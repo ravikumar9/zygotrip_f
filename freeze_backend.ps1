@@ -1,114 +1,126 @@
-Write-Host "======================================"
-Write-Host "Zygotrip Backend Cleanup + Freeze Tool"
-Write-Host "======================================"
-
-$root = Get-Location
+Write-Host "==========================================="
+Write-Host "Zygotrip Repo Cleanup Before Git Push"
+Write-Host "==========================================="
 
 Write-Host ""
-Write-Host "Step 1: Removing Python cache folders..."
+Write-Host "Step 1: Remove Next.js build artifacts (.next)"
+
+if (Test-Path "frontend/.next") {
+    git rm -r --cached frontend/.next 2>$null
+    Remove-Item -Recurse -Force frontend/.next
+}
+
+Write-Host ""
+Write-Host "Step 2: Remove Node modules"
+
+if (Test-Path "frontend/node_modules") {
+    git rm -r --cached frontend/node_modules 2>$null
+    Remove-Item -Recurse -Force frontend/node_modules
+}
+
+Write-Host ""
+Write-Host "Step 3: Remove Python virtual environment"
+
+if (Test-Path "venv") {
+    git rm -r --cached venv 2>$null
+}
+
+Write-Host ""
+Write-Host "Step 4: Remove Python cache files"
 
 Get-ChildItem -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue |
 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-
-Write-Host ""
-Write-Host "Step 2: Removing compiled python files..."
-
 Get-ChildItem -Recurse -Include *.pyc,*.pyo -File -ErrorAction SilentlyContinue |
-Remove-Item -Force
-
+Remove-Item -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
-Write-Host "Step 3: Removing development junk folders..."
+Write-Host "Step 5: Remove deprecated / backup files"
 
-$junkDirs = @(
-".claude",
-".idea",
-".vscode",
-"logs"
-)
+Get-ChildItem -Recurse -Include *.bak,*.old,*DEPRECATED* -File -ErrorAction SilentlyContinue |
+Remove-Item -Force -ErrorAction SilentlyContinue
 
-foreach ($dir in $junkDirs) {
-    Get-ChildItem -Recurse -Directory -Filter $dir -ErrorAction SilentlyContinue |
-    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host ""
+Write-Host "Step 6: Clean logs"
+
+if (Test-Path "logs") {
+    Remove-Item -Recurse -Force logs
 }
 
-
 Write-Host ""
-Write-Host "Step 4: Removing temporary audit reports..."
-
-$junkFiles = @(
-"*AUDIT_REPORT*.md",
-"*FREEZE_REPORT*.md",
-"*CODEBASE_AUDIT*.md"
-)
-
-foreach ($pattern in $junkFiles) {
-    Get-ChildItem -Filter $pattern -ErrorAction SilentlyContinue |
-    Remove-Item -Force
-}
-
-
-Write-Host ""
-Write-Host "Step 5: Creating .gitignore..."
+Write-Host "Step 7: Recreate .gitignore"
 
 @"
+# ================================
 # Python
+# ================================
+venv/
 __pycache__/
 *.pyc
 *.pyo
 
-# Virtual env
-venv/
+# ================================
+# Node
+# ================================
+node_modules/
+frontend/node_modules/
 
+# ================================
+# Next.js
+# ================================
+.next/
+frontend/.next/
+
+# ================================
 # Logs
+# ================================
 logs/
 *.log
 
-# Local env
+# ================================
+# Environment
+# ================================
 .env
 .env.local
 
-# Node
-node_modules/
-
+# ================================
 # IDE
+# ================================
 .vscode/
 .idea/
+.claude/
 
+# ================================
 # OS
+# ================================
 .DS_Store
 Thumbs.db
+
+# ================================
+# Build
+# ================================
+dist/
+build/
+out/
 "@ | Out-File .gitignore -Encoding utf8
 
+Write-Host ""
+Write-Host "Step 8: Remove ignored files from Git index"
+
+git rm -r --cached . 2>$null
 
 Write-Host ""
-Write-Host "Step 6: Initializing Git repository..."
-
-if (!(Test-Path ".git")) {
-    git init
-}
-
-
-Write-Host ""
-Write-Host "Step 7: Adding project files..."
+Write-Host "Step 9: Re-add clean project files"
 
 git add .
 
+Write-Host ""
+Write-Host "Step 10: Commit cleanup"
+
+git commit -m "Repository cleanup before push - remove build artifacts and junk"
 
 Write-Host ""
-Write-Host "Step 8: Creating backend freeze commit..."
-
-git commit -m "Backend Freeze v1 - OTA architecture stable"
-
-
-Write-Host ""
-Write-Host "Step 9: Creating version tag..."
-
-git tag backend-freeze-v1
-
-
-Write-Host ""
-Write-Host "======================================"
-Write-Host "Backend successfully frozen"
-Write-Host "======================================"
+Write-Host "==========================================="
+Write-Host "Repository cleaned successfully"
+Write-Host "Safe to push to GitHub now"
+Write-Host "==========================================="
