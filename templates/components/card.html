@@ -1,0 +1,57 @@
+{% comment %}
+  LISTING CARD COMPONENT
+  
+  Required context:
+  - item: object with title, image, price, etc.
+  - item_type: 'hotel', 'bus', 'cab', 'package'
+{% endcomment %}
+
+<article class="card">
+  {% if item.image %}
+    <img src="{{ item.image }}" alt="{{ item.title }}" class="card-image">
+  {% endif %}
+  
+  <h3 class="card-title">{{ item.title|default:item.name }}</h3>
+  
+  <div class="card-meta">
+    {% if item.location %}
+      <span>📍 {{ item.location }}</span>
+    {% endif %}
+    {% if item.rating %}
+      <span class="rating">
+        <span class="rating-star">★</span>
+        {{ item.rating }}
+      </span>
+    {% endif %}
+  </div>
+  
+  {% if item.features %}
+    <div class="card-features">
+      {% for feature in item.features %}
+        <span class="badge">{{ feature }}</span>
+      {% endfor %}
+    </div>
+  {% endif %}
+  
+  <div class="card-price">
+    ₹{{ item.price|default:0 }}
+    <span class="card-price-label">/ night</span>
+  </div>
+  
+  <div class="card-footer">
+    <a href="{% if item.get_absolute_url %}{{ item.get_absolute_url }}{% else %}#{% endif %}" class="btn btn-primary w-full">
+      Book Now
+    </a>
+  </div>
+</article>
+
+
+
+
+
+
+
+
+
+
+

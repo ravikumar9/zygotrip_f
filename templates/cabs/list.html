@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block hero %}
+<section class="hero hero--search">
+  <div class="hero-gradient">
+    <div class="hero-content">
+      <p class="hero-eyebrow">Zygotrip Cabs</p>
+      <h1 class="hero-title">Cabs for every itinerary</h1>
+      <p class="hero-subtitle">Choose the right ride for city and outstation trips.</p>
+      {% include "components/search/cab_search.html" %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="sidebar-layout">
+      <aside class="filters">
+        <div class="card filter-card">
+          <h3 class="text-lg font-semibold mb-4">Filters</h3>
+          <form method="get">
+            <div class="mb-6">
+              <label class="text-sm font-semibold mb-2">City</label>
+              <input type="text" name="city" class="form-control" placeholder="Enter city" value="{{ request.GET.city|default:'' }}" />
+            </div>
+            <div class="mb-6">
+              <label class="text-sm font-semibold mb-2">Price Range</label>
+              <input type="number" name="min_price" class="form-control mb-2" placeholder="Min" value="{{ request.GET.min_price|default:'' }}" />
+              <input type="number" name="max_price" class="form-control" placeholder="Max" value="{{ request.GET.max_price|default:'' }}" />
+            </div>
+            <button type="submit" class="btn btn-primary primary-button w-full">Apply Filters</button>
+            <a href="{% url 'cabs:list' %}" class="btn btn-ghost w-full">Reset</a>
+          </form>
+        </div>
+      </aside>
+
+      <main>
+        <div class="service-grid">
+      {% for cab in cabs %}
+      <article class="card">
+        <div class="card-image card-image--cab">🚕</div>
+        
+        <h3 class="card-title">{{ cab.name }}</h3>
+        
+        <div class="card-description">{{ cab.seats }} seats • {{ cab.get_fuel_type_display }}</div>
+        
+        <div class="cab-amenities">
+          <span class="chip chip--primary">{{ cab.city|title }}</span>
+          <span class="chip chip--primary">{{ cab.seats }} Seater</span>
+        </div>
+        
+        <div class="card-price">₹{{ cab.system_price_per_km }}<span class="card-price-label">/ km</span></div>
+        
+        <div class="card-footer">
+          <a href="{% url 'cabs:booking' cab.id %}" class="btn btn-primary w-full">Book Now</a>
+        </div>
+      </article>
+      {% empty %}
+      <div class="col-span-full">
+        <div class="empty-state">
+          <div class="empty-state-icon">🚕</div>
+          <h3 class="empty-state-title">No cabs available</h3>
+          <p class="empty-state-description">Please try again later or contact support for assistance.</p>
+          <a href="{% url 'cabs:list' %}" class="btn btn-primary">Back to Cabs</a>
+        </div>
+      </div>
+      {% endfor %}
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

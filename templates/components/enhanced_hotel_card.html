@@ -1,0 +1,98 @@
+{% load static %}
+<!-- Enhanced Hotel Card Component - OTA-Grade Layout -->
+<div class="hotel-card" data-hotel-card>
+  <div class="hotel-card__media">
+    {% if hotel.image_url %}
+      <img src="{{ hotel.image_url }}" alt="{{ hotel.name }}" class="hotel-card__image" loading="lazy" />
+    {% else %}
+      <div class="hotel-card__placeholder">
+        <span>🏨</span>
+      </div>
+    {% endif %}
+
+    {% if hotel.discount_percent %}
+      <span class="hotel-card__discount">
+        {{ hotel.discount_percent|floatformat:0 }}% OFF
+      </span>
+    {% endif %}
+
+    {% if hotel.rooms_left and hotel.rooms_left <= 3 %}
+      <div class="hotel-card__scarcity">
+        {% include "ui/components/scarcity_badge.html" with text="Only"|add:hotel.rooms_left|add:" rooms left" %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="hotel-card__body">
+    <div class="hotel-card__header">
+      <h3 class="hotel-card__title">{{ hotel.name }}</h3>
+    </div>
+
+    <div class="hotel-card__meta-row">
+      {% if hotel.rating_value %}
+        {% include "ui/components/rating_badge.html" with rating=hotel.rating_value reviews=hotel.rating_count %}
+      {% endif %}
+    </div>
+
+    {% if hotel.location %}
+      <p class="hotel-card__location">📍 {{ hotel.location }}</p>
+    {% endif %}
+
+    {% if hotel.amenities %}
+      <div class="hotel-card__amenities">
+        {% for amenity in hotel.amenities|slice:":5" %}
+          <span class="badge badge--neutral">{{ amenity }}</span>
+        {% endfor %}
+        {% if hotel.amenities|length > 5 %}
+          <span class="badge badge--ghost">+{{ hotel.amenities|length|add:"-5" }}</span>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="hotel-card__trust">
+      {% if hotel.free_cancellation %}
+        {% include "ui/components/trust_badge.html" with text="Free Cancellation" icon="✓" %}
+      {% endif %}
+      {% if hotel.instant_booking %}
+        {% include "ui/components/trust_badge.html" with text="Instant Booking" icon="⚡" %}
+      {% endif %}
+      {% if hotel.booked_recently %}
+        <span class="trust-badge trust-badge--warning">
+          <span class="trust-badge__icon">🔥</span>
+          <span class="trust-badge__text">Booked {{ hotel.booked_recently }} times today</span>
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="hotel-card__aside">
+    {% include "ui/components/price_tag.html" with price=hotel.price_current original=hotel.price_original discount_percent=hotel.discount_percent %}
+
+    <a href="{{ hotel.cta_url|default:'#' }}" class="ui-button ui-button--primary ui-button--md">
+      {{ hotel.cta_label|default:"View Details" }}
+    </a>
+    
+    {% if hotel.map_url %}
+      <button type="button" class="ui-button ui-button--text ui-button--sm" onclick="window.open('{{ hotel.map_url }}', '_blank')">
+        View Map
+      </button>
+    {% endif %}
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

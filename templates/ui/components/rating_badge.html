@@ -1,0 +1,25 @@
+{% comment %}
+Rating Badge Component
+Usage: {% include "ui/components/rating_badge.html" with rating=4.5 reviews=125 %}
+{% endcomment %}
+
+<div class="rating-badge">
+  <div class="rating-badge__stars">
+    {% if rating >= 4.5 %}⭐⭐⭐⭐⭐{% elif rating >= 4 %}⭐⭐⭐⭐{% elif rating >= 3 %}⭐⭐⭐{% else %}⭐⭐{% endif %}
+  </div>
+  <div class="rating-badge__score">{{ rating|floatformat:1 }}</div>
+  {% if reviews %}
+  <div class="rating-badge__reviews">({{ reviews }} reviews)</div>
+  {% endif %}
+</div>
+
+
+
+
+
+
+
+
+
+
+

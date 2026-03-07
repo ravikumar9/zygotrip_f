@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block hero %}
+<section class="hero hero--search">
+  <div class="hero-gradient">
+    <div class="hero-content">
+      <p class="hero-eyebrow">Zygotrip Buses</p>
+      <h1 class="hero-title">Book bus tickets with confidence</h1>
+      <p class="hero-subtitle">Compare routes, operators, and prices in one search.</p>
+      {% include "components/search/bus_search.html" %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="sidebar-layout">
+      <aside class="filters">
+        <div class="card filter-card">
+          <h3 class="text-lg font-semibold mb-4">Filters</h3>
+          <form method="get">
+            <div class="mb-6">
+              <label class="text-sm font-semibold mb-2">Route</label>
+              <input type="text" name="q" class="form-control" placeholder="From, To, Operator" value="{{ request.GET.q|default:'' }}" />
+            </div>
+            <div class="mb-6">
+              <label class="text-sm font-semibold mb-2">Price Range</label>
+              <input type="number" name="min_price" class="form-control mb-2" placeholder="Min" value="{{ request.GET.min_price|default:'' }}" />
+              <input type="number" name="max_price" class="form-control" placeholder="Max" value="{{ request.GET.max_price|default:'' }}" />
+            </div>
+            <button type="submit" class="btn btn-primary primary-button w-full">Apply Filters</button>
+            <a href="{% url 'buses:list' %}" class="btn btn-ghost w-full">Reset</a>
+          </form>
+        </div>
+      </aside>
+
+      <main>
+        <div class="service-grid">
+      {% for bus in buses %}
+      <article class="card">
+        <div class="card-image card-image--bus">🚌</div>
+        
+        <h3 class="card-title">{{ bus.operator_name }}</h3>
+        
+        <div class="card-meta">
+          <span>{{ bus.from_city }} → {{ bus.to_city }}</span>
+          {% if bus.bus_type %}
+            <span class="bus-rating">{{ bus.bus_type.get_name_display }}</span>
+          {% endif %}
+        </div>
+        
+        <div class="bus-route">
+          <div class="bus-route__point">
+            <div class="bus-route__time">{{ bus.departure_time }}</div>
+            <div class="bus-route__city">{{ bus.from_city }}</div>
+          </div>
+          <div class="bus-route__duration">{{ bus.journey_date|date:"M d" }}</div>
+          <div class="bus-route__point bus-route__point--end">
+            <div class="bus-route__time">{{ bus.arrival_time }}</div>
+            <div class="bus-route__city">{{ bus.to_city }}</div>
+          </div>
+        </div>
+        
+        <div class="bus-amenities">
+            {% for amenity in bus.get_amenities_list|slice:":3" %}
+              <span class="chip chip--primary">{{ amenity }}</span>
+            {% endfor %}
+            <span class="chip chip--primary">{{ bus.available_seats }} seats</span>
+        </div>
+        
+          <div class="card-price">₹{{ bus.price_per_seat|default:0 }}<span class="card-price-label">/ seat</span></div>
+        
+        <div class="card-footer">
+          <a href="{% url 'buses:booking' bus.id %}" class="btn btn-primary w-full">Select Seats</a>
+        </div>
+      </article>
+      {% empty %}
+      <div class="col-span-full">
+        <div class="empty-state">
+          <div class="empty-state-icon">🚌</div>
+          <h3 class="empty-state-title">No buses found</h3>
+          <p class="empty-state-description">Try searching for different cities or dates.</p>
+          <a href="{% url 'buses:list' %}" class="btn btn-primary">Browse All Buses</a>
+        </div>
+      </div>
+      {% endfor %}
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,39 @@
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="/" class="site-logo">Zygotrip</a>
+    
+    <div class="site-nav-links">
+      <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a>
+      <a href="/hotels/" class="nav-link {% if '/hotels/' in request.path %}active{% endif %}">Hotels</a>
+      <a href="/buses/" class="nav-link {% if '/buses/' in request.path %}active{% endif %}">Buses</a>
+      <a href="/cabs/" class="nav-link {% if '/cabs/' in request.path %}active{% endif %}">Cabs</a>
+      <a href="/packages/" class="nav-link {% if '/packages/' in request.path %}active{% endif %}">Packages</a>
+      <a href="/flights/" class="nav-link {% if '/flights/' in request.path %}active{% endif %}">Flights</a>
+      <a href="/trains/" class="nav-link {% if '/trains/' in request.path %}active{% endif %}">Trains</a>
+    </div>
+    
+    <div class="site-nav-actions">
+      {% if user.is_authenticated %}
+        <span class="nav-user">{{ user.full_name|default:user.email }}</span>
+        {% if user.is_staff %}
+          <a href="/admin/" class="btn btn-ghost btn-sm">Admin</a>
+        {% endif %}
+        <a href="{% url 'account_logout' %}" class="btn btn-primary btn-sm">Logout</a>
+      {% else %}
+        <a href="{% url 'account_login' %}" class="btn btn-outline btn-sm">Login</a>
+        <a href="{% url 'account_register' %}" class="btn btn-primary btn-sm">Register</a>
+      {% endif %}
+    </div>
+  </nav>
+</header>
+
+
+
+
+
+
+
+
+
+
+

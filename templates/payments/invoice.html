@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div >
+      <!-- Invoice Header -->
+      <div class="card mb-8">
+        <div class="d-flex justify-between mb-8 align-start" >
+          <div>
+            <h1 class="m-0">Invoice</h1>
+            <p class="m-2">Zygotrip Online Bookings</p>
+          </div>
+          <div class="text-right">
+            {% if invoice.status == 'paid' %}
+              <span class="badge badge-success p-3 text-base">✓ Paid</span>
+            {% else %}
+              <span class="badge badge-warning p-3 text-base">Pending</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Invoice Details -->
+        <div class="d-grid gap-8 p-8 border-top border-bottom mb-8" >
+          <div>
+            <p class="m-2 text-xs" >Invoice Number</p>
+            <p class="font-semibold m-0 text-lg" >{{ invoice.uuid }}</p>
+          </div>
+          <div class="text-right">
+            <p class="m-2 text-xs" >Issue Date</p>
+            <p class="font-semibold m-0">{{ invoice.issued_at|date:"M d, Y" }}</p>
+          </div>
+        </div>
+
+        <!-- Billing Information -->
+        <div class="d-grid gap-8 mb-8" >
+          <div>
+            <h4 class="m-4 text-xs" >Bill To</h4>
+            <p class="font-semibold m-2">{{ invoice.booking.user.full_name }}</p>
+            <p class="m-0" >{{ invoice.booking.user.email }}</p>
+          </div>
+          <div>
+            <h4 class="m-4 text-xs" >Property</h4>
+            <p class="font-semibold m-2">{{ invoice.booking.property.name }}</p>
+            <p class="m-0" >{{ invoice.booking.property.address }}</p>
+            <p class="m-0" >{{ invoice.booking.property.city }}, {{ invoice.booking.property.country }}</p>
+          </div>
+        </div>
+
+        <!-- Booking Details -->
+        <div class="p-6 rounded-lg mb-8" >
+          <h4 class="m-4">Booking Details</h4>
+          <div class="d-grid gap-4" >
+            <div>
+              <p class="m-2 text-sm" >Check In</p>
+              <p class="font-semibold m-0">{{ invoice.booking.check_in }}</p>
+            </div>
+            <div>
+              <p class="m-2 text-sm" >Check Out</p>
+              <p class="font-semibold m-0">{{ invoice.booking.check_out }}</p>
+            </div>
+            <div>
+              <p class="m-2 text-sm" >Rooms</p>
+              <p class="font-semibold m-0">{{ invoice.booking.quantity }}</p>
+            </div>
+            <div>
+              <p class="m-2 text-sm" >Booking Reference</p>
+              <p class="font-semibold m-0">{{ invoice.booking.uuid|truncatechars:12 }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Price Breakdown -->
+        <table class="price-table mb-8">
+          <tbody>
+            <tr>
+              <td class="price-row-label">Base Rate</td>
+              <td class="text-right">₹{{ invoice.booking.price_breakdown.base_amount }}</td>
+            </tr>
+            {% if invoice.booking.price_breakdown.meal_amount %}
+            <tr>
+              <td class="price-row-label">Meals</td>
+              <td class="text-right">₹{{ invoice.booking.price_breakdown.meal_amount }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+              <td class="price-row-label">Service Fee (8%)</td>
+              <td class="text-right">₹{{ invoice.booking.price_breakdown.service_fee }}</td>
+            </tr>
+            <tr>
+              <td class="price-row-label">Tax (GST 12%)</td>
+              <td class="text-right">₹{{ invoice.booking.price_breakdown.gst }}</td>
+            </tr>
+            {% if invoice.booking.price_breakdown.promo_discount %}
+            <tr class="price-row-highlight">
+              <td class="price-row-label">Promo Discount</td>
+              <td class="text-right">-₹{{ invoice.booking.price_breakdown.promo_discount }}</td>
+            </tr>
+            {% endif %}
+            <tr class="font-bold text-lg border-top">
+              <td class="p-4">Total Amount Due</td>
+              <td class="text-right p-4" >₹{{ invoice.total_amount }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Payment Status -->
+        {% if invoice.status == 'paid' %}
+          <div class="alert alert-success">
+            <strong>✓ Payment Received</strong>
+            <p class="m-2 text-sm">Thank you for booking with Zygotrip. Your stay is confirmed.</p>
+          </div>
+        {% else %}
+          <div class="alert alert-warning">
+            <strong>⏳ Awaiting Payment</strong>
+            <p class="m-2 text-sm">Please complete payment to confirm your booking.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="d-flex gap-4 justify-center flex-wrap">
+        <button onclick="window.print()" class="button button-secondary">📄 Print Invoice</button>
+        <a href="/accounts/profile/" class="button button-primary">Back to Profile</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <a href="{% url 'packages:list' %}" class="mb-8 d-inline-block" >← Back to Packages</a>
+
+    <div class="grid md:grid-cols-3 gap-8">
+      <!-- Main Content -->
+      <div class="md:col-span-2">
+        <div class="card">
+          <h1 class="mb-2">{{ package.name }}</h1>
+          <div class="d-flex gap-4 mb-8">
+            <span class="p-2 rounded-full font-semibold text-sm" >{{ package.duration_days }} Days</span>
+            <span class="p-2 rounded-full text-sm" >📍 {{ package.destination }}</span>
+          </div>
+
+          <div class="mb-8">
+            <p class="text-lg" >{{ package.description }}</p>
+          </div>
+
+          <!-- Itinerary -->
+          <div class="mb-12">
+            <h2 class="mb-6">Day-by-Day Itinerary</h2>
+            <div class="d-grid gap-6">
+              {% for day in itinerary %}
+                <div class="p-6 rounded-lg" >
+                  <h3 class="m-2">Day {{ day.day_number }}: {{ day.title }}</h3>
+                  <p class="m-3" >{{ day.description }}</p>
+                  <div class="d-flex gap-4 text-sm">
+                    {% if day.accommodation %}<p class="m-0">🏨 Accommodation: {{ day.accommodation }}</p>{% endif %}
+                    {% if day.meals_included %}<p class="m-0">🍽️ Meals: {{ day.get_meals_included_display }}</p>{% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Inclusions & Exclusions -->
+          <div class="grid md:grid-cols-2 gap-8">
+            <div>
+              <h3 class="mb-4">✓ Inclusions</h3>
+              <ul class="list-none m-0 p-0">
+                {% for inclusion in inclusions %}
+                  <li class="p-2" >{{ inclusion }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% if exclusions %}
+              <div>
+                <h3 class="mb-4">✗ Exclusions</h3>
+                <ul class="list-none m-0 p-0">
+                  {% for exclusion in exclusions %}
+                    <li class="p-2" >{{ exclusion }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div>
+        <div class="card sticky" >
+          <div class="mb-8">
+            <p class="m-2 text-sm" >STARTING FROM</p>
+            <p class="font-bold text-4xl m-0" >₹{{ package.base_price|floatformat:0 }}</p>
+            <p class="m-2 text-sm" >Per person (Group of 10)</p>
+          </div>
+
+          <div class="mb-6 pb-6 border-bottom">
+            <div class="d-flex justify-between mb-3">
+              <span class="">Duration</span>
+              <strong>{{ package.duration_days }} days</strong>
+            </div>
+            <div class="d-flex justify-between mb-3">
+              <span class="">Difficulty</span>
+              <strong>{{ package.get_difficulty_level_display }}</strong>
+            </div>
+            <div class="d-flex justify-between">
+              <span class="">Group Size</span>
+              <strong>Upto {{ package.max_group_size }}</strong>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <div class="d-flex align-center gap-2 mb-4">
+              <span >★</span>
+              <strong>{{ package.rating }} / 5</strong>
+              <span class="text-sm" >({{ package.review_count }} reviews)</span>
+            </div>
+          </div>
+
+          <a class="btn btn-primary w-full" href="{% url 'packages:booking' package.id %}">Book Now</a>
+          <button class="btn btn-secondary w-full" type="button">Ask a Question</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

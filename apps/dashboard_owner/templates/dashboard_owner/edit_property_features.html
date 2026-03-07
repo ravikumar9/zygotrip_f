@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit Property - {{ property.name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 40px auto; padding: 0 20px;">
+  <!-- Header -->
+  <div style="margin-bottom: 32px;">
+    <h1 style="font-size: 28px; font-weight: 700; color: #111827; margin-bottom: 8px;">
+      Edit Property Features
+    </h1>
+    <p style="color: #6b7280;">
+      Update your property information, amenities, and policies
+    </p>
+  </div>
+
+  <!-- Back Button -->
+  <div style="margin-bottom: 24px;">
+    <a href="{% url 'dashboard_owner:dashboard' %}" style="color: #2563eb; text-decoration: none; font-weight: 500;">
+      ← Back to Dashboard
+    </a>
+  </div>
+
+  <!-- Form Card -->
+  <div style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); padding: 32px;">
+    <form method="post" action="">
+      {% csrf_token %}
+      
+      <!-- Messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div style="background: {% if message.tags == 'success' %}#ecfdf5{% else %}#fef2f2{% endif %}; 
+                      border-left: 4px solid {% if message.tags == 'success' %}#10b981{% else %}#ef4444{% endif %}; 
+                      padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+            <p style="margin: 0; color: {% if message.tags == 'success' %}#065f46{% else %}#991b1b{% endif %};">
+              {{ message }}
+            </p>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Basic Information -->
+      <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
+        Basic Information
+      </h2>
+      
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+          {{ form.name.label }}
+        </label>
+        {{ form.name }}
+        {% if form.name.errors %}
+          <p style="color: #ef4444; font-size: 14px; margin-top: 4px;">{{ form.name.errors }}</p>
+        {% endif %}
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+          {{ form.address.label }}
+        </label>
+        {{ form.address }}
+        {% if form.address.errors %}
+          <p style="color: #ef4444; font-size: 14px; margin-top: 4px;">{{ form.address.errors }}</p>
+        {% endif %}
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+            {{ form.property_type.label }}
+          </label>
+          {{ form.property_type }}
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+            {{ form.star_category.label }}
+          </label>
+          {{ form.star_category }}
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+          {{ form.description.label }}
+        </label>
+        {{ form.description }}
+        {% if form.description.errors %}
+          <p style="color: #ef4444; font-size: 14px; margin-top: 4px;">{{ form.description.errors }}</p>
+        {% endif %}
+      </div>
+
+      <!-- Amenities Section -->
+      <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 32px 0 20px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
+        Property Amenities
+      </h2>
+      
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+          Amenities (one per line)
+        </label>
+        <textarea name="amenities_list" rows="6" class="form-control" 
+                  style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit;"
+                  placeholder="Free WiFi&#10;Swimming Pool&#10;Gym&#10;Free Parking&#10;Restaurant&#10;24/7 Room Service">{{ amenities_list }}</textarea>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 8px;">
+          List each amenity on a separate line. These will be displayed to guests.
+        </p>
+      </div>
+
+      <!-- Cancellation Policy -->
+      <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 32px 0 20px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
+        Cancellation Policy
+      </h2>
+      
+      <div style="margin-bottom: 16px;">
+        <label style="display: flex; align-items: center; cursor: pointer;">
+          {{ form.has_free_cancellation }}
+          <span style="margin-left: 8px; font-weight: 500; color: #374151;">
+            {{ form.has_free_cancellation.label }}
+          </span>
+        </label>
+      </div>
+
+      <div style="margin-bottom: 32px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+          {{ form.cancellation_hours.label }}
+        </label>
+        {{ form.cancellation_hours }}
+        <p style="color: #6b7280; font-size: 14px; margin-top: 8px;">
+          Number of hours before check-in when guests can cancel for free
+        </p>
+      </div>
+
+      <!-- GEO LOCATION SECTION -->
+      <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 32px 0 20px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
+        Geo Location
+      </h2>
+      <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
+        Accurate coordinates help guests find your property on maps and improve search visibility.
+      </p>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+            Latitude
+          </label>
+          {{ form.latitude }}
+          {% if form.latitude.errors %}<p style="color: #ef4444; font-size: 14px;">{{ form.latitude.errors }}</p>{% endif %}
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+            Longitude
+          </label>
+          {{ form.longitude }}
+          {% if form.longitude.errors %}<p style="color: #ef4444; font-size: 14px;">{{ form.longitude.errors }}</p>{% endif %}
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+          Google Place ID
+          <span style="font-size: 12px; font-weight: 400; color: #9ca3af; margin-left: 6px;">(optional — from Google Maps)</span>
+        </label>
+        {{ form.place_id }}
+        {% if form.place_id.errors %}<p style="color: #ef4444; font-size: 14px;">{{ form.place_id.errors }}</p>{% endif %}
+      </div>
+      
+      <div style="margin-bottom: 32px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+          Formatted Address
+          <span style="font-size: 12px; font-weight: 400; color: #9ca3af; margin-left: 6px;">(optional — auto-filled by Google Places)</span>
+        </label>
+        {{ form.formatted_address }}
+        {% if form.formatted_address.errors %}<p style="color: #ef4444; font-size: 14px;">{{ form.formatted_address.errors }}</p>{% endif %}
+      </div>
+
+      <!-- Submit Section -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+        <a href="{% url 'dashboard_owner:dashboard' %}" 
+           style="padding: 12px 24px; background: #f3f4f6; color: #374151; border-radius: 8px; text-decoration: none; font-weight: 500;">
+          Cancel
+        </a>
+        <button type="submit" 
+                style="padding: 12px 32px; background: linear-gradient(135deg, #2563eb 0%, #7e22ce 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 16px; cursor: pointer; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);">
+          Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Approval Status Info -->
+  <div style="margin-top: 24px; padding: 16px; background: {% if property.status == 'approved' %}#ecfdf5{% elif property.status == 'pending' %}#fffbeb{% else %}#fef2f2{% endif %}; border-radius: 8px;">
+    <p style="margin: 0; font-weight: 500; color: {% if property.status == 'approved' %}#065f46{% elif property.status == 'pending' %}#78350f{% else %}#991b1b{% endif %};">
+      <strong>Status:</strong> {{ property.get_status_display }}
+      {% if property.status == 'pending' %}
+        - Changes will be reviewed by admin before going live
+      {% elif property.status == 'approved' %}
+        - Your property is live and accepting bookings
+      {% endif %}
+    </p>
+  </div>
+</div>
+{% endblock %}

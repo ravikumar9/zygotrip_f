@@ -1,0 +1,34 @@
+<div class="search-card">
+  <form method="get" action="/cabs/" class="search-form" data-search-form>
+    <div class="search-form-group">
+      <div class="search-form-field relative">
+        <label for="cab-city">Pickup city</label>
+        <input
+          type="text"
+          id="cab-city"
+          name="city"
+          placeholder="Pickup city"
+          value="{{ request.GET.city|default:'' }}"
+          data-autocomplete="search"
+          autocomplete="off"
+        />
+      </div>
+      <div class="search-form-field">
+        <label for="cab-date">Pickup date</label>
+        <input type="date" id="cab-date" name="pickup_date" value="{{ request.GET.pickup_date|default:'' }}" />
+      </div>
+      <div class="search-form-field">
+        <label for="cab-type">Cab type</label>
+        <select id="cab-type" name="cab_type">
+          <option value="" {% if not request.GET.cab_type %}selected{% endif %}>Any</option>
+          <option value="sedan" {% if request.GET.cab_type == "sedan" %}selected{% endif %}>Sedan</option>
+          <option value="suv" {% if request.GET.cab_type == "suv" %}selected{% endif %}>SUV</option>
+          <option value="premium" {% if request.GET.cab_type == "premium" %}selected{% endif %}>Premium</option>
+        </select>
+      </div>
+      <div class="search-form-field">
+        <button type="submit" class="btn btn-primary primary-button">Search Cabs</button>
+      </div>
+    </div>
+  </form>
+</div>

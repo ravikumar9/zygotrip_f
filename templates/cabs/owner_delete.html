@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div >
+      <div class="card p-8">
+        <div class="mb-4" >⚠️</div>
+        <h1 class="mb-2">Delete Cab</h1>
+        <p class="mb-6" >Are you sure you want to delete <strong>{{ cab.name }}</strong>?</p>
+
+        <div class="p-4 rounded mb-6" >
+          <p class="text-sm m-0">
+            This action cannot be undone. The cab will be deactivated and no longer visible to customers.
+          </p>
+        </div>
+
+        <form method="post" class="mb-4">
+          {% csrf_token %}
+          <button type="submit" class="button button-danger button-block p-4">Confirm Delete</button>
+        </form>
+
+        <a href="{% url 'cabs:owner-list' %}" class="button button-secondary button-block">Cancel</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Bookings - Zygotrip{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <h1 class="dashboard-title">My Bookings</h1>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-label">Total Bookings</p>
+        <p class="stat-value stat-value--primary">{{ total_bookings }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Confirmed</p>
+        <p class="stat-value stat-value--success">{{ confirmed_bookings }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Cancelled</p>
+        <p class="stat-value stat-value--danger">{{ cancelled_bookings }}</p>
+      </div>
+    </div>
+
+    {% if bookings %}
+      <div class="table-card">
+        <div class="table-card__header">
+          <h2>Your Bookings</h2>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for booking in bookings %}
+              <tr>
+                <td>{{ booking.property.name }}</td>
+                <td>{{ booking.check_in|date:"M d, Y" }}</td>
+                <td>{{ booking.check_out|date:"M d, Y" }}</td>
+                <td class="table-amount">₹{{ booking.total_amount }}</td>
+                <td>
+                  {% if booking.status == 'confirmed' %}
+                    <span class="status-badge status-badge--success">Confirmed</span>
+                  {% elif booking.status == 'payment' %}
+                    <span class="status-badge status-badge--warning">Payment</span>
+                  {% elif booking.status == 'review' %}
+                    <span class="status-badge status-badge--info">Review</span>
+                  {% elif booking.status == 'cancelled' %}
+                    <span class="status-badge status-badge--danger">Cancelled</span>
+                  {% else %}
+                    <span class="status-badge">{{ booking.get_status_display }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if booking.status in 'review,payment' %}
+                    <a href="{% url 'booking:review' booking.uuid %}" class="table-link">View</a>
+                  {% elif booking.status == 'confirmed' %}
+                    <a href="{% url 'booking:review' booking.uuid %}" class="table-link table-link--success">Details</a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">📅</div>
+        <h3 class="empty-state-title">No bookings found</h3>
+        <p class="empty-state-description">Start exploring stays and build your next trip.</p>
+        <div class="empty-state-action">
+          <a href="{% url 'search:list' %}" class="btn btn-primary">Browse Hotels</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

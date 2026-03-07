@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="text-center p-12">
+      <h1 class="mb-4">Booking Confirmed</h1>
+      <p class="mb-8" >Your package booking has been successfully created.</p>
+
+      <div class="card text-left" >
+        <h3 class="card-title">Booking Details</h3>
+        <p><strong>Booking ID:</strong> <span id="package-booking-uuid">{{ booking.uuid }}</span></p>
+        <p><strong>Package:</strong> {{ booking.package.name }}</p>
+        <p><strong>Dates:</strong> {{ booking.start_date }} to {{ booking.end_date }}</p>
+        <p><strong>Travelers:</strong> {{ booking.number_of_travelers }}</p>
+        <p><strong>Total:</strong> ₹{{ booking.total_amount }}</p>
+      </div>
+
+      <div class="mt-6">
+        <a href="{% url 'packages:list' %}" class="button button-secondary">Back to Packages</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

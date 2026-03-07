@@ -1,0 +1,80 @@
+{% load static %}
+<!-- Enterprise Hotel Card - 3-Column Grid Architecture -->
+<article class="hotel-card-premium {% if hotel.is_best_rating or hotel.is_lowest_price or hotel.is_best_deal %}best-deal{% endif %}" data-score="{{ hotel.relevance_score|default:0 }}" data-hotel-card>
+  <a href="{{ hotel.cta_url }}" class="hotel-card-link">
+    
+    <!-- Column 1: Image (280px) -->
+    <div class="hotel-card-image-wrapper">
+      <img
+        src="{% if hotel.image_url %}{{ hotel.image_url }}{% else %}{% static 'img/placeholder-hotel.jpg' %}{% endif %}"
+        alt="{{ hotel.name }}"
+        class="hotel-image"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+    
+    <!-- Column 2: Info (flex 1fr) -->
+    <div class="hotel-card-info">
+      <div class="hotel-card-header">
+        <h3 class="hotel-card-title">{{ hotel.name }}</h3>
+        
+        {% if hotel.rating_value %}
+          <div class="hotel-card-rating">
+            <span class="hotel-card-rating-score">{{ hotel.rating_value|floatformat:1 }}</span>
+            <svg class="hotel-card-rating-star" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+            </svg>
+            {% if hotel.rating_count or hotel.review_count %}
+              <span class="hotel-card-rating-count">({{ hotel.rating_count|default:hotel.review_count }})</span>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+      
+      <div class="hotel-card-location">
+        <svg class="hotel-card-location-icon" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+        </svg>
+        <span>{{ hotel.city }}{% if hotel.area %}, {{ hotel.area }}{% endif %}</span>
+      </div>
+      
+      {% if hotel.amenities %}
+        <div class="hotel-card-badges">
+          {% for amenity in hotel.amenities|slice:":3" %}
+            <span class="hotel-card-badge">{{ amenity }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    
+    <!-- Column 3: Price (180px) -->
+    <div class="hotel-card-price-section">
+      <div class="hotel-card-price-container">
+        {% if hotel.price_original and hotel.discount_percent %}
+          <div class="hotel-card-price-original">₹{{ hotel.price_original|floatformat:0 }}</div>
+        {% endif %}
+        
+        <div class="hotel-card-price-current">₹{{ hotel.price_current|floatformat:0 }}</div>
+        
+        <div class="hotel-card-price-label">per night</div>
+      </div>
+      
+      <button class="hotel-card-cta" type="button">
+        View Details
+      </button>
+    </div>
+    
+  </a>
+</article>
+
+
+
+
+
+
+
+
+
+
+

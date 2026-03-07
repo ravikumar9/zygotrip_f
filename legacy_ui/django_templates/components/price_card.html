@@ -1,0 +1,129 @@
+{% load static %}
+
+{# Sticky price summary card for booking pages #}
+<div class="sticky-card price-summary booking-summary" id="priceSummaryCard">
+  <div class="price-summary-header">
+    Booking Summary
+  </div>
+  
+  <!-- Hotel Info (if available) -->
+  {% if hotel %}
+    <div class="flex gap-sm mb-md pb-md border-b">
+      {% if hotel.featured_image or hotel.image_url %}
+        <img 
+          src="{{ hotel.featured_image.url|default:hotel.image_url }}" 
+          alt="{{ hotel.name }}"
+          style="width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-md);"
+        />
+      {% endif %}
+      <div style="flex: 1; min-width: 0;">
+        <div class="font-semibold truncate">{{ hotel.name }}</div>
+        <div class="text-sm text-secondary">{{ hotel.city }}</div>
+      </div>
+    </div>
+  {% endif %}
+  
+  <!-- Booking Details -->
+  <div class="mb-md pb-md border-b">
+    {% if check_in and check_out %}
+      <div class="price-summary-row">
+        <span class="price-summary-label text-sm">Check-in</span>
+        <span class="price-summary-value text-sm">{{ check_in|date:"d M, Y" }}</span>
+      </div>
+      <div class="price-summary-row">
+        <span class="price-summary-label text-sm">Check-out</span>
+        <span class="price-summary-value text-sm">{{ check_out|date:"d M, Y" }}</span>
+      </div>
+    {% endif %}
+    
+    {% if nights %}
+      <div class="price-summary-row">
+        <span class="price-summary-label text-sm">Nights</span>
+        <span class="price-summary-value text-sm">{{ nights }}</span>
+      </div>
+    {% endif %}
+    
+    {% if guests %}
+      <div class="price-summary-row">
+        <span class="price-summary-label text-sm">Guests</span>
+        <span class="price-summary-value text-sm">{{ guests.adults }} Adult{% if guests.adults != 1 %}s{% endif %}{% if guests.children %}, {{ guests.children }} Child{% if guests.children != 1 %}ren{% endif %}{% endif %}</span>
+      </div>
+    {% endif %}
+    
+    {% if rooms %}
+      <div class="price-summary-row">
+        <span class="price-summary-label text-sm">Rooms</span>
+        <span class="price-summary-value text-sm">{{ rooms }}</span>
+      </div>
+    {% endif %}
+  </div>
+  
+  <!-- Price Breakdown -->
+  <div class="mb-md">
+    {% if price_breakdown %}
+      {% if price_breakdown.room_charges %}
+        <div class="price-summary-row">
+          <span class="price-summary-label">Room Charges</span>
+          <span class="price-summary-value">₹{{ price_breakdown.room_charges|floatformat:2 }}</span>
+        </div>
+      {% endif %}
+      
+      {% if price_breakdown.service_fee %}
+        <div class="price-summary-row">
+          <span class="price-summary-label">
+            Service Fee
+          </span>
+          <span class="price-summary-value">₹{{ price_breakdown.service_fee|floatformat:2 }}</span>
+        </div>
+      {% endif %}
+      
+      {% if price_breakdown.gst %}
+        <div class="price-summary-row">
+          <span class="price-summary-label">
+            GST
+          </span>
+          <span class="price-summary-value">₹{{ price_breakdown.gst|floatformat:2 }}</span>
+        </div>
+      {% endif %}
+      
+      {% if price_breakdown.discount %}
+        <div class="price-summary-row">
+          <span class="price-summary-label text-success">Discount</span>
+          <span class="price-summary-value text-success">-₹{{ price_breakdown.discount|floatformat:2 }}</span>
+        </div>
+      {% endif %}
+    {% else %}
+      <!-- Fallback if no breakdown provided -->
+      <div class="price-summary-row">
+        <span class="price-summary-label">Subtotal</span>
+        <span class="price-summary-value">₹{{ subtotal|default:0|floatformat:2 }}</span>
+      </div>
+    {% endif %}
+  </div>
+  
+  <!-- Total -->
+  <div class="price-summary-row total">
+    <span class="price-summary-label">Total Amount</span>
+    <span class="price-summary-value">₹{{ total_amount|default:0|floatformat:2 }}</span>
+  </div>
+  
+  <!-- Action Button -->
+  {% if show_cta %}
+    <button 
+      type="submit" 
+      class="btn btn-primary btn-block btn-lg mt-md"
+      {% if cta_disabled %}disabled{% endif %}
+    >
+      {{ cta_text|default:"Proceed to Book" }}
+    </button>
+  {% endif %}
+  
+  <!-- Additional Info -->
+  {% if show_cancellation_info %}
+    <div class="alert alert-info mt-md" style="padding: var(--space-sm);">
+      <div class="text-xs text-center">
+        ✓ Free cancellation available
+      </div>
+    </div>
+  {% endif %}
+</div>

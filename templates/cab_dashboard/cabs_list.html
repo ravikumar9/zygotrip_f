@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <h1 class="mb-4">Your Cabs</h1>
+    {% if cabs %}
+      <div class="grid grid-cols-1 gap-4">
+        {% for cab in cabs %}
+          <div class="card">
+            <h3 class="card-title">{{ cab.vehicle_type }} - {{ cab.cab_type }}</h3>
+            <p class="">{{ cab.from_location }} to {{ cab.to_location }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card text-center p-6">
+        <p class="">No cabs available.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

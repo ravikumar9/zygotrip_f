@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="d-flex justify-between align-center mb-6">
+      <div>
+        <h1>Bus Fleet Dashboard</h1>
+        <p class="text-sm">{{ request.user.email|cut:"@test.com" }}</p>
+      </div>
+      <a href="/vendor/bus/create/" class="btn btn-primary" role="button">Add Bus</a>
+    </div>
+
+    {% if buses %}
+      <div class="card">
+        <h2 class="mb-4">Your Buses</h2>
+        <div class="grid grid-cols-1 gap-4">
+          {% for bus in buses %}
+            <div class="card">
+              <h3 class="card-title">{{ bus.registration_number }}</h3>
+              <p class="">{{ bus.from_city }} to {{ bus.to_city }}</p>
+              <p class="">Seats: {{ bus.available_seats }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class="card text-center p-6">
+        <p class="">No buses created yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

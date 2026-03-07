@@ -1,0 +1,56 @@
+<div class="hotel-accordion" data-accordion>
+  <div class="hotel-accordion__item">
+    <button class="hotel-accordion__trigger" type="button" data-accordion-trigger>
+      <span>Check-in rules</span>
+      <span class="hotel-accordion__icon" aria-hidden="true">+</span>
+    </button>
+    <div class="hotel-accordion__content" data-accordion-content>
+      <p>Check-in after 14:00 and check-out by 11:00. Government-issued photo ID is required at check-in.</p>
+    </div>
+  </div>
+
+  <div class="hotel-accordion__item">
+    <button class="hotel-accordion__trigger" type="button" data-accordion-trigger>
+      <span>Cancellation</span>
+      <span class="hotel-accordion__icon" aria-hidden="true">+</span>
+    </button>
+    <div class="hotel-accordion__content" data-accordion-content>
+      {% if property.has_free_cancellation %}
+        <p>Free cancellation up to {{ property.cancellation_hours }} hours before check-in.</p>
+      {% else %}
+        <p>Non-refundable booking. Please review before confirming.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="hotel-accordion__item">
+    <button class="hotel-accordion__trigger" type="button" data-accordion-trigger>
+      <span>Child policy</span>
+      <span class="hotel-accordion__icon" aria-hidden="true">+</span>
+    </button>
+    <div class="hotel-accordion__content" data-accordion-content>
+      <p>Children are welcome. Extra bedding is available on request.</p>
+    </div>
+  </div>
+
+  <div class="hotel-accordion__item">
+    <button class="hotel-accordion__trigger" type="button" data-accordion-trigger>
+      <span>Payment</span>
+      <span class="hotel-accordion__icon" aria-hidden="true">+</span>
+    </button>
+    <div class="hotel-accordion__content" data-accordion-content>
+      <p>Secure online payment is supported. Pay at hotel may be available for select rooms.</p>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+

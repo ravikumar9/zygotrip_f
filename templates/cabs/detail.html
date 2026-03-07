@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="mb-8">
+      <a href="{% url 'cabs:list' %}" >← Back to Cabs</a>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8">
+      <!-- Images -->
+      <div>
+        {% for image in images %}
+          {% if image.is_primary or forloop.first %}
+            <div class="card mb-4">
+              <div class="w-full rounded overflow-hidden" >
+                {% if image.image_url %}
+                  <img src="{{ image.image_url }}" alt="{{ cab.name }}" class="w-full h-full" onerror="this.onerror=null;this.src='{% static 'img/placeholder-card.svg' %}';" />
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+        {% empty %}
+          <div class="card mb-4">
+            <div class="w-full rounded" ></div>
+          </div>
+        {% endfor %}
+        
+        <!-- Thumbnail Gallery -->
+        {% if images.count > 0 %}
+          <div class="d-flex gap-2 overflow-x-auto p-2">
+            {% for image in images %}
+              <div class="rounded overflow-hidden border" >
+                {% if image.image_url %}
+                  <img src="{{ image.image_url }}" alt="Thumb" class="w-full h-full" onerror="this.onerror=null;this.src='{% static 'img/placeholder-card.svg' %}';" />
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Details -->
+      <div>
+        <div class="card p-6">
+          <div class="d-flex justify-between mb-4 align-start" >
+            <div>
+              <h1 class="card-title">{{ cab.name }}</h1>
+              <p class="card-meta">📍 {{ cab.get_city_display }} • {{ cab.get_fuel_type_display }}</p>
+            </div>
+            <span class="badge badge-success">Active</span>
+          </div>
+
+          <div class="p-4 rounded mb-6" >
+            <div class="d-flex justify-between align-center">
+              <div>
+                <p class="mb-1 text-sm" >Rate per km</p>
+                <strong class="text-2xl" >₹{{ cab.system_price_per_km }}</strong>
+              </div>
+              <div>
+                <p class="mb-1 text-sm" >Base Fare</p>
+                <strong class="text-xl">₹50</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Specs -->
+          <div class="mb-6">
+            <h3 class="mb-3 font-semibold">Specifications</h3>
+            <div class="d-grid gap-4" >
+              <div>
+                <p class="text-sm" >Seats</p>
+                <p class="font-semibold">{{ cab.get_seats_display }}</p>
+              </div>
+              <div>
+                <p class="text-sm" >Fuel Type</p>
+                <p class="font-semibold">{{ cab.get_fuel_type_display }}</p>
+              </div>
+              <div>
+                <p class="text-sm" >Owner Price</p>
+                <p class="font-semibold">₹{{ cab.base_price_per_km }}/km</p>
+              </div>
+              <div>
+                <p class="text-sm" >Platform Margin</p>
+                <p class="font-semibold">₹{{ cab.system_price_per_km|add:"-"|add:cab.base_price_per_km }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Availability -->
+          {% if availability %}
+            <div class="mb-6">
+              <h3 class="mb-3 font-semibold">Availability (Next 30 Days)</h3>
+              <div class="d-grid gap-2" >
+                {% for slot in availability %}
+                  <div class="p-2 border rounded text-center" >
+                    <p class="m-1 text-xs">{{ slot.date|date:"d" }}</p>
+                    <p class="text-xs" >{{ slot.date|date:"M" }}</p>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- CTA -->
+          {% if user.is_authenticated %}
+            <a href="/cabs/{{ cab.id }}/book/" class="button button-primary button-block p-4">Book Now</a>
+          {% else %}
+            <a href="/accounts/login/?next=/cabs/{{ cab.id }}/book/" class="button button-secondary button-block p-4">Login to Book</a>
+            <p class="text-center mb-2" >
+              Login to book this cab
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,38 @@
+<header class="ui-navbar">
+  <div class="ui-navbar__inner">
+    <a class="ui-brand" href="/">Zygotrip</a>
+
+    <nav class="ui-nav">
+      <a href="/hotels/">Hotels</a>
+      <a href="/buses/">Buses</a>
+      <a href="/cabs/">Cabs</a>
+      <a href="/packages/">Packages</a>
+      <a href="/flights/">Flights</a>
+      <a href="/trains/">Trains</a>
+    </nav>
+
+    <div class="ui-actions">
+      {% if user.is_authenticated %}
+        <span class="ui-user">{{ user.full_name|default:user.email }}</span>
+        {% if user.is_staff %}
+          <a href="/admin/" class="ui-button ui-button--ghost ui-button--sm">Admin</a>
+        {% endif %}
+        <a href="{% url 'account_logout' %}" class="ui-button ui-button--primary ui-button--sm">Logout</a>
+      {% else %}
+        <a href="{% url 'account_login' %}" class="ui-button ui-button--ghost ui-button--sm">Login</a>
+        <a href="{% url 'account_register' %}" class="ui-button ui-button--primary ui-button--sm">Register</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+
+
+
+
+
+
+
+
+
+

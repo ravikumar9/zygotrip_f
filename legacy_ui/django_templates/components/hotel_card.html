@@ -1,0 +1,39 @@
+<div class="hotel-card" data-hotel-card>
+  {% if hotel.image_url %}
+    <img src="{{ hotel.image_url }}" alt="{{ hotel.name }}" class="hotel-card-image">
+  {% else %}
+    <div class="hotel-card-image flex-center icon-placeholder">🏨</div>
+  {% endif %}
+  
+  <div class="hotel-card-body">
+    <h3 class="hotel-card-title">{{ hotel.name }}</h3>
+    <p class="hotel-card-location">📍 {{ hotel.city }}{% if hotel.area %}, {{ hotel.area }}{% endif %}</p>
+    
+    {% if hotel.rating_value %}
+      <div class="mb-4">
+        <span class="badge badge-primary">⭐ {{ hotel.rating_value }}</span>
+        {% if hotel.review_count %}
+          <span class="text-small text-muted"> ({{ hotel.review_count }} reviews)</span>
+        {% endif %}
+      </div>
+    {% endif %}
+    
+    <div class="hotel-card-price">
+      ₹{{ hotel.price_current|floatformat:0 }}
+      <span class="text-small text-muted">/night</span>
+      {% if hotel.discount_percent %}
+        <div class="text-small text-muted mt-1">
+          <span class="text-strikethrough">₹{{ hotel.price_original|floatformat:0 }}</span>
+          <span class="badge badge-primary ml-2">{{ hotel.discount_percent }}% OFF</span>
+        </div>
+      {% endif %}
+    </div>
+    
+    <div class="hotel-card-footer">
+      <a href="{{ hotel.cta_url }}" class="btn btn-primary w-full">{{ hotel.cta_label|default:"View Details" }}</a>
+    </div>
+  </div>
+</div>
+
+
+

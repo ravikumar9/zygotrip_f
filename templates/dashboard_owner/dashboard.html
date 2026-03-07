@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Property Dashboard | Zygotrip{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+
+    <!-- Dashboard Header Banner -->
+    <div class="owner-dashboard-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
+        <div>
+          <h1>🏨 Property Dashboard</h1>
+          <p>Manage your listings, rooms, and bookings in one place</p>
+        </div>
+        <a href="/owner/dashboard/properties/add/" class="button button-accent button-lg">
+          + Add Property
+        </a>
+      </div>
+      <!-- Quick Stats -->
+      <div style="display:flex;gap:16px;margin-top:24px;flex-wrap:wrap;">
+        <div class="stat-badge">
+          <div class="stat-num">{{ properties|length }}</div>
+          <div class="stat-lbl">Properties</div>
+        </div>
+        <div class="stat-badge">
+          <div class="stat-num">
+            {% with total=0 %}
+              {% for p in properties %}{% with total=total|add:p.room_types.count %}{% endwith %}{% endfor %}
+              {{ properties|length }}
+            {% endwith %}
+          </div>
+          <div class="stat-lbl">Listings Active</div>
+        </div>
+        <div class="stat-badge">
+          <div class="stat-num">🟢</div>
+          <div class="stat-lbl">Online</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% if messages %}
+    <div style="margin-bottom:20px;">
+      {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% else %}success{% endif %}" style="border-radius:12px;margin-bottom:8px;">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Properties Grid -->
+    {% if properties %}
+      {% for property in properties %}
+      <div class="property-card">
+
+        <!-- Card Header -->
+        <div class="property-card-header">
+          <div style="flex:1;">
+            <h3 class="property-name">{{ property.name }}</h3>
+            <p class="property-meta">📍 {{ property.city }}{% if property.country %}, {{ property.country }}{% endif %}{% if property.area %} · {{ property.area }}{% endif %}</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+            {% if property.approval.status == 'approved' %}
+              <span class="badge badge-success" style="font-size:12px;padding:6px 14px;border-radius:20px;">✅ Live</span>
+            {% elif property.approval.status == 'pending' %}
+              <span class="badge badge-warning" style="font-size:12px;padding:6px 14px;border-radius:20px;">🕐 Under Review</span>
+            {% elif property.approval.status == 'rejected' %}
+              <span class="badge badge-danger" style="font-size:12px;padding:6px 14px;border-radius:20px;">❌ Rejected</span>
+            {% else %}
+              <span class="badge" style="font-size:12px;padding:6px 14px;border-radius:20px;background:#f3f4f6;color:#6b7280;">Draft</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="property-card-body">
+
+          {% if property.description %}
+          <p style="color:#6b7280;font-size:14px;margin:0 0 20px;line-height:1.6;">{{ property.description|truncatewords:35 }}</p>
+          {% endif %}
+
+          <!-- Room Types -->
+          {% if property.room_types.all %}
+            <div style="margin-bottom:4px;">
+              <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin:0 0 12px;">Room Types ({{ property.room_types.count }})</p>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">
+                {% for room in property.room_types.all %}
+                <div class="room-type-pill">
+                  <div>
+                    <div class="room-name">{{ room.name }}</div>
+                    <div style="font-size:11px;color:#9ca3af;">Max {{ room.max_guests }} guests</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="room-price">₹{{ room.base_price }}/night</div>
+                    <a href="/owner/dashboard/rooms/{{ room.id }}/price/" class="action-btn action-btn-secondary" style="font-size:11px;padding:4px 10px;margin-top:4px;">Edit</a>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <div style="background:#fffbf5;border:1px dashed #fcd09a;border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:20px;">🛏️</span>
+              <div>
+                <p style="margin:0;font-size:13px;font-weight:600;color:#92400e;">No Room Types Yet</p>
+                <p style="margin:2px 0 0;font-size:12px;color:#b45309;">Add a room type to enable bookings for this property</p>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Card Footer Actions -->
+        <div class="property-card-footer">
+          <a href="/owner/dashboard/properties/{{ property.id }}/rooms/add/" class="action-btn action-btn-secondary">
+            🛏️ Add Room Type
+          </a>
+          <a href="/owner/dashboard/properties/{{ property.id }}/meals/add/" class="action-btn action-btn-secondary">
+            🍽️ Add Meal Plan
+          </a>
+          <a href="/owner/dashboard/properties/{{ property.id }}/submit/" class="action-btn action-btn-primary">
+            📋 Submit for Approval
+          </a>
+        </div>
+
+      </div>
+      {% endfor %}
+
+    {% else %}
+      <!-- Empty State -->
+      <div style="text-align:center;padding:64px 32px;background:#fff;border-radius:16px;border:2px dashed #e5e7eb;">
+        <div style="font-size:56px;margin-bottom:16px;">🏨</div>
+        <h3 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;">No Properties Yet</h3>
+        <p style="color:#6b7280;font-size:15px;margin:0 0 28px;max-width:400px;margin-left:auto;margin-right:auto;">
+          Get started by creating your first property listing. It only takes a few minutes!
+        </p>
+        <a href="/owner/dashboard/properties/add/" class="button button-accent button-lg">
+          🏨 Create First Property
+        </a>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+

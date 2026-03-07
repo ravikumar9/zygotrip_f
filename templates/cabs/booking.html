@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div >
+      <h1 class="mb-8">Book {{ cab.name }}</h1>
+
+      <form method="post" class="card p-6">
+        {% csrf_token %}
+
+        <!-- Messages -->
+        {% if messages %}
+          {% for message in messages %}
+            <div class="mb-4 p-3 rounded" >
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <!-- Cab Summary -->
+        <div class="p-4 rounded mb-6" >
+          <p class="mb-1 text-sm" >Cab</p>
+          <h3 class="mb-2">{{ cab.name }}</h3>
+          <div class="d-flex justify-between text-sm">
+            <span>Rate: ₹{{ cab.system_price_per_km }}/km + ₹50 base</span>
+          </div>
+        </div>
+
+        <!-- Form Fields -->
+        <div class="form-group">
+          <label>Distance (km)</label>
+          <input type="number" name="distance_km" step="0.1" min="1" class="form-control" placeholder="Enter distance in km" required />
+          {% if form.distance_km.errors %}
+            <p class="text-sm" >{{ form.distance_km.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Best Coupon Suggestion -->
+        {% if best_coupon %}
+          <div class="p-4 rounded m-4" >
+            <p class="mb-1 text-sm">✨ Best Deal Available</p>
+            <h3 class="mb-1" >Save {{ best_coupon.value }}{% if best_coupon.discount_type == 'percent' %}%{% else %}₹{% endif %}</h3>
+            <p class="text-sm">Code: <strong>{{ best_coupon.code }}</strong></p>
+          </div>
+        {% endif %}
+
+        <!-- Coupon Input -->
+        <div class="form-group">
+          <label>Coupon Code (Optional)</label>
+          <input type="text" name="promo_code" class="form-control" placeholder="Enter promo code e.g., SAVE20" />
+          {% if form.promo_code.errors %}
+            <p class="text-sm" >{{ form.promo_code.errors.0 }}</p>
+          {% endif %}
+          <p class="mt-1 text-xs" >{% if best_coupon %}Use code <strong>{{ best_coupon.code }}</strong>{% else %}Have a promo code? Enter it here.{% endif %}</p>
+        </div>
+
+        <!-- Pricing Preview (JS will update this) -->
+        <div class="p-4 rounded m-6" >
+          <div class="d-flex justify-between mb-2">
+            <span>Base Fare:</span>
+            <span>₹50</span>
+          </div>
+          <div class="d-flex justify-between mb-2">
+            <span>Distance (0 km × ₹{{ cab.system_price_per_km }}):</span>
+            <span id="distance-cost">₹0</span>
+          </div>
+          <div class="d-flex justify-between mb-2 pt-2 border-top">
+            <span>Subtotal:</span>
+            <span id="subtotal">₹50</span>
+          </div>
+          <div class="d-flex justify-between" >
+            <span>Discount:</span>
+            <span id="discount">₹0</span>
+          </div>
+          <div class="d-flex justify-between mt-2 pt-2 font-semibold text-lg border-top">
+            <span>Total:</span>
+            <span id="total">₹50</span>
+          </div>
+        </div>
+
+        <button type="submit" class="button button-primary button-block p-4 mb-3">Confirm Booking</button>
+        <a href="{% url 'cabs:detail' cab.id %}" class="button button-secondary button-block">Cancel</a>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+  const ratePerKm = parseFloat('{{ cab.system_price_per_km }}');
+  const baseFare = 50;
+  let bestCouponCode = '{{ best_coupon.code|default:"" }}';
+  let bestCouponValue = parseFloat('{{ best_coupon.value|default:"0" }}');
+  let bestCouponType = '{{ best_coupon.discount_type|default:"" }}';
+  let bestCouponMaxDiscount = parseFloat('{{ best_coupon.max_discount|default:"0" }}');
+
+  function updatePricing() {
+    const distance = parseFloat(document.querySelector('input[name="distance_km"]').value) || 0;
+    const distanceCost = distance * ratePerKm;
+    const subtotal = baseFare + distanceCost;
+    
+    let discount = 0;
+    const promo = document.querySelector('input[name="promo_code"]').value.trim().toUpperCase();
+    
+    if (promo && promo === bestCouponCode) {
+      if (bestCouponType === 'percent') {
+        discount = (subtotal * bestCouponValue) / 100;
+      } else {
+        discount = bestCouponValue;
+      }
+      if (bestCouponMaxDiscount > 0) {
+        discount = Math.min(discount, bestCouponMaxDiscount);
+      }
+    }
+
+    const total = subtotal - discount;
+
+    document.getElementById('distance-cost').textContent = '₹' + distanceCost.toFixed(2);
+    document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
+    document.getElementById('discount').textContent = '-₹' + discount.toFixed(2);
+    document.getElementById('total').textContent = '₹' + total.toFixed(2);
+  }
+
+  document.querySelector('input[name="distance_km"]').addEventListener('change', updatePricing);
+  document.querySelector('input[name="distance_km"]').addEventListener('keyup', updatePricing);
+  document.querySelector('input[name="promo_code"]').addEventListener('keyup', updatePricing);
+  
+  updatePricing();
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

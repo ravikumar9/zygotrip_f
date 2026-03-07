@@ -1,0 +1,30 @@
+{
+  "name": "zygotrip",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tailwind:build": "node build-tailwind.js",
+    "tailwind:watch": "node build-tailwind.js --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ravikumar9/zygotrip.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ravikumar9/zygotrip/issues"
+  },
+  "homepage": "https://github.com/ravikumar9/zygotrip#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@tailwindcss/postcss": "^4.1.18",
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19"
+  }
+}

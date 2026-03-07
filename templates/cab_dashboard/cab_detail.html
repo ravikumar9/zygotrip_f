@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="card">
+      <h1 class="mb-4">Cab Details</h1>
+      <p><strong>Vehicle Type:</strong> {{ cab.vehicle_type }}</p>
+      <p><strong>Cab Type:</strong> {{ cab.cab_type }}</p>
+      <p><strong>Route:</strong> {{ cab.from_location }} to {{ cab.to_location }}</p>
+      <p><strong>Base Fare:</strong> ₹{{ cab.base_fare }}</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

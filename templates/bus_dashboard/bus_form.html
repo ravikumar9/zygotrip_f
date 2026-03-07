@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container auth-container">
+    <div class="card auth-card">
+      <h1 class="mb-4">Add Bus</h1>
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-4">
+          <label class="auth-label">Bus Number</label>
+          <input type="text" name="bus_number" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Bus Type</label>
+          <select name="bus_type" required>
+            <option value="">Select type</option>
+            <option value="ac">AC</option>
+            <option value="sleeper">Sleeper</option>
+            <option value="semi_sleeper">Semi Sleeper</option>
+            <option value="seater">Seater</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Total Seats</label>
+          <input type="number" name="total_seats" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Route</label>
+          <input type="text" name="route" placeholder="City A to City B" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Registration Number</label>
+          <input type="text" name="registration_number" />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Operator Name</label>
+          <input type="text" name="operator_name" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">From City</label>
+          <input type="text" name="from_city" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">To City</label>
+          <input type="text" name="to_city" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Departure Time</label>
+          <input type="time" name="departure_time" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Arrival Time</label>
+          <input type="time" name="arrival_time" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Price Per Seat</label>
+          <input type="number" step="0.01" name="price_per_seat" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Available Seats</label>
+          <input type="number" name="available_seats" required />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Amenities</label>
+          <input type="text" name="amenities" />
+        </div>
+        <div class="mb-4">
+          <label class="auth-label">Bus Type ID</label>
+          <input type="number" name="bus_type_id" />
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Create Bus</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

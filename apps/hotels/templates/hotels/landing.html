@@ -1,0 +1,799 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Hotels - Zygotrip{% endblock %}
+
+{% block extra_css %}
+<style>
+  .hotel-hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 5rem 1rem;
+    text-align: center;
+  }
+
+  .hotel-hero h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+
+  .hotel-hero p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+  }
+
+  .hotel-search-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 900px;
+    margin: -3rem auto 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    position: relative;
+    z-index: 10;
+  }
+
+  .search-form {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
+    gap: 1rem;
+    align-items: flex-end;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .form-group input, .form-group select {
+    padding: 0.7rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .autosuggest {
+    position: relative;
+  }
+
+  .autosuggest-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-top: 0.25rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    z-index: 30;
+    max-height: 320px;
+    overflow-y: auto;
+    display: none;
+    width: 100%;
+    min-width: 280px;
+  }
+
+  .autosuggest-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #111827;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .autosuggest-item:last-child {
+    border-bottom: none;
+  }
+
+  .autosuggest-item:hover {
+    background: #f9fafb;
+  }
+
+  .autosuggest-label {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  .autosuggest-count {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin-left: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .search-btn {
+    padding: 0.7rem 1.5rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background 0.2s ease;
+  }
+
+  .search-btn:hover {
+    background: #764ba2;
+  }
+
+  /* Content Sections */
+  .content-section {
+    padding: 3rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: #111827;
+  }
+
+  /* Recent Searches */
+  .recent-searches-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .recent-search-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .recent-search-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  }
+
+  .search-location {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.5rem;
+  }
+
+  .search-dates {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+  }
+
+  .search-guests {
+    font-size: 0.85rem;
+    color: #9ca3af;
+  }
+
+  /* Offers Grid */
+  .offers-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .offer-card {
+    display: block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+  }
+
+  .offer-badge-large {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.25);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .offer-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .offer-description {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+
+  .offer-code {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .offer-validity {
+    font-size: 0.8rem;
+    opacity: 0.8;
+  }
+
+  /* Daily Deals Grid */
+  .daily-deals-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .deal-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+  }
+
+  .deal-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
+  }
+
+  .deal-image {
+    height: 180px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .deal-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .deal-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    font-size: 3rem;
+  }
+
+  .deal-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #ef4444;
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .deal-info {
+    padding: 1.25rem;
+  }
+
+  .deal-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.5rem;
+  }
+
+  .deal-location {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+  }
+
+  .deal-offer-name {
+    font-size: 0.85rem;
+    color: #10b981;
+    font-weight: 500;
+  }
+
+  /* Destination Categories Section */
+  .category-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .category-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  }
+
+  .category-image {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .category-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .category-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    height: 100%;
+  }
+
+  .category-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.5));
+    display: flex;
+    align-items: flex-end;
+    padding: 1.5rem;
+  }
+
+  .category-name {
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .categories-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .features {
+    padding: 4rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .features h2 {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 3rem;
+    color: #111827;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .feature-card {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .feature-card h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #111827;
+  }
+
+  .feature-card p {
+    color: #6b7280;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 1024px) {
+    .search-form {
+      grid-template-columns: 1fr 1fr;
+    }
+    .search-btn {
+      grid-column: 1 / -1;
+    }
+    .features-grid,
+    .recent-searches-grid,
+    .offers-grid,
+    .categories-grid,
+    .daily-deals-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hotel-hero h1 {
+      font-size: 1.8rem;
+    }
+    .hotel-search-card {
+      margin: -2rem 0 0;
+      padding: 1.5rem;
+    }
+    .search-form {
+      grid-template-columns: 1fr;
+    }
+    .content-section {
+      padding: 2rem 1rem;
+    }
+    .section-title {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hotel-hero">
+  <h1>Find Your Perfect Stay</h1>
+  <p>Discover approved properties with verified agreements</p>
+</div>
+
+<!-- Search Card -->
+<div class="hotel-search-card">
+  <form method="GET" action="{% url 'hotels:listing' %}" class="search-form">
+    <!-- Location -->
+    <div class="form-group">
+      <label for="location">Location</label>
+      <div class="autosuggest">
+        <input type="text" id="location" name="location" placeholder="City or area" autocomplete="off" />
+        <div class="autosuggest-results" id="landing-location-suggestions"></div>
+      </div>
+    </div>
+    
+    <!-- Check In (ISO format) -->
+    <div class="form-group">
+      <label for="checkin">Check In</label>
+      <input type="date" id="checkin" name="checkin" required />
+    </div>
+    
+    <!-- Check Out (ISO format) -->
+    <div class="form-group">
+      <label for="checkout">Check Out</label>
+      <input type="date" id="checkout" name="checkout" required />
+    </div>
+    
+    <!-- Adults & Rooms (collapsible) -->
+    <div class="form-group">
+      <label for="adults">Adults</label>
+      <select id="adults" name="adults" required>
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4+</option>
+      </select>
+    </div>
+    
+    <!-- Children (optional) -->
+    <div class="form-group">
+      <label for="children">Children</label>
+      <select id="children" name="children">
+        <option value="0" selected>0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>
+    </div>
+    
+    <!-- Rooms -->
+    <div class="form-group">
+      <label for="rooms">Rooms</label>
+      <select id="rooms" name="rooms" required>
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4+</option>
+      </select>
+    </div>
+    
+    <button type="submit" class="search-btn">Search</button>
+  </form>
+</div>
+
+<!-- Recent Searches Section -->
+{% if recent_searches %}
+<div class="content-section">
+  <h2 class="section-title">Recent Searches</h2>
+  <div class="recent-searches-grid">
+    {% for search in recent_searches|slice:":3" %}
+    <a href="{% url 'hotels:listing' %}?location={{ search.search_text }}&checkin={{ search.checkin|date:'Y-m-d' }}&checkout={{ search.checkout|date:'Y-m-d' }}&adults={{ search.adults }}&children={{ search.children }}&rooms={{ search.rooms }}" class="recent-search-card">
+      <div class="search-location">{{ search.search_text }}</div>
+      <div class="search-dates">{{ search.checkin|date:'M d' }} – {{ search.checkout|date:'M d, Y' }}</div>
+      <div class="search-guests">{{ search.adults }} Adult{{ search.adults|pluralize }}, {{ search.children }} Child{{ search.children|pluralize }}, {{ search.rooms }} Room{{ search.rooms|pluralize }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Offers For You Section -->
+{% if offers %}
+<div class="content-section">
+  <h2 class="section-title">Offers For You</h2>
+  <div class="offers-grid">
+    {% for offer in offers %}
+    <a class="offer-card" href="{% url 'hotels:listing' %}?offer_code={{ offer.coupon_code }}">
+      <div class="offer-badge-large">{{ offer.discount_percentage|floatformat:0 }}% OFF</div>
+      <div class="offer-title">{{ offer.title }}</div>
+      <div class="offer-description">{{ offer.description }}</div>
+      <div class="offer-code">Use code: <strong>{{ offer.coupon_code }}</strong></div>
+      <div class="offer-validity">Valid till {{ offer.end_datetime|date:'M d, Y' }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Daily Deals Section -->
+{% if daily_deals %}
+<div class="content-section">
+  <h2 class="section-title">Daily Deals</h2>
+  <div class="daily-deals-grid">
+    {% for property in daily_deals %}
+    <a href="{% url 'hotels:details' %}?property={{ property.slug }}" class="deal-card">
+      <div class="deal-image">
+        {% with deal_img=property.images.first %}
+          {% if deal_img and deal_img.resolved_url %}
+            <img src="{{ deal_img.resolved_url }}" alt="{{ property.name }}" loading="lazy" />
+          {% else %}
+            <div class="deal-placeholder">🏨</div>
+          {% endif %}
+        {% endwith %}
+        {% with offer=property.offers.first.offer %}
+          <div class="deal-badge">{{ offer.discount_percentage|floatformat:0 }}% OFF</div>
+        {% endwith %}
+      </div>
+      <div class="deal-info">
+        <h3 class="deal-name">{{ property.name }}</h3>
+        <div class="deal-location">📍 {{ property.city.name }}</div>
+        {% if property.offers.first.offer %}
+          <div class="deal-offer-name">{{ property.offers.first.offer.title }}</div>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Destination Categories Section -->
+{% if destination_categories %}
+<div class="content-section">
+  <h2 class="section-title">Explore Destinations</h2>
+  <div class="categories-grid">
+    {% for category in destination_categories %}
+    <a href="{% url 'hotels:listing' %}?category={{ category.slug }}" class="category-card">
+      <div class="category-image">
+        {% if category.image and category.image.name %}
+          <img src="{{ category.image.url }}" alt="{{ category.name }}" loading="lazy" />
+        {% else %}
+          <div class="category-placeholder">
+            {% if 'beach' in category.name|lower %}🏖️
+            {% elif 'mountain' in category.name|lower %}🏔️
+            {% elif 'royal' in category.name|lower %}👑
+            {% elif 'pilgrimage' in category.name|lower %}🕉️
+            {% elif 'party' in category.name|lower %}🎉
+            {% elif 'weekend' in category.name|lower %}🌃
+            {% else %}🏨{% endif %}
+          </div>
+        {% endif %}
+        <div class="category-overlay">
+          <div class="category-name">{{ category.name }}</div>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Features Section -->
+<div class="features">
+  <h2>Why Choose Zygotrip Hotels?</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">✓</div>
+      <h3>Verified Listings</h3>
+      <p>All properties are approved by our team with verified agreements</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💰</div>
+      <h3>Best Prices</h3>
+      <p>Real pricing from properties without hidden markup</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <h3>Safe Booking</h3>
+      <p>Secure payments and backed guarantees on every booking</p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Set date defaults: today and tomorrow, disable past dates
+  document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const formatDate = (date) => date.toISOString().split('T')[0];
+    const todayStr = formatDate(today);
+    
+    const checkinInput = document.getElementById('checkin');
+    const checkoutInput = document.getElementById('checkout');
+    
+    // Set min attribute to disable past dates
+    if (checkinInput) {
+      checkinInput.min = todayStr;
+      if (!checkinInput.value) {
+        checkinInput.value = todayStr;
+      }
+    }
+    
+    if (checkoutInput) {
+      checkoutInput.min = todayStr;  // Also disable past dates for checkout
+      if (!checkoutInput.value) {
+        checkoutInput.value = formatDate(tomorrow);
+      }
+    }
+  });
+
+  function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
+  function setupAutosuggest(inputId, resultsId) {
+    const input = document.getElementById(inputId);
+    const results = document.getElementById(resultsId);
+    if (!input || !results) return;
+
+    const renderSuggestions = (data) => {
+      const items = [];
+      
+      // Add cities with property counts and coordinates
+      if (data.cities) {
+        data.cities.forEach(city => {
+          items.push({
+            label: city.display || `${city.name}, ${city.state} (${city.count} properties)`,
+            value: city.name,
+            count: city.count || 0,
+            type: 'city',
+            code: city.code,
+            latitude: city.latitude,
+            longitude: city.longitude
+          });
+        });
+      }
+      
+      // Add areas with property counts
+      if (data.areas) {
+        data.areas.forEach(area => {
+          items.push({
+            label: area.display || `${area.name}, ${area.city} (${area.count} properties)`,
+            value: area.name,
+            count: area.count || 0,
+            type: 'area'
+          });
+        });
+      }
+      
+      // Add properties
+      if (data.properties) {
+        data.properties.forEach(prop => {
+          items.push({
+            label: prop.display || `${prop.name} - ${prop.city}`,
+            value: prop.name,
+            count: null,
+            type: 'property'
+          });
+        });
+      }
+
+      results.innerHTML = '';
+      if (!items.length) {
+        results.style.display = 'none';
+        return;
+      }
+
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'autosuggest-item';
+        
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'autosuggest-label';
+        labelSpan.textContent = item.label;
+        
+        // Count is already included in label for cities/areas, so no need for separate span
+        
+        div.appendChild(labelSpan);
+        
+        div.addEventListener('click', () => {
+          input.value = item.value;
+          results.style.display = 'none';
+        });
+        results.appendChild(div);
+      });
+      results.style.display = 'block';
+    };
+
+    const fetchSuggestions = async () => {
+      const query = input.value.trim();
+      if (query.length < 2) {
+        results.style.display = 'none';
+        return;
+      }
+      try {
+        const response = await fetch(`/api/hotels/suggest/?q=${encodeURIComponent(query)}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        renderSuggestions(data);
+      } catch (err) {
+        results.style.display = 'none';
+      }
+    };
+
+    input.addEventListener('input', debounce(fetchSuggestions, 300));
+    document.addEventListener('click', (event) => {
+      if (!results.contains(event.target) && event.target !== input) {
+        results.style.display = 'none';
+      }
+    });
+  }
+
+  setupAutosuggest('location', 'landing-location-suggestions');
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="w-full max-w-2xl mx-auto">
+    <div class="card">
+      <h1 class="mb-6">Review Your Bus Booking</h1>
+      
+      <div class="p-6 rounded-lg mb-8">
+        <div class="flex justify-between mb-4">
+          <div>
+            <p class="text-xs mb-2 uppercase">From</p>
+            <p class="m-0 font-semibold text-lg">{{ booking.bus.from_city }}</p>
+          </div>
+          <div class="flex items-center">→</div>
+          <div>
+            <p class="text-xs mb-2 uppercase">To</p>
+            <p class="m-0 font-semibold text-lg">{{ booking.bus.to_city }}</p>
+          </div>
+        </div>
+        <p class="m-0">{{ booking.journey_date }} | {{ booking.bus.operator_name }}</p>
+      </div>
+
+      <div class="mb-8">
+        <h3 class="m-0 mb-4">Passengers</h3>
+        <div class="grid gap-3">
+          {% for passenger in booking.passengers.all %}
+            <div class="p-4 rounded-md border-l-4">
+              <p class="m-0 mb-2 font-semibold">{{ passenger.full_name }} · Seat {{ passenger.seat.seat_number }}</p>
+              <p class="m-0 text-sm">{{ passenger.age }} years old · {{ passenger.gender }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="p-6 rounded-lg text-center">
+        <p class="text-xs m-0 mb-2">Total Amount</p>
+        <p class="text-4xl font-bold m-0">₹{{ booking.total_amount }}</p>
+      </div>
+
+      <form method="post" class="mt-8">
+        {% csrf_token %}
+        <button type="submit" class="button button-accent w-full p-3">Proceed to Payment</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

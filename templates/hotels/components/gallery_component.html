@@ -1,0 +1,63 @@
+<section class="hotel-gallery" id="gallery">
+  <div class="container">
+    {% if property.images.all %}
+      {% with primary=property.images.first %}
+        <div class="hotel-gallery__grid">
+          <button class="hotel-gallery__main js-gallery-open" type="button" data-index="0" aria-label="Open main photo">
+            <img class="hotel-gallery__image" src="{% if primary.image %}{{ primary.image.url }}{% else %}{{ primary.image_url }}{% endif %}" alt="{{ primary.caption|default:property.name }}" loading="lazy" decoding="async" srcset="{% if primary.image %}{{ primary.image.url }}{% else %}{{ primary.image_url }}{% endif %} 1x, {% if primary.image %}{{ primary.image.url }}{% else %}{{ primary.image_url }}{% endif %} 2x" sizes="(max-width: 768px) 100vw, 60vw" />
+          </button>
+          <div class="hotel-gallery__thumbs" role="list">
+            {% for image in property.images.all|slice:"1:5" %}
+              <button class="hotel-gallery__thumb js-gallery-open" type="button" data-index="{{ forloop.counter }}" aria-label="Open photo {{ forloop.counter }}">
+                <img class="hotel-gallery__thumb-image" src="{% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %}" alt="{{ image.caption|default:property.name }}" loading="lazy" decoding="async" srcset="{% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %} 1x, {% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %} 2x" sizes="(max-width: 768px) 40vw, 20vw" />
+              </button>
+            {% endfor %}
+          </div>
+        </div>
+      {% endwith %}
+
+      <div class="hotel-gallery__carousel" data-gallery-carousel>
+        {% for image in property.images.all|slice:":6" %}
+          <button class="hotel-gallery__slide js-gallery-open" type="button" data-index="{{ forloop.counter0 }}" aria-label="Open photo {{ forloop.counter }}">
+            <img class="hotel-gallery__slide-image" src="{% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %}" alt="{{ image.caption|default:property.name }}" loading="lazy" decoding="async" srcset="{% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %} 1x, {% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %} 2x" sizes="90vw" />
+          </button>
+        {% endfor %}
+      </div>
+
+      <div class="hotel-gallery__sources" aria-hidden="true">
+        {% for image in property.images.all %}
+          <img data-gallery-item src="{% if image.image %}{{ image.image.url }}{% else %}{{ image.image_url }}{% endif %}" alt="{{ image.caption|default:property.name }}" loading="lazy" decoding="async" />
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="hotel-gallery__empty">
+        <div class="hotel-gallery__empty-title">Photos coming soon</div>
+        <div class="hotel-gallery__empty-meta">This property is updating its gallery.</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="gallery-modal" id="gallery-modal" aria-hidden="true" role="dialog" aria-label="Photo gallery">
+    <div class="gallery-modal__backdrop" data-gallery-close></div>
+    <div class="gallery-modal__panel" role="document">
+      <button class="gallery-modal__close" type="button" data-gallery-close aria-label="Close gallery">✕</button>
+      <button class="gallery-modal__nav gallery-modal__nav--prev" type="button" data-gallery-prev aria-label="Previous photo">‹</button>
+      <figure class="gallery-modal__figure">
+        <img class="gallery-modal__image" src="" alt="Gallery image" loading="lazy" decoding="async" />
+        <figcaption class="gallery-modal__caption" data-gallery-caption></figcaption>
+      </figure>
+      <button class="gallery-modal__nav gallery-modal__nav--next" type="button" data-gallery-next aria-label="Next photo">›</button>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+
+
+
+
+

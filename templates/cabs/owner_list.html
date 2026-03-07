@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="d-flex justify-between align-center mb-8">
+      <h1>My Cabs</h1>
+      <a href="{% url 'cabs:owner-add' %}" class="button button-primary">+ Add New Cab</a>
+    </div>
+
+    {% if cabs %}
+      <div class="grid lg:grid-cols-2">
+        {% for cab in cabs %}
+          <div class="card p-4">
+            <div class="d-flex justify-between mb-3 align-start" >
+              <div>
+                <h3 class="card-title m-1">{{ cab.name }}</h3>
+                <p class="card-meta m-0">{{ cab.get_city_display }}</p>
+              </div>
+              <span class="badge {% if cab.is_active %}badge-success{% else %}badge-danger{% endif %}">
+                {% if cab.is_active %}Active{% else %}Inactive{% endif %}
+              </span>
+            </div>
+
+            <div class="d-grid gap-3 m-4 p-3 border-top border-bottom" >
+              <div>
+                <p class="text-xs" >Your Price</p>
+                <p class="font-semibold">₹{{ cab.base_price_per_km }}/km</p>
+              </div>
+              <div>
+                <p class="text-xs" >System Price</p>
+                <p class="font-semibold">₹{{ cab.system_price_per_km }}/km</p>
+              </div>
+              <div>
+                <p class="text-xs" >Seats</p>
+                <p class="font-semibold">{{ cab.get_seats_display }}</p>
+              </div>
+              <div>
+                <p class="text-xs" >Fuel</p>
+                <p class="font-semibold">{{ cab.get_fuel_type_display }}</p>
+              </div>
+            </div>
+
+            <div class="d-flex justify-between gap-2 mt-4">
+              <a href="{% url 'cabs:owner-edit' cab.id %}" class="button button-secondary" >Edit</a>
+              <a href="{% url 'cabs:owner-delete' cab.id %}" class="button button-danger" >Delete</a>
+            </div>
+
+            <p class="mt-2 mb-0 text-xs" >
+              📊 {{ cab.bookings.count }} bookings • Registered {{ cab.created_at|date:"M d, Y" }}
+            </p>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state p-12">
+        <div class="empty-state-icon">🚗</div>
+        <h3 class="empty-state-title">No Cabs Yet</h3>
+        <p class="empty-state-text">Register your first cab to start accepting rides</p>
+        <a href="{% url 'cabs:owner-add' %}" class="button button-primary">Add Your First Cab</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

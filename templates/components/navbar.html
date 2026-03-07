@@ -1,0 +1,71 @@
+{% load static %}
+
+<nav class="navbar">
+  <div class="container">
+    <div class="navbar-container">
+      <!-- Brand -->
+      <a href="{% url 'core:home' %}" class="navbar-brand">
+        ✈️ Zygotrip
+      </a>
+      
+      <!-- Navigation Links -->
+      <ul class="navbar-nav hidden-mobile">
+        <li>
+          <a href="{% url 'core:home' %}" {% if request.path == '/' %}class="active"{% endif %}>
+            Home
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'hotels:home' %}" {% if '/hotels/' in request.path %}class="active"{% endif %}>
+            Hotels
+          </a>
+        </li>
+        <li>
+          <a href="/buses/" {% if '/buses/' in request.path %}class="active"{% endif %}>
+            Buses
+          </a>
+        </li>
+        <li>
+          <a href="/cabs/" {% if '/cabs/' in request.path %}class="active"{% endif %}>
+            Cabs
+          </a>
+        </li>
+        <li>
+          <a href="/packages/" {% if '/packages/' in request.path %}class="active"{% endif %}>
+            Packages
+          </a>
+        </li>
+      </ul>
+      
+      <!-- User Actions -->
+      <div class="flex items-center gap-sm">
+        {% if user.is_authenticated %}
+          <div class="dropdown">
+            <button class="btn btn-ghost dropdown-trigger" id="userDropdown">
+              <span>{{ user.full_name|default:user.email|truncatechars:20 }}</span>
+              <span>▼</span>
+            </button>
+            <div class="dropdown-menu">
+              <a href="/dashboard/" class="dropdown-item">My Bookings</a>
+              <a href="/profile/" class="dropdown-item">Profile</a>
+              {% if user.is_staff %}
+                <div class="dropdown-divider"></div>
+                <a href="/admin/" class="dropdown-item">Admin Panel</a>
+              {% endif %}
+              <div class="dropdown-divider"></div>
+              <a href="{% url 'account_logout' %}" class="dropdown-item">Logout</a>
+            </div>
+          </div>
+        {% else %}
+          <a href="{% url 'account_login' %}" class="btn btn-ghost">Login</a>
+          <a href="{% url 'account_register' %}" class="btn btn-primary btn-sm">Sign Up</a>
+        {% endif %}
+      </div>
+      
+      <!-- Mobile Menu Button -->
+      <button class="btn btn-ghost visible-mobile" id="mobileMenuToggle">
+        ☰
+      </button>
+    </div>
+  </div>
+</nav>

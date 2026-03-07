@@ -1,0 +1,198 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: zygotrip_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 640M
+    networks:
+      - zygotrip_network
+
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: zygotrip_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zygotrip_db}
+      POSTGRES_USER: ${POSTGRES_USER:-zygotrip_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zygotrip_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zygotrip_user}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - zygotrip_network
+
+
+  web:
+    build: .
+    container_name: zygotrip_web
+    restart: unless-stopped
+    command: >
+      sh -c "
+      python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
+      gunicorn zygotrip_project.wsgi:application --config deployment/gunicorn.conf.py
+      "
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - static_files:/app/staticfiles
+      - media_files:/app/media
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: zygotrip_project.settings
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      REDIS_HOST: redis
+      USE_REDIS_CACHE: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - zygotrip_network
+
+
+  celery_worker:
+    build: .
+    container_name: zygotrip_celery_worker
+    restart: unless-stopped
+    command: celery -A zygotrip_project worker -l info --concurrency=4 -Q default,bookings,payments
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: zygotrip_project.settings
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      REDIS_HOST: redis
+      USE_REDIS_CACHE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A zygotrip_project inspect ping --timeout 5 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    networks:
+      - zygotrip_network
+
+
+  celery_beat:
+    build: .
+    container_name: zygotrip_celery_beat
+    restart: unless-stopped
+    command: celery -A zygotrip_project beat -l info --pidfile=/tmp/celerybeat.pid
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: zygotrip_project.settings
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      REDIS_HOST: redis
+      USE_REDIS_CACHE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - zygotrip_network
+
+
+  # ── Celery Flower (monitoring dashboard) ───────────────────────────
+  flower:
+    build: .
+    container_name: zygotrip_flower
+    restart: unless-stopped
+    command: celery -A zygotrip_project flower --port=5555 --broker_api=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: zygotrip_project.settings
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - zygotrip_network
+
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_files:
+  media_files:
+
+
+networks:
+  zygotrip_network:
+    driver: bridge

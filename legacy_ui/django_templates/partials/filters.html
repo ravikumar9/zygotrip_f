@@ -1,0 +1,93 @@
+{# PHASE 6: Sticky filter sidebar with Tailwind styling #}
+<form method="get" class="hotels-filters filters sticky top-24 rounded-lg border p-6 space-y-6">
+  <h3 class="text-lg font-semibold">Filters</h3>
+  
+  <!-- Location Filter -->
+  <div>
+    <details open class="space-y-3">
+      <summary class="font-medium cursor-pointer">📍 Location</summary>
+      <div class="filters-group space-y-2 pt-3">
+        {% for city in filters.city_options %}
+          <label class="filters-option flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="city" value="{{ city.name }}" {% if filters.selected_cities and city.name in filters.selected_cities %}checked{% endif %} class="w-4 h-4 rounded" />
+          <span class="">{{ city.name|title }} ({{ city.count }})</span>
+          </label>
+        {% endfor %}
+      </div>
+    </details>
+  </div>
+  
+  <!-- Price Range Filter -->
+  <div>
+    <details open class="space-y-3">
+      <summary class="font-medium cursor-pointer">💰 Price Range</summary>
+      <div class="pt-3 space-y-3">
+        <input type="hidden" name="min_price" value="{{ filters.min_price|default:'0' }}" />
+        <input type="range" min="0" max="20000" value="{{ filters.max_price|default:'20000' }}" name="max_price" class="filter-input w-full" />
+        <div class="filters-range text-sm">₹0 - ₹{{ filters.max_price|default:'20000' }}</div>
+      </div>
+    </details>
+  </div>
+  
+  <!-- Rating Filter -->
+  <div>
+    <details open class="space-y-3">
+      <summary class="font-medium cursor-pointer">⭐ Rating</summary>
+      <div class="filters-group space-y-2 pt-3">
+        {% for rating in filters.rating_options %}
+          <label class="filters-option flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="rating" value="{{ rating }}" {% if filters.selected_ratings and rating in filters.selected_ratings %}checked{% endif %} class="w-4 h-4 rounded" />
+            <span class="">{{ rating }}+</span>
+          </label>
+        {% endfor %}
+      </div>
+    </details>
+  </div>
+  
+  <!-- Amenities Filter -->
+  <div>
+    <details open class="space-y-3">
+      <summary class="font-medium cursor-pointer">🏠 Amenities</summary>
+      <div class="filters-group space-y-2 pt-3">
+        {% for amenity in filters.amenity_options %}
+          <label class="filters-option flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="amenities" value="{{ amenity }}" {% if filters.selected_amenities and amenity in filters.selected_amenities %}checked{% endif %} class="w-4 h-4 rounded" />
+            <span class="">{{ amenity|title }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </details>
+  </div>
+  
+  <!-- Action Buttons -->
+  <div class="space-y-2 pt-4">
+    <button type="submit" class="button button-primary w-full font-medium py-2 px-4 rounded-lg transition">
+      ✓ Apply Filters
+    </button>
+    <a href="{% url 'hotels:listing' %}" class="button button-secondary w-full block text-center font-medium py-2 px-4 rounded-lg transition">
+      ↻ Reset Filters
+    </a>
+  </div>
+</form>
+<script>
+  const filterForm = document.querySelector('.hotels-filters');
+  if (filterForm) {
+    filterForm.addEventListener('change', function (event) {
+      const target = event.target;
+      if (target && (target.matches('input') || target.matches('select'))) {
+        filterForm.submit();
+      }
+    });
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+

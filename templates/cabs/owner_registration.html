@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div >
+      <h1 class="mb-2">Register New Cab</h1>
+      <p class="mb-8" >Add your cab to our platform</p>
+
+      <form method="post" class="card p-6">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="p-3 rounded mb-4" >
+            {{ form.non_field_errors.0 }}
+          </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label>Cab Name</label>
+          {{ form.name }}
+          {% if form.name.errors %}
+            <p class="text-sm" >{{ form.name.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>City</label>
+          {{ form.city }}
+          {% if form.city.errors %}
+            <p class="text-sm" >{{ form.city.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Number of Seats</label>
+          {{ form.seats }}
+          {% if form.seats.errors %}
+            <p class="text-sm" >{{ form.seats.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Fuel Type</label>
+          {{ form.fuel_type }}
+          {% if form.fuel_type.errors %}
+            <p class="text-sm" >{{ form.fuel_type.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Price per km (₹)</label>
+          {{ form.base_price_per_km }}
+          {% if form.base_price_per_km.errors %}
+            <p class="text-sm" >{{ form.base_price_per_km.errors.0 }}</p>
+          {% endif %}
+          <p class="mt-1 text-xs" >📝 System will automatically add platform margin (₹3 by default)</p>
+        </div>
+
+        <div class="p-4 rounded m-6" >
+          <p class="font-semibold mb-2">ℹ️ Pricing Details</p>
+          <p class="text-sm m-0">Your Price: Your entered amount</p>
+          <p class="m-1 text-sm">System Price: Your Price + ₹3 platform margin</p>
+          <p class="mt-2 text-xs" >Customers pay the System Price. You receive Your Price.</p>
+        </div>
+
+        <button type="submit" class="button button-primary button-block p-4 mb-3">Register Cab</button>
+        <a href="/dashboard/" class="button button-secondary button-block">Cancel</a>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,6 @@
+{
+  "/page": "app/page.js",
+  "/hotels/[slug]/page": "app/hotels/[slug]/page.js",
+  "/booking/[context_uuid]/page": "app/booking/[context_uuid]/page.js",
+  "/hotels/page": "app/hotels/page.js"
+}

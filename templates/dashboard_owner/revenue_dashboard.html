@@ -1,0 +1,186 @@
+{% extends "dashboard_owner/base.html" %}
+{% block title %}Revenue & Earnings - Owner Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Revenue & Earnings Dashboard</h1>
+            <p class="text-muted">Track your property earnings and payouts</p>
+        </div>
+        <div class="col-md-4">
+            <div class="text-right">
+                <div class="display-4 text-success">₹{{ total_revenue }}</div>
+                <p class="text-muted">Total Revenue (This Month)</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="text-muted">Total Bookings</h5>
+                    <h2 class="text-primary">{{ total_bookings }}</h2>
+                    <small class="text-success">+{{ new_bookings_this_month }} this month</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="text-muted">Confirmed Revenue</h5>
+                    <h2 class="text-success">₹{{ confirmed_revenue }}</h2>
+                    <small class="text-muted">From completed bookings</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="text-muted">Commission Deducted</h5>
+                    <h2 class="text-warning">₹{{ total_commission }}</h2>
+                    <small class="text-muted">Your share: {{ your_commission }}%</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="text-muted">Earnings (After Tax)</h5>
+                    <h2 class="text-info">₹{{ net_earnings }}</h2>
+                    <small class="text-success">Available for payout</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue by Property -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Revenue by Property</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Property</th>
+                        <th>Bookings</th>
+                        <th>Gross Revenue</th>
+                        <th>Commission</th>
+                        <th>Net Earnings</th>
+                        <th>Occupancy Rate</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for property_revenue in properties %}
+                    <tr>
+                        <td><strong>{{ property_revenue.property.name }}</strong></td>
+                        <td>{{ property_revenue.booking_count }}</td>
+                        <td>₹{{ property_revenue.gross_revenue }}</td>
+                        <td>
+                            ₹{{ property_revenue.commission }}
+                            <small class="text-muted">({{ property_revenue.commission_percent }}%)</small>
+                        </td>
+                        <td><strong>₹{{ property_revenue.net_earnings }}</strong></td>
+                        <td>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: {{ property_revenue.occupancy_rate }}%">
+                                    {{ property_revenue.occupancy_rate }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{% url 'dashboard_owner:property_revenue' property_revenue.property.id %}" class="btn btn-sm btn-primary">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Monthly Trend -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Monthly Earnings Trend</h5>
+                </div>
+                <canvas id="earningsChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Booking Status Distribution</h5>
+                </div>
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settlement Status -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Settlement Status</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Pending Settlement:</strong> <span class="text-warning">₹{{ pending_settlement }}</span></p>
+                    <p><strong>Settled Amount:</strong> <span class="text-success">₹{{ settled_amount }}</span></p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Next Payout Date:</strong> {{ next_payout_date|default:"N/A" }}</p>
+                    <p><strong>Bank Account:</strong> {{ bank_account|default:"Not configured" }}</p>
+                </div>
+            </div>
+            <hr>
+            <a href="{% url 'dashboard_owner:payout_settings' %}" class="btn btn-primary">
+                Configure Payout Settings
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+// Earnings Chart
+const earningsCtx = document.getElementById('earningsChart').getContext('2d');
+new Chart(earningsCtx, {
+    type: 'line',
+    data: {
+        labels: {{ months_json|safe }},
+        datasets: [{
+            label: 'Revenue',
+            data: {{ revenue_trend_json|safe }},
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: true } }
+    }
+});
+
+// Status Chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Confirmed', 'Cancelled', 'Pending'],
+        datasets: [{
+            data: [{{ confirmed_count }}, {{ cancelled_count }}, {{ pending_count }}],
+            backgroundColor: ['#28a745', '#dc3545', '#ffc107']
+        }]
+    }
+});
+</script>
+{% endblock %}

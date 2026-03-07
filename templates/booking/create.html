@@ -1,0 +1,186 @@
+{% extends "layouts/marketplace_layout.html" %}
+
+{% block page_title %}Book {{ property.name }}{% endblock %}
+
+{% block page_header %}
+  <h1 class="text-3xl font-bold mb-2">Book Your Stay</h1>
+  <p class="text-base">{{ property.name }}</p>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="grid grid-cols-3 gap-8">
+    <!-- Booking Form -->
+    <div class="col-span-2">
+      <div class="p-8 rounded-lg shadow-sm">
+        <h2 class="text-2xl font-semibold mb-6">Booking Details</h2>
+        
+        {% if messages %}
+          <div class="mb-6">
+            {% for message in messages %}
+              <div class="p-4 mb-2 rounded-lg {% if message.tags %}bg-{{ message.tags }}-100 {% else %}bg-blue-100{% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" class="space-y-6 booking-form">
+          {% csrf_token %}
+
+          <!-- Check-in & Check-out -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Check-in Date *</label>
+              {{ form.check_in }}
+              {% if form.check_in.errors %}
+                <p class="text-sm mt-1">{{ form.check_in.errors.0 }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Check-out Date *</label>
+              {{ form.check_out }}
+              {% if form.check_out.errors %}
+                <p class="text-sm mt-1">{{ form.check_out.errors.0 }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Quantity & Room Type -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Number of Rooms/Units *</label>
+              {{ form.quantity }}
+              {% if form.quantity.errors %}
+                <p class="text-sm mt-1">{{ form.quantity.errors.0 }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Room Type *</label>
+              {{ form.room_type }}
+              {% if form.room_type.errors %}
+                <p class="text-sm mt-1">{{ form.room_type.errors.0 }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Guest Details -->
+          <div>
+            <h3 class="text-lg font-semibold mb-4">Guest Details</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-2">Full Name *</label>
+                {{ form.guest_full_name }}
+                {% if form.guest_full_name.errors %}
+                  <p class="text-sm mt-1">{{ form.guest_full_name.errors.0 }}</p>
+                {% endif %}
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium mb-2">Age *</label>
+                  {{ form.guest_age }}
+                  {% if form.guest_age.errors %}
+                    <p class="text-sm mt-1">{{ form.guest_age.errors.0 }}</p>
+                  {% endif %}
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-2">Email</label>
+                  {{ form.guest_email }}
+                  {% if form.guest_email.errors %}
+                    <p class="text-sm mt-1">{{ form.guest_email.errors.0 }}</p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Promo Code -->
+          <div>
+            <label class="block text-sm font-medium mb-2">Promo Code (Optional)</label>
+            {{ form.promo_code }}
+          </div>
+
+          <!-- Meal Plan -->
+          <div>
+            <label class="block text-sm font-medium mb-2">Meal Plan (Optional)</label>
+            {{ form.meal_plan }}
+          </div>
+
+          <!-- Submit Button -->
+          <div class="flex gap-4">
+            <button type="submit" class="px-6 py-3 rounded-lg font-medium">
+              Proceed to Booking
+            </button>
+            <button type="submit" class="px-6 py-3 rounded-lg font-medium">
+              Book now
+            </button>
+            <a href="{% if property.slug %}{% url 'hotels:details' %}?property={{ property.slug }}{% else %}{% url 'hotels:details' %}{% endif %}" class="px-6 py-3 border rounded-lg font-medium">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Property Summary -->
+    <div class="col-span-1">
+      <div class="p-6 rounded-lg shadow-sm sticky top-4">
+        <h3 class="text-lg font-semibold mb-4">{{ property.name }}</h3>
+        
+        {% with primary_image=property.images.first %}
+          {% if primary_image %}
+            <img src="{{ primary_image.resolved_url }}" alt="{{ property.name }}" class="w-full h-48 object-cover rounded-lg mb-4">
+          {% else %}
+            <div class="w-full h-48 rounded-lg mb-4 flex items-center justify-center">
+              <span class="">No image</span>
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <!-- Property Details -->
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between">
+            <span class="">📍 Location:</span>
+            <span class="font-medium">{{ property.city.name|default:"Unknown" }}</span>
+          </div>
+          
+          {% if property.rating %}
+            <div class="flex justify-between">
+              <span class="">⭐ Rating:</span>
+              <span class="font-medium">{{ property.rating }}/5.0</span>
+            </div>
+          {% endif %}
+
+          {% if property.min_room_price %}
+            <div class="flex justify-between border-t border-b py-3 my-3">
+              <span class="">Price per night:</span>
+              <span class="font-semibold">₹{{ property.min_room_price|floatformat:0 }}</span>
+            </div>
+          {% endif %}
+
+          <div class="flex justify-between">
+            <span class="">{{ property.review_count|default:0 }} reviews</span>
+            {% if property.has_free_cancellation %}
+              <span class="text-xs font-medium px-2 py-1 rounded">
+                Free Cancellation
+              </span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

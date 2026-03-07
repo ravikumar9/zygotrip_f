@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block hero %}
+<section class="hero hero--search">
+  <div class="hero-gradient">
+    <div class="hero-content">
+      <p class="hero-eyebrow">Zygotrip Cabs</p>
+      <h1 class="hero-title">Book reliable cabs for your journey</h1>
+      <p class="hero-subtitle">Compare prices and book your ride instantly.</p>
+      <div class="search-card">
+        <form method="get" action="{% url 'cabs:list' %}" class="search-form">
+          <div class="search-form-group">
+            <div class="search-form-field">
+              <label for="pickup-location" class="text-[11px] uppercase tracking-wider text-gray-500">Pickup Location</label>
+              <input type="text" id="pickup-location" name="pickup" placeholder="City or address" value="{{ request.GET.pickup|default:'' }}" class="text-[16px] h-12" />
+            </div>
+            <div class="search-form-field">
+              <label for="dropoff-location" class="text-[11px] uppercase tracking-wider text-gray-500">Dropoff Location</label>
+              <input type="text" id="dropoff-location" name="dropoff" placeholder="City or address" value="{{ request.GET.dropoff|default:'' }}" class="text-[16px] h-12" />
+            </div>
+            <div class="search-form-field">
+              <label for="cab-date" class="text-[11px] uppercase tracking-wider text-gray-500">Date</label>
+              <input type="date" id="cab-date" name="date" value="{{ request.GET.date|default:'' }}" />
+            </div>
+            <div class="search-form-field">
+              <button type="submit" class="btn btn-primary primary-button h-[52px] min-w-[160px] rounded-xl text-[15px]">Search Cabs</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="max-w-7xl mx-auto px-4">
+    {% if cabs %}
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-4">Available Cabs</h2>
+      <p class="text-sm text-gray-500 mb-6">
+        {% if request.GET.pickup and request.GET.dropoff %}
+          {{ cabs|length }} cabs from {{ request.GET.pickup }} to {{ request.GET.dropoff }}
+        {% else %}
+          {{ cabs|length }} cabs available
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for cab_type in cab_types %}
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition overflow-hidden">
+        <div class="h-40 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+          <div class="text-6xl">{% if cab_type == 'hatchback' %}🚗{% elif cab_type == 'sedan' %}🚙{% elif cab_type == 'suv' %}🚐{% else %}🚗{% endif %}</div>
+        </div>
+        <div class="p-4">
+          <h3 class="text-lg font-semibold mb-2">
+            {% if cab_type == 'hatchback' %}Hatchback
+            {% elif cab_type == 'sedan' %}Sedan
+            {% elif cab_type == 'suv' %}SUV
+            {% else %}Standard{% endif %}
+          </h3>
+          <p class="text-sm text-gray-500 mb-3">
+            {% if cab_type == 'hatchback' %}Up to 4 passengers
+            {% elif cab_type == 'sedan' %}Up to 4 passengers with comfort
+            {% elif cab_type == 'suv' %}Up to 6 passengers
+            {% else %}Economy option{% endif %}
+          </p>
+          <div class="mb-4">
+            <p class="text-xs text-gray-500">Starting from</p>
+            <p class="text-2xl font-bold text-gray-900">₹{{ base_prices|default:'450' }}</p>
+          </div>
+          <button class="btn btn-primary h-10 w-full rounded-lg font-semibold">Book Now</button>
+        </div>
+      </div>
+      {% empty %}
+      <div class="bg-white rounded-2xl shadow-sm py-16 text-center col-span-full">
+        <div class="text-4xl mb-4">🚗</div>
+        <h3 class="text-xl font-semibold mb-2">Select your ride type</h3>
+        <p class="text-sm text-gray-500">Choose a cab type that suits your journey</p>
+      </div>
+      {% endfor %}
+
+      {% if not cab_types %}
+      <div class="bg-white rounded-xl shadow-sm p-8 col-span-full text-center">
+        <div class="text-5xl mb-4">🚗</div>
+        <h3 class="text-xl font-semibold mb-2">Find rides in your city</h3>
+        <p class="text-sm text-gray-500 mb-6">Enter your pickup and dropoff locations to see available cabs</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          <div class="p-6 bg-gradient-to-b from-blue-50 to-transparent rounded-lg">
+            <div class="text-4xl mb-3">🚗</div>
+            <h4 class="font-semibold mb-2">Hatchback</h4>
+            <p class="text-sm text-gray-600">Economy rides, perfect for short trips</p>
+            <p class="text-lg font-bold text-blue-600 mt-3">From ₹450</p>
+          </div>
+          <div class="p-6 bg-gradient-to-b from-green-50 to-transparent rounded-lg">
+            <div class="text-4xl mb-3">🚙</div>
+            <h4 class="font-semibold mb-2">Sedan</h4>
+            <p class="text-sm text-gray-600">Comfortable rides with extra space</p>
+            <p class="text-lg font-bold text-green-600 mt-3">From ₹650</p>
+          </div>
+          <div class="p-6 bg-gradient-to-b from-purple-50 to-transparent rounded-lg">
+            <div class="text-4xl mb-3">🚐</div>
+            <h4 class="font-semibold mb-2">SUV</h4>
+            <p class="text-sm text-gray-600">Spacious rides for groups</p>
+            <p class="text-lg font-bold text-purple-600 mt-3">From ₹950</p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

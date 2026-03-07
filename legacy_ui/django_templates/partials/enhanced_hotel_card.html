@@ -1,0 +1,114 @@
+{% load static %}
+<!-- Enhanced Hotel Card Component -->
+<div class="hotel-card rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border" data-hotel-card>
+  
+  <!-- Hotel Image -->
+  <div class="hotel-image-container relative h-48">
+    {% if hotel.image_url %}
+      <img src="{{ hotel.image_url }}" alt="{{ hotel.name }}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='{% static 'img/placeholder-card.svg' %}';" />
+    {% else %}
+      <div class="w-full h-full flex items-center justify-center">
+        <span class="text-5xl">🏨</span>
+      </div>
+    {% endif %}
+    
+    <!-- Discount Badge -->
+    {% if hotel.discount_percent %}
+      <div class="absolute top-3 right-3">
+        <span class="px-3 py-1 rounded-lg text-sm font-bold shadow-md">
+          {{ hotel.discount_percent|floatformat:0 }}% OFF
+        </span>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Hotel Details -->
+  <div class="p-5">
+    
+    <!-- Name & Rating -->
+    <div class="flex justify-between items-start mb-2">
+      <h3 class="font-bold text-lg line-clamp-1 flex-1">
+        {{ hotel.name }}
+      </h3>
+      
+      {% if hotel.rating_value %}
+        <div class="hotel-rating flex items-center gap-1 ml-2">
+          <div class="rating-badge px-2 py-1 rounded text-sm font-semibold">
+            {{ hotel.rating_value }}
+          </div>
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
+            <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/>
+          </svg>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Location -->
+    {% if hotel.location %}
+      <p class="text-sm mb-3 flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        {{ hotel.location_text }}
+      </p>
+    {% endif %}
+
+    <!-- Amenities -->
+    {% if hotel.amenities %}
+      <div class="amenities flex flex-wrap gap-2 mb-4">
+        {% for amenity in hotel.amenities|slice:":4" %}
+          <span class="px-2 py-1 rounded text-xs">
+            {{ amenity }}
+          </span>
+        {% endfor %}
+        {% if hotel.amenities|length > 4 %}
+          <span class="px-2 py-1 rounded text-xs">
+            +{{ hotel.amenities|length|add:"-4" }} more
+          </span>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- Reviews -->
+    {% if hotel.rating_count %}
+      <p class="text-sm mb-4">
+        {{ hotel.rating_count }} reviews
+      </p>
+    {% endif %}
+
+    <!-- Pricing Section -->
+    <div class="border-t pt-4 mt-4">
+      <div class="flex justify-between items-end">
+        <div class="price-info">
+          {% if hotel.price_original and hotel.discount_percent %}
+            <p class="text-sm line-through">
+              ₹{{ hotel.price_original|floatformat:0 }}
+            </p>
+          {% endif %}
+          <div class="flex items-baseline gap-1">
+            <span class="text-2xl font-bold">
+              ₹{{ hotel.price_current|default:"999"|floatformat:0 }}
+            </span>
+            <span class="text-sm">/night</span>
+          </div>
+        </div>
+        
+        <a href="{{ hotel.cta_url }}" class="primary-btn px-6 py-2 font-semibold rounded-lg transition-colors">
+          {{ hotel.cta_label|default:"View Details" }}
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,425 @@
+"""
+PRODUCTION-GRADE FILTER ENGINE
+Slug-based, relational, deterministic, PostgreSQL-safe
+"""
+from django.db.models import Count, Min, Q, DecimalField, F, Case, When
+from django.conf import settings
+from django.core.exceptions import FieldDoesNotExist
+import logging
+
+from apps.dashboard_admin.models import PropertyApproval
+from apps.hotels.models import Property
+from apps.core.location_models import City, Locality
+
+logger = logging.getLogger(__name__)
+
+
+def _supports_field(model, field_name: str) -> bool:
+    try:
+        model._meta.get_field(field_name)
+        return True
+    except FieldDoesNotExist:
+        return False
+
+
+def _supports_relation(model, relation_name: str) -> bool:
+    return any(field.name == relation_name for field in model._meta.get_fields())
+
+
+def public_properties_queryset():
+    """
+    Production base queryset:
+    - Only approved properties
+    - Only active properties
+    - Prefetch related objects
+    - Annotate with min room price
+    """
+    filters = {
+        "approval__status": PropertyApproval.STATUS_APPROVED,
+    }
+    if _supports_field(Property, "is_active"):
+        filters["is_active"] = True
+    
+    return (
+        Property.objects
+        .filter(**filters)
+        .select_related("approval", "owner", "city", "locality")
+        .prefetch_related("images", "amenities", "policies", "offers")
+        .annotate(
+            min_room_price=Min("room_types__base_price"),
+        )
+    )
+
+
+def get_property_detail(identifier):
+    """Fetch single property by slug or ID"""
+    filters = {
+        "approval__status": PropertyApproval.STATUS_APPROVED,
+    }
+    if _supports_field(Property, "is_active"):
+        filters["is_active"] = True
+    lookup = Q(slug=str(identifier))
+    try:
+        lookup |= Q(pk=int(identifier))
+    except (TypeError, ValueError):
+        pass
+    queryset = (
+        Property.objects.filter(lookup, **filters)
+        .select_related("approval", "owner", "city", "locality")
+        .prefetch_related("images", "amenities", "policies", "offers", "room_types")
+    )
+    return queryset.first()
+
+
+def apply_hotel_filters_v2(qs, params, exclude_price=False):
+    """
+    PRODUCTION FILTER ENGINE v2
+    
+    Deterministic, slug-based filtering:
+    - ?city_slug=coorg&locality_slug=madikeri
+    - No mixing of parameter types
+    - All filters applied sequentially
+    - Results logged for debugging
+    
+    Args:
+        qs: Base queryset (should be from public_properties_queryset())
+        params: QueryDict with canonical filter parameters
+        exclude_price: If True, skips price filtering (for aggregate computation)
+    
+    Returns:
+        {
+            'queryset': filtered_qs,
+            'city': City object or None,
+            'locality': Locality object or None,
+            'count': final result count,
+            'params': canonical params dict
+        }
+    """
+    
+    # Canonical parameter names
+    city_slug = params.get('city_slug', '').strip()
+    locality_slug = params.get('locality_slug', '').strip()
+    min_rating = params.get('min_rating', '').strip()
+    max_price = params.get('max_price', '').strip()
+    min_price = params.get('min_price', '').strip()
+    amenities = params.getlist('amenities')
+    property_type = params.get('property_type', '').strip()
+    has_free_cancel = params.get('has_free_cancel', '').strip()
+    
+    result = {
+        'city': None,
+        'locality': None,
+        'count': 0,
+        'params': {
+            'city_slug': city_slug,
+            'locality_slug': locality_slug,
+            'min_rating': min_rating,
+            'max_price': max_price,
+            'min_price': min_price,
+        }
+    }
+    
+    # STEP 1: Filter by city (FK-relational)
+    if city_slug:
+        try:
+            city = City.objects.get(slug=city_slug)
+            qs = qs.filter(city=city)
+            result['city'] = city
+            logger.info(f"Filter: city={city.name} ({city_slug}) -> {qs.count()} props")
+        except City.DoesNotExist:
+            logger.warning(f"City not found: {city_slug}")
+            qs = qs.none()
+    
+    # STEP 2: Filter by locality (FK-relational, only if city set)
+    if locality_slug and result['city']:
+        try:
+            locality = Locality.objects.get(slug=locality_slug, city=result['city'])
+            qs = qs.filter(locality=locality)
+            result['locality'] = locality
+            logger.info(f"Filter: locality={locality.name} ({locality_slug}) -> {qs.count()} props")
+        except Locality.DoesNotExist:
+            logger.warning(f"Locality not found: {locality_slug} in {result['city'].name}")
+            qs = qs.none()
+    
+    # STEP 3: Filter by rating (minimum)
+    if min_rating:
+        try:
+            min_rating_val = float(min_rating)
+            qs = qs.filter(rating__gte=min_rating_val)
+            logger.info(f"Filter: rating >= {min_rating_val} -> {qs.count()} props")
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid min_rating: {min_rating}")
+    
+    # STEP 4: Filter by price range
+    if not exclude_price:
+        if min_price:
+            try:
+                from decimal import Decimal
+                min_price_val = Decimal(str(min_price))
+                qs = qs.filter(room_types__base_price__gte=min_price_val)
+                logger.info(f"Filter: price >= {min_price_val} -> {qs.count()} props")
+            except Exception as e:
+                logger.warning(f"Invalid min_price: {min_price} - {e}")
+        
+        if max_price:
+            try:
+                from decimal import Decimal
+                max_price_val = Decimal(str(max_price))
+                qs = qs.filter(room_types__base_price__lte=max_price_val)
+                logger.info(f"Filter: price <= {max_price_val} -> {qs.count()} props")
+            except Exception as e:
+                logger.warning(f"Invalid max_price: {max_price} - {e}")
+    
+    # STEP 5: Filter by amenities (AND logic)
+    if amenities:
+        for amenity in amenities:
+            qs = qs.filter(amenities__name__icontains=amenity)
+        qs = qs.distinct()
+        logger.info(f"Filter: amenities={amenities} -> {qs.count()} props")
+    
+    # STEP 6: Filter by property type
+    if property_type:
+        qs = qs.filter(property_type__iexact=property_type)
+        logger.info(f"Filter: type={property_type} -> {qs.count()} props")
+    
+    # STEP 7: Filter by cancellation policy
+    if has_free_cancel:
+        if has_free_cancel.lower() == 'true':
+            qs = qs.filter(has_free_cancellation=True)
+            logger.info(f"Filter: free_cancellation=True -> {qs.count()} props")
+    
+    # Final count
+    final_count = qs.count()
+    result['count'] = final_count
+    result['queryset'] = qs
+    
+    logger.info(f"[FILTER_RESULT] city={city_slug} locality={locality_slug} count={final_count}")
+    
+    return result
+
+
+def get_city_aggregates(city_slug):
+    """
+    Get aggregated data for a city (for filter UI)
+    - Locality counts within this city
+    - Rating distribution
+    - Amenity counts
+    
+    CRITICAL: Counts must be computed from city-scoped queryset, not filtered queryset
+    """
+    if not city_slug:
+        return {
+            'localities': [],
+            'ratings': {4.5: 0, 4.0: 0, 3.5: 0},
+            'amenities': []
+        }
+    
+    try:
+        city = City.objects.get(slug=city_slug)
+    except City.DoesNotExist:
+        return {
+            'localities': [],
+            'ratings': {4.5: 0, 4.0: 0, 3.5: 0},
+            'amenities': []
+        }
+    
+    # Base queryset: all active properties in this city
+    base_qs = public_properties_queryset().filter(city=city)
+    
+    # Locality counts (computed from city-scoped queryset)
+    localities = base_qs.values('locality__slug', 'locality__name', 'locality__display_name').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Convert to list with counts
+    locality_list = []
+    for loc in localities:
+        locality_list.append({
+            'slug': loc['locality__slug'],
+            'name': loc['locality__name'],
+            'display_name': loc['locality__display_name'],
+            'count': loc['count']
+        })
+    
+    # Rating distribution
+    ratings = {}
+    for threshold in [4.5, 4.0, 3.5]:
+        count = base_qs.filter(rating__gte=threshold).count()
+        ratings[threshold] = count
+    
+    return {
+        'localities': locality_list,
+        'ratings': ratings,
+        'city': city
+    }
+
+
+def get_locality_aggregates(city_slug, locality_slug):
+    """
+    Get aggregated data for a locality (for filter UI)
+    Same pattern as city aggregates but for specific locality
+    """
+    if not city_slug or not locality_slug:
+        return {'amenities': [], 'ratings': {}}
+    
+    try:
+        city = City.objects.get(slug=city_slug)
+        locality = Locality.objects.get(slug=locality_slug, city=city)
+    except (City.DoesNotExist, Locality.DoesNotExist):
+        return {'amenities': [], 'ratings': {}}
+    
+    base_qs = public_properties_queryset().filter(city=city, locality=locality)
+    
+    # Amenities
+    amenities = base_qs.values('amenities__name').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    amenity_list = [
+        {'name': a['amenities__name'], 'count': a['count']}
+        for a in amenities if a['amenities__name']
+    ]
+    
+    # Rating distribution
+    ratings = {}
+    for threshold in [4.5, 4.0, 3.5]:
+        count = base_qs.filter(rating__gte=threshold).count()
+        ratings[threshold] = count
+    
+    return {
+        'amenities': amenity_list,
+        'ratings': ratings,
+        'locality': locality
+    }
+
+
+# Keep old function for backwards compatibility (deprecated)
+def parse_filters(params):
+    """DEPRECATED: Use apply_hotel_filters_v2 instead"""
+    return {
+        'search_query': params.get('q', '').strip(),
+        'selected_cities': params.getlist('city'),
+        'selected_areas': params.getlist('area'),
+        'selected_ratings': params.getlist('rating'),
+        'selected_amenities': params.getlist('amenities'),
+        'selected_property_types': params.getlist('property_type'),
+        'selected_meals': params.getlist('meals'),
+        'selected_cancellation': params.get('cancellation'),
+        'min_price': params.get('min_price'),
+        'max_price': params.get('max_price'),
+        'selected_category': params.get('category'),
+    }
+
+
+def apply_hotel_filters(queryset, params, exclude_price: bool = False):
+    """DEPRECATED: Use apply_hotel_filters_v2 instead"""
+    filters = parse_filters(params)
+    search_query = filters["search_query"]
+    selected_cities = filters["selected_cities"]
+    selected_areas = filters["selected_areas"]
+    selected_ratings = filters["selected_ratings"]
+    selected_amenities = filters["selected_amenities"]
+    selected_property_types = filters["selected_property_types"]
+    selected_meals = filters["selected_meals"]
+    selected_cancellation = filters["selected_cancellation"]
+    min_price = filters["min_price"]
+    max_price = filters["max_price"]
+    selected_category = filters["selected_category"]
+    guests = filters.get("guests")
+    rooms = filters.get("rooms")
+
+    if search_query:
+        queryset = queryset.filter(
+            Q(name__icontains=search_query)
+            | Q(city__name__icontains=search_query)
+            | Q(city__display_name__icontains=search_query)
+            | Q(area__icontains=search_query)
+            | Q(locality__name__icontains=search_query)
+            | Q(landmark__icontains=search_query)
+            | Q(slug__icontains=search_query)
+        )
+
+    if selected_cities:
+        city_query = Q()
+        for city in selected_cities:
+            city_query |= Q(city__name__iexact=city)
+            city_query |= Q(city__display_name__iexact=city)
+        queryset = queryset.filter(city_query)
+
+    if selected_areas:
+        area_query = Q()
+        for area in selected_areas:
+            area_query |= Q(area__iexact=area)
+            area_query |= Q(locality__name__iexact=area)
+        queryset = queryset.filter(area_query)
+
+    if selected_ratings:
+        try:
+            rating_thresholds = [float(value) for value in selected_ratings]
+            min_rating = min(rating_thresholds)
+            queryset = queryset.filter(rating__gte=min_rating)
+        except (ValueError, TypeError):
+            pass
+
+    if min_price and not exclude_price:
+        try:
+            from decimal import Decimal, InvalidOperation
+            min_price_decimal = Decimal(str(min_price).strip())
+            queryset = queryset.filter(room_types__base_price__gte=min_price_decimal)
+        except (ValueError, TypeError, InvalidOperation):
+            pass
+
+    if max_price and not exclude_price:
+        try:
+            from decimal import Decimal, InvalidOperation
+            max_price_decimal = Decimal(str(max_price).strip())
+            queryset = queryset.filter(room_types__base_price__lte=max_price_decimal)
+        except (ValueError, TypeError, InvalidOperation):
+            pass
+
+    if selected_amenities:
+        amenity_map = {
+            "wifi": "Free WiFi",
+            "breakfast": "Breakfast Included",
+            "pool": "Swimming Pool",
+            "parking": "Parking",
+        }
+        amenity_names = []
+        for value in selected_amenities:
+            key = value.lower()
+            amenity_names.append(amenity_map.get(key, value))
+        queryset = queryset.filter(amenities__name__in=amenity_names).distinct()
+
+    if selected_property_types:
+        queryset = queryset.filter(property_type__in=selected_property_types)
+
+    if selected_meals and _supports_relation(queryset.model, "meal_plans"):
+        queryset = queryset.filter(meal_plans__name__in=selected_meals).distinct()
+
+    if selected_cancellation == "free":
+        queryset = queryset.filter(has_free_cancellation=True)
+    elif selected_cancellation == "non_refundable":
+        queryset = queryset.filter(has_free_cancellation=False)
+
+    if guests:
+        try:
+            guest_count = int(guests)
+            queryset = queryset.filter(room_types__max_guests__gte=guest_count)
+        except (ValueError, TypeError):
+            pass
+
+    if rooms:
+        try:
+            room_count = int(rooms)
+            queryset = queryset.filter(room_types__available_count__gte=room_count)
+        except (ValueError, TypeError):
+            pass
+
+    if selected_category:
+        queryset = queryset.filter(categories__category__slug=selected_category)
+
+    filters.update({
+        "queryset": queryset,
+        "selected_category": selected_category,
+    })
+    return filters

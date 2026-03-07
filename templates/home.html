@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Zygotrip - Book Hotels, Buses & Cabs{% endblock %}
+
+{% block hero %}
+<section class="hero hero--search">
+  <div class="hero-gradient">
+    <div class="hero-content">
+      <p class="hero-eyebrow">Zygotrip</p>
+      <h1 class="hero-title">Plan your perfect journey</h1>
+      <p class="hero-subtitle">Book hotels, buses, cabs, flights and trains all in one place.</p>
+      {% include "components/search/hotel_search.html" %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<!-- Featured Services Section -->
+<section class="section">
+  <div class="ota-container">
+    <h2>Popular Services</h2>
+    
+    <div class="service-grid">
+      <!-- Hotels Service Card -->
+      <div class="service-card">
+        <div class="service-icon">🏨</div>
+        <h3 class="service-title">Hotels & Stays</h3>
+        <p class="service-description">Find and book the perfect accommodation from luxury to budget options across all cities.</p>
+        <a href="{% url 'hotels:listing' %}" class="btn btn-primary h-11 px-6 rounded-lg inline-flex items-center justify-center">Browse Hotels</a>
+      </div>
+      
+      <!-- Buses Service Card -->
+      <div class="service-card">
+        <div class="service-icon">🚌</div>
+        <h3 class="service-title">Bus Tickets</h3>
+        <p class="service-description">Comfortable and affordable bus travel to thousands of destinations across the country.</p>
+        <a href="{% url 'buses:list' %}" class="btn btn-primary h-11 px-6 rounded-lg inline-flex items-center justify-center">Book Buses</a>
+      </div>
+      
+      <!-- Cabs Service Card -->
+      <div class="service-card">
+        <div class="service-icon">🚕</div>
+        <h3 class="service-title">Cab Rentals</h3>
+        <p class="service-description">Convenient cab rentals for your local and outstation trips with professional drivers.</p>
+        <a href="{% url 'cabs:list' %}" class="btn btn-primary h-11 px-6 rounded-lg inline-flex items-center justify-center">Rent Cabs</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Why Choose Section -->
+<section class="section">
+  <div class="ota-container">
+    <h2 class="text-center">Why Choose Zygotrip?</h2>
+    <p class="text-center">The most trusted travel booking platform in India</p>
+    
+    <div class="benefits-grid">
+      <div class="benefit-item">
+        <div class="benefit-icon">✅</div>
+        <h3 class="benefit-title">Best Prices</h3>
+        <p class="benefit-description">Guaranteed lowest prices with price matching guarantee on all bookings.</p>
+      </div>
+      <div class="benefit-item">
+        <div class="benefit-icon">🛡️</div>
+        <h3 class="benefit-title">Secure Booking</h3>
+        <p class="benefit-description">100% secure payment processing with SSL encryption and fraud protection.</p>
+      </div>
+      <div class="benefit-item">
+        <div class="benefit-icon">📞</div>
+        <h3 class="benefit-title">24/7 Support</h3>
+        <p class="benefit-description">Round-the-clock customer support available in multiple languages for all your needs.</p>
+      </div>
+      <div class="benefit-item">
+        <div class="benefit-icon">⚡</div>
+        <h3 class="benefit-title">Easy Booking</h3>
+        <p class="benefit-description">Fast and simple booking process in just a few clicks - no complicated forms.</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

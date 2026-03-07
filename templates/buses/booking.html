@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="mb-8">
+      <a href="{% url 'buses:detail' bus.id %}" >← Back to Bus</a>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-8">
+      <div class="md:col-span-2">
+        <div class="card">
+          <h2 class="card-title">Book {{ bus.operator_name }} - {{ bus.from_city }} to {{ bus.to_city }}</h2>
+
+          <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+              <label>Seat</label>
+              {{ form.seat_id }}
+            </div>
+
+            <div class="form-group">
+              <label>Journey Date</label>
+              {{ form.journey_date }}
+            </div>
+
+            <div class="form-group">
+              <label>Passenger Name</label>
+              {{ form.passenger_full_name }}
+            </div>
+
+            <div class="form-group">
+              <label>Passenger Age</label>
+              {{ form.passenger_age }}
+            </div>
+
+            <div class="form-group">
+              <label>Passenger Gender</label>
+              {{ form.passenger_gender }}
+            </div>
+
+            <div class="form-group">
+              <label>Phone (Optional)</label>
+              {{ form.passenger_phone }}
+            </div>
+
+            <div class="form-group">
+              <label>Promo Code (Optional)</label>
+              {{ form.promo_code }}
+            </div>
+
+            <button type="submit" class="button button-accent w-full p-3">Confirm Booking</button>
+          </form>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3 class="card-title">Trip Summary</h3>
+          <p class="m-2">{{ bus.from_city }} → {{ bus.to_city }}</p>
+          <p class="m-2">Departure: {{ bus.departure_time }}</p>
+          <p class="m-2">Arrival: {{ bus.arrival_time }}</p>
+          <p class="font-semibold m-0">Price per seat: ₹{{ bus.price_per_seat }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

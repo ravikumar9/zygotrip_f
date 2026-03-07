@@ -1,0 +1,20 @@
+{% comment %}
+Trust Badge Component
+Usage: {% include "ui/components/trust_badge.html" with text="Free Cancellation" icon="✓" %}
+{% endcomment %}
+
+<span class="trust-badge {% if type %}trust-badge--{{ type }}{% endif %}">
+  {% if icon %}<span class="trust-badge__icon">{{ icon }}</span>{% endif %}
+  <span class="trust-badge__text">{{ text }}</span>
+</span>
+
+
+
+
+
+
+
+
+
+
+

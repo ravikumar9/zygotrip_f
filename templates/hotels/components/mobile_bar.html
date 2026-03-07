@@ -1,0 +1,26 @@
+<div class="mobile-booking-bar" data-mobile-bar>
+  <div class="mobile-booking-bar__content">
+    <div class="mobile-booking-bar__price">
+      <span class="mobile-booking-bar__amount">₹{{ property.base_price|default:0 }}</span>
+      <span class="mobile-booking-bar__unit">/ night</span>
+    </div>
+    <div class="mobile-booking-bar__details">
+      <span data-mobile-dates>Select dates</span>
+      <span data-mobile-guests>{{ form.quantity.value|default:1 }} room</span>
+    </div>
+  </div>
+  <button class="btn btn-primary primary-button" type="button" data-booking-toggle>
+    Book now
+  </button>
+</div>
+
+
+
+
+
+
+
+
+
+
+

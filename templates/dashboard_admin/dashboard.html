@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="d-flex justify-between align-center mb-12">
+      <div>
+        <h1>Admin Dashboard</h1>
+        <p class="">Review and approve property listings</p>
+      </div>
+      <div class="badge badge-warning">
+        {{ pending|length }} Pending
+      </div>
+    </div>
+
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-title">Dashboard</div>
+        <a href="/admin/dashboard/" class="sidebar-link active">All Reviews</a>
+        <a href="#" class="sidebar-link">Approved ({{ approved|length }})</a>
+        <a href="#" class="sidebar-link">Rejected ({{ rejected|length }})</a>
+        
+        <div class="mt-8 pt-8 border-top">
+          <div class="sidebar-title">Stats</div>
+          <div class="text-sm">
+            <div class="d-flex justify-between mb-4">
+              <span>Total Properties</span>
+              <strong>{{ total_properties }}</strong>
+            </div>
+            <div class="d-flex justify-between">
+              <span>Approval Rate</span>
+              <strong>95%</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        {% if pending %}
+          <div class="mb-8">
+            <h2 class="section-title m-6">Pending Reviews</h2>
+            <div class="grid md:grid-cols-2">
+              {% for approval in pending|default_if_none:"" %}
+                <div class="card">
+                  <div class="d-flex justify-between mb-4 align-start" >
+                    <div>
+                      <h3 class="card-title">{{ approval.property.name }}</h3>
+                      <p class="card-meta">📍 {{ approval.property.city }}, {{ approval.property.country }}</p>
+                    </div>
+                    <span class="badge badge-warning">Pending</span>
+                  </div>
+
+                  <p class="m-4">{{ approval.property.description|truncatewords:20 }}</p>
+
+                  <div class="rounded-lg p-4 mb-6 text-sm" >
+                    <div class="d-flex justify-between mb-2">
+                      <span>Owner</span>
+                      <strong>{{ approval.property.owner.full_name }}</strong>
+                    </div>
+                    <div class="d-flex justify-between">
+                      <span>Rating</span>
+                      <strong>{{ approval.property.rating }} ⭐</strong>
+                    </div>
+                  </div>
+
+                  <div class="card-footer gap-2">
+                    <a href="/admin/dashboard/approvals/{{ approval.id }}/approve/" class="button button-success button-block" >
+                      ✓ Approve
+                    </a>
+                    <a href="/admin/dashboard/approvals/{{ approval.id }}/reject/" class="button button-danger button-block">
+                      ✕ Reject
+                    </a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-state-icon">✓</div>
+            <h3 class="empty-state-title">All Caught Up!</h3>
+            <p class="empty-state-text">You've reviewed all pending property submissions</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

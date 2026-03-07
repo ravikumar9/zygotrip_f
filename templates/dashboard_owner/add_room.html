@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Add Room Type — {{ property.name }} | Zygotrip{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="owner-form-page">
+
+      <!-- Breadcrumb -->
+      <nav style="font-size:13px;color:#9ca3af;margin-bottom:20px;">
+        <a href="/owner/dashboard/" style="color:#ff6b35;text-decoration:none;">Dashboard</a>
+        <span style="margin:0 8px;">›</span>
+        <span>{{ property.name }}</span>
+        <span style="margin:0 8px;">›</span>
+        <span style="color:#111827;">Add Room Type</span>
+      </nav>
+
+      <!-- Page Header -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#ff6b35,#ff8c42);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🛏️</div>
+        <div>
+          <h1 style="margin:0;font-size:26px;font-weight:800;color:#111827;">Add Room Type</h1>
+          <p style="margin:2px 0 0;color:#6b7280;font-size:14px;">Define a room type for <strong style="color:#ff6b35;">{{ property.name }}</strong></p>
+        </div>
+      </div>
+
+      <!-- Main Card -->
+      <div class="card" style="border-radius:16px;padding:36px 40px;box-shadow:0 4px 24px rgba(0,0,0,0.08);margin-top:24px;">
+        <form method="post">
+          {% csrf_token %}
+
+          <!-- Room Identity -->
+          <div class="form-section-title">Room Identity</div>
+
+          <div class="form-group">
+            <label>Room Type Name <span style="color:#ef4444;">*</span></label>
+            {{ form.name }}
+            <p class="form-hint">💡 E.g., Deluxe Suite, Standard Room, Sea View Villa</p>
+          </div>
+
+          <div class="form-group">
+            <label>Description</label>
+            {{ form.description }}
+            <p class="form-hint">Describe amenities, view, and features guests will love</p>
+          </div>
+
+          <!-- Pricing & Capacity -->
+          <div class="form-section-title" style="margin-top:28px;">Pricing & Capacity</div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <div class="form-group">
+              <label>Base Price Per Night <span style="color:#ef4444;">*</span></label>
+              {{ form.base_price }}
+              <p class="form-hint">Starting rate before meals and fees</p>
+            </div>
+            <div class="form-group">
+              <label>Max Guests <span style="color:#ef4444;">*</span></label>
+              {{ form.max_guests }}
+              <p class="form-hint">Maximum occupancy</p>
+            </div>
+          </div>
+
+          {% if form.room_size_sqm %}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <div class="form-group">
+              <label>Room Size (sqm)</label>
+              {{ form.room_size_sqm }}
+              <p class="form-hint">Floor area in square metres</p>
+            </div>
+            {% if form.bed_type %}
+            <div class="form-group">
+              <label>Bed Type</label>
+              {{ form.bed_type }}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {% if form.available_count %}
+          <div class="form-group">
+            <label>Available Rooms</label>
+            {{ form.available_count }}
+            <p class="form-hint">Number of rooms of this type available</p>
+          </div>
+          {% endif %}
+
+          <!-- Hidden / other fields -->
+          {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+          <!-- Submit -->
+          <div style="margin-top:32px;padding-top:24px;border-top:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <a href="/owner/dashboard/" style="color:#6b7280;font-size:14px;text-decoration:none;">← Back to Dashboard</a>
+            <button type="submit" class="button button-accent button-lg" style="min-width:220px;">
+              🛏️ Create Room Type
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+

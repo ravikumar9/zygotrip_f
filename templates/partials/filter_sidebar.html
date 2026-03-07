@@ -1,0 +1,72 @@
+<!-- REUSABLE COMPONENT: Filter Sidebar (Data Contract) -->
+<!-- Usage: {% include 'partials/filter_sidebar.html' with filters=filters_data %} -->
+
+<aside class="filters">
+  
+  <!-- Location Section -->
+  <div class="sidebar-section">
+    <h3 class="sidebar-section-title">Location</h3>
+    <div class="sidebar-section-content">
+      {% for location in filters.locations %}
+      <label>
+        <input type="checkbox" name="location" value="{{ location }}"> {{ location }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Price Section -->
+  <div class="sidebar-section">
+    <h3 class="sidebar-section-title">Price</h3>
+    <div class="sidebar-section-content">
+      {% for price_range in filters.price_ranges %}
+      <label>
+        <input type="checkbox" name="price" value="{{ price_range.min }}-{{ price_range.max }}">
+        ₹{{ price_range.min|floatformat:0 }} - ₹{{ price_range.max|floatformat:0 }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Rating Section -->
+  <div class="sidebar-section">
+    <h3 class="sidebar-section-title">Rating</h3>
+    <div class="sidebar-section-content">
+      {% for rating in filters.ratings %}
+      <label>
+        <input type="checkbox" name="rating" value="{{ rating }}">
+        ⭐ {{ rating }}+
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Amenities Section -->
+  <div class="sidebar-section">
+    <h3 class="sidebar-section-title">Amenities</h3>
+    <div class="sidebar-section-content">
+      {% for amenity in filters.amenities %}
+      <label>
+        <input type="checkbox" name="amenity" value="{{ amenity }}"> {{ amenity }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Apply Button -->
+  <div class="sidebar-section">
+    <button class="card-cta-button" onclick="applyFilters()" class="w-full">Apply Filters</button>
+  </div>
+
+</aside>
+
+
+
+
+
+
+
+
+
+
+

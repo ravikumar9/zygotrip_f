@@ -1,0 +1,120 @@
+<!-- REUSABLE COMPONENT: Listing Card WITH INTELLIGENCE SIGNALS -->
+<!-- Usage: {% include 'partials/listing_card.html' with card=card_data %} -->
+
+{% comment %}
+CARD DATA CONTRACT (RENDER-READY FORMAT WITH SIGNALS):
+{"id": 123,"name":"Hotel Name","location":"City, Country","image_url":"/path/to/image.jpg",
+  
+  # INTELLIGENCE SIGNALS (critical for informative cards)"rating_value": 4.5,"rating_count": 128,"popularity_score": 89,"bookings_today": 12,"is_trending": true,"distance_km": 2.3,  # From city center or search reference point"amenities": ["WiFi","Breakfast","Pool"],  # STRING ARRAY ONLY"price_current": 4500,"price_original": 6000,"discount_percent": 25,
+  
+  # POLICY SIGNALS"has_free_cancellation": true,"cancellation_hours": 24,"cta_url":"/hotels/123/","cta_label":"View Details"
+}
+
+RULE: Backend MUST send pre-formatted data. UI never parses.
+RULE: Amenities MUST be ["string","string"], never dicts.
+RULE: Prices MUST be numbers, not objects.
+{% endcomment %}
+
+<div class="hotel-card-premium">
+  
+  <!-- IMAGE SECTION -->
+  <div class="card-image-section">
+    {% if card.image_url %}
+    <img src="{{ card.image_url }}" alt="{{ card.name }}" loading="lazy">
+    
+    <!-- TRENDING BADGE -->
+    {% if card.is_trending %}
+    <div class="card-badge-trending">🔥 Trending</div>
+    {% endif %}
+    
+    {% else %}
+    <div class="d-flex align-center justify-center h-full" >
+      No Image
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- CONTENT SECTION -->
+  <div class="card-content-section">
+    
+    <!-- TITLE -->
+    <h2 class="card-title">{{ card.name }}</h2>
+    
+    <!-- LOCATION + DISTANCE -->
+    <div class="card-location">
+      📍 {{ card.location }}
+      {% if card.distance_km %}
+        <span class="card-distance">• {{ card.distance_km }} km from city center</span>
+      {% endif %}
+    </div>
+    
+    <!-- RATING + POPULARITY SIGNALS -->
+    <div class="card-signals-row">
+      {% if card.rating_value %}
+      <div class="card-rating">
+        <span class="rating-badge">{{ card.rating_value }}★</span>
+        <span class="card-rating-count">({{ card.rating_count }} reviews)</span>
+      </div>
+      {% endif %}
+      
+      <!-- BOOKING VELOCITY SIGNAL -->
+      {% if card.bookings_today and card.bookings_today > 0 %}
+      <div class="card-booking-signal">
+        <span class="booking-badge">{{ card.bookings_today }} booked today</span>
+      </div>
+      {% endif %}
+    </div>
+    
+    <!-- AMENITIES (STRING ARRAY ONLY) -->
+    {% if card.amenities %}
+    <div class="card-amenities">
+      {% for amenity in card.amenities %}
+        <span class="card-amenity-badge">{{ amenity }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- CANCELLATION POLICY -->
+    {% if card.has_free_cancellation %}
+    <div class="card-policy">
+      <span class="policy-badge">✓ Free cancellation</span>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- PRICING SECTION -->
+  <div class="card-pricing-section">
+    
+    <!-- PRICE WITH DISCOUNT -->
+    {% if card.price_current %}
+    <div class="d-flex align-baseline" >
+      <span class="card-price">₹{{ card.price_current|floatformat:0 }}</span>
+      
+      {% if card.price_original %}
+      <span class="card-price-original">₹{{ card.price_original|floatformat:0 }}</span>
+      {% endif %}
+      
+      {% if card.discount_percent %}
+      <span class="card-discount">{{ card.discount_percent|floatformat:0 }}% off</span>
+      {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- CTA BUTTON -->
+    <a href="{{ card.cta_url }}" class="card-cta-button">{{ card.cta_label }}</a>
+    
+  </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+

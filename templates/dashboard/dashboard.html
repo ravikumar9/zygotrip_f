@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <h1 class="mb-4">Dashboard</h1>
+
+    {% if bookings %}
+      <div class="card mb-6">
+        <h2 class="mb-4">Your Bookings</h2>
+        <ul class="list">
+          {% for booking in bookings %}
+            <li class="mb-2">
+              <strong>#{{ booking.id }}</strong> - {{ booking.property.name|default:"Property" }}
+              ({{ booking.check_in }} to {{ booking.check_out }}) - {{ booking.status }}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if properties %}
+      <div class="card mb-6">
+        <h2 class="mb-4">Your Properties</h2>
+        <ul class="list">
+          {% for property in properties %}
+            <li class="mb-2">
+              <strong>{{ property.name }}</strong> - {{ property.city }}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if cabs %}
+      <div class="card mb-6">
+        <h2 class="mb-4">Your Cabs</h2>
+        <ul class="list">
+          {% for cab in cabs %}
+            <li class="mb-2">
+              <strong>{{ cab.vehicle_type }}</strong> - {{ cab.from_location }} to {{ cab.to_location }}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if buses %}
+      <div class="card mb-6">
+        <h2 class="mb-4">Your Buses</h2>
+        <ul class="list">
+          {% for bus in buses %}
+            <li class="mb-2">
+              <strong>{{ bus.registration_number }}</strong> - {{ bus.from_city }} to {{ bus.to_city }}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if not bookings and not properties and not cabs and not buses %}
+      <div class="card text-center p-6">
+        <p class="">No dashboard data available.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

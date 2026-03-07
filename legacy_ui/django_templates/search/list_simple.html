@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static query_params %}
+
+{% block content %}
+<section class="section">
+    <div class="ota-container">
+        <div class="search-card search-card--inline">
+            {% include "components/search/hotel_search.html" %}
+        </div>
+        <h1>Search Results{% if query %} for"{{ query }}"{% endif %}</h1>
+
+        {% if results %}
+            <p class="">Found {{ total_count }} properties</p>
+
+            <div class="service-grid">
+                {% for property in results %}
+                    <article class="hotel-card-premium" data-score="{{ property.relevance_score|default:0 }}">
+                        <div class="hotel-card-image-wrapper">
+                            <img src="{% if property.image_url %}{{ property.image_url }}{% else %}{% static 'img/placeholder-hotel.jpg' %}{% endif %}" alt="{{ property.name }}" class="hotel-image" loading="lazy" />
+                        </div>
+                        <div class="hotel-card-info">
+                            <div class="hotel-card-header">
+                                <h3 class="hotel-card-title">{{ property.name }}</h3>
+                                {% if property.rating_value %}
+                                    <div class="hotel-card-rating">{{ property.rating_value }} ★</div>
+                                {% endif %}
+                            </div>
+                            <div class="hotel-card-location">{{ property.city }}{% if property.area %}, {{ property.area }}{% endif %}</div>
+                            {% if property.rating_count %}
+                                <div class="hotel-card-badges">
+                                    <span class="hotel-card-badge">{{ property.rating_count }} reviews</span>
+                                </div>
+                            {% endif %}
+                            {% if property.amenities %}
+                                <div class="hotel-card-badges">
+                                    {% for amenity in property.amenities|slice:":3" %}
+                                        <span class="hotel-card-badge">{{ amenity }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="hotel-card-price-section">
+                            <div>
+                                <div class="hotel-card-price-current">₹{{ property.price_current }}</div>
+                                <div class="hotel-card-price-label">per night</div>
+                            </div>
+                            <a href="{{ property.cta_url }}" class="hotel-card-cta">View Details</a>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+
+            {% if page_obj.has_other_pages %}
+                <div class="results-header">
+                    {% if page_obj.has_previous %}
+                        <a href="?q={{ query }}&page={{ page_obj.previous_page_number }}{% if request|query_get:'checkin' %}&checkin={{ request|query_get:'checkin' }}{% endif %}{% if request|query_get:'checkout' %}&checkout={{ request|query_get:'checkout' }}{% endif %}{% if request|query_get:'guests' %}&guests={{ request|query_get:'guests' }}{% endif %}" class="btn btn-outline">Previous</a>
+                    {% endif %}
+                    <span class="">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}
+                        <a href="?q={{ query }}&page={{ page_obj.next_page_number }}{% if request|query_get:'checkin' %}&checkin={{ request|query_get:'checkin' }}{% endif %}{% if request|query_get:'checkout' %}&checkout={{ request|query_get:'checkout' }}{% endif %}{% if request|query_get:'guests' %}&guests={{ request|query_get:'guests' }}{% endif %}" class="btn btn-outline">Next</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">🏨</div>
+                <h2 class="empty-state-title">No properties found</h2>
+                <p class="empty-state-description">Try adjusting your search or use different filters.</p>
+                <div class="empty-state-action">
+                    <a href="/" class="btn btn-primary">Back to Home</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

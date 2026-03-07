@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div >
+      <h1 class="mb-2">Register New Bus</h1>
+      <p class="mb-8" >Add your bus to our platform</p>
+
+      <form method="post" class="card p-6">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="p-3 rounded mb-4" >
+            {{ form.non_field_errors.0 }}
+          </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label>Operator Name</label>
+          {{ form.operator_name }}
+          {% if form.operator_name.errors %}
+            <p class="text-sm" >{{ form.operator_name.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>From City</label>
+          {{ form.from_city }}
+          {% if form.from_city.errors %}
+            <p class="text-sm" >{{ form.from_city.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>To City</label>
+          {{ form.to_city }}
+          {% if form.to_city.errors %}
+            <p class="text-sm" >{{ form.to_city.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Departure Time</label>
+          {{ form.departure_time }}
+          {% if form.departure_time.errors %}
+            <p class="text-sm" >{{ form.departure_time.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Arrival Time</label>
+          {{ form.arrival_time }}
+          {% if form.arrival_time.errors %}
+            <p class="text-sm" >{{ form.arrival_time.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Journey Date</label>
+          {{ form.journey_date }}
+          {% if form.journey_date.errors %}
+            <p class="text-sm" >{{ form.journey_date.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Price Per Seat (₹)</label>
+          {{ form.price_per_seat }}
+          {% if form.price_per_seat.errors %}
+            <p class="text-sm" >{{ form.price_per_seat.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Available Seats</label>
+          {{ form.available_seats }}
+          {% if form.available_seats.errors %}
+            <p class="text-sm" >{{ form.available_seats.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Registration Number</label>
+          {{ form.registration_number }}
+          {% if form.registration_number.errors %}
+            <p class="text-sm" >{{ form.registration_number.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Bus Type</label>
+          {{ form.bus_type }}
+          {% if form.bus_type.errors %}
+            <p class="text-sm" >{{ form.bus_type.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Amenities (comma-separated)</label>
+          {{ form.amenities }}
+          {% if form.amenities.errors %}
+            <p class="text-sm" >{{ form.amenities.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="mt-6">
+          <button type="submit" class="btn btn-primary w-full">Register Bus</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

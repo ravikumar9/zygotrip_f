@@ -1,0 +1,44 @@
+{# PHASE 8: Enhanced Empty State Component #}
+<div class="empty-state">
+    <div class="empty-state__illustration" aria-hidden="true">
+        <div class="empty-state__icon">🔍</div>
+        <div class="empty-state__orb"></div>
+        <div class="empty-state__spark"></div>
+    </div>
+    
+    <h3 class="empty-state__title">{{ empty_title|default:"No hotels match your search" }}</h3>
+    <p class="empty-state__desc">{{ empty_message|default:"Try removing filters or explore trending cities" }}</p>
+    
+    <div class="empty-state__actions">
+        {% if empty_action_url %}
+            <a href="{{ empty_action_url }}" class="ui-button ui-button--primary ui-button--md">
+                {{ empty_action_label|default:"Reset Filters" }}
+            </a>
+        {% endif %}
+        {% if secondary_action_url %}
+            <a href="{{ secondary_action_url }}" class="ui-button ui-button--ghost ui-button--md">
+                {{ secondary_action_label|default:"View Popular Cities" }}
+            </a>
+        {% else %}
+            <a href="{% url 'hotels:list' %}" class="ui-button ui-button--ghost ui-button--md">
+                View All Hotels
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

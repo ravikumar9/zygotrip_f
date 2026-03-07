@@ -1,0 +1,79 @@
+{% load static %}
+
+{# Goibibo-style hotel card for listing pages #}
+<a href="{{ hotel.detail_url|default:'#' }}" class="hotel-card" data-hotel-card data-hotel-id="{{ hotel.id }}">
+  <!-- Hotel Image -->
+  <div class="hotel-card-image-wrapper">
+    {% if hotel.featured_image or hotel.image_url %}
+      <img 
+        src="{{ hotel.featured_image.url|default:hotel.image_url }}" 
+        alt="{{ hotel.name }}"
+        class="hotel-card-image"
+        loading="lazy"
+      />
+    {% else %}
+      <div class="hotel-card-image flex items-center justify-center" style="background: var(--bg-gray);">
+        <span style="font-size: 48px;">🏨</span>
+      </div>
+    {% endif %}
+    
+    {% if hotel.discount_percent %}
+      <div class="badge badge-secondary" style="position: absolute; top: 12px; left: 12px;">
+        {{ hotel.discount_percent }}% OFF
+      </div>
+    {% endif %}
+  </div>
+  
+  <!-- Hotel Content -->
+  <div class="hotel-card-content">
+    <!-- Header: Title + Rating -->
+    <div class="hotel-card-header">
+      <div style="flex: 1; min-width: 0;">
+        <h3 class="hotel-card-title truncate">{{ hotel.name }}</h3>
+        <div class="hotel-card-location">
+          <span>📍</span>
+          <span>{{ hotel.city }}{% if hotel.area %}, {{ hotel.area }}{% endif %}</span>
+        </div>
+      </div>
+      
+      {% if hotel.rating_value %}
+        <div class="hotel-card-rating">
+          <span>⭐</span>
+          <span>{{ hotel.rating_value }}</span>
+        </div>
+      {% endif %}
+    </div>
+    
+    <!-- Amenities -->
+    {% if hotel.amenities %}
+      <div class="hotel-card-amenities">
+        {% for amenity in hotel.amenities|slice:":4" %}
+          <span class="hotel-card-amenity">{{ amenity.display_name|default:amenity.name }}</span>
+        {% endfor %}
+        {% if hotel.amenities|length > 4 %}
+          <span class="hotel-card-amenity">+{{ hotel.amenities|length|add:"-4" }} more</span>
+        {% endif %}
+      </div>
+    {% endif %}
+    
+    <!-- Footer: Price + CTA -->
+    <div class="hotel-card-footer">
+      <div class="hotel-card-price">
+        <span class="hotel-card-price-label">Starting from</span>
+        <div>
+          <span class="hotel-card-price-amount">₹{{ hotel.price_current|floatformat:0 }}</span>
+          <span class="text-sm text-secondary">/night</span>
+        </div>
+        {% if hotel.price_original and hotel.price_original > hotel.price_current %}
+          <span class="text-xs text-tertiary" style="text-decoration: line-through;">
+            ₹{{ hotel.price_original|floatformat:0 }}
+          </span>
+        {% endif %}
+      </div>
+      
+      <button class="btn btn-primary btn-sm" onclick="event.preventDefault(); window.location.href='{{ hotel.detail_url }}';">
+        View Details
+      </button>
+    </div>
+  </div>
+</a>

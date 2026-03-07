@@ -1,0 +1,96 @@
+{% load static %}
+
+{# Room card for hotel detail pages #}
+<div class="card" data-room-id="{{ room.id }}">
+  <div class="card-body">
+    <!-- Room Header -->
+    <div class="flex justify-between items-start gap-md mb-md">
+      <div style="flex: 1;">
+        <h4 class="card-title">{{ room.name }}</h4>
+        {% if room.description %}
+          <p class="text-sm text-secondary">{{ room.description|truncatechars:100 }}</p>
+        {% endif %}
+      </div>
+      
+      {% if room.max_occupancy %}
+        <div class="badge badge-primary">
+          👥 {{ room.max_occupancy }} Guests
+        </div>
+      {% endif %}
+    </div>
+    
+    <!-- Room Amenities -->
+    {% if room.amenities_list %}
+      <div class="flex flex-wrap gap-xs mb-md">
+        {% for amenity in room.amenities_list|slice:":6" %}
+          <span class="text-xs text-secondary p-xs bg-light rounded-sm">
+            {{ amenity }}
+          </span>
+        {% endfor %}
+      </div>
+    {% endif %}
+    
+    <!-- Room Details Grid -->
+    <div class="grid grid-cols-2 gap-sm mb-md">
+      {% if room.bed_type %}
+        <div class="text-sm">
+          <span class="text-secondary">Bed:</span>
+          <span class="font-medium">{{ room.bed_type }}</span>
+        </div>
+      {% endif %}
+      
+      {% if room.room_size %}
+        <div class="text-sm">
+          <span class="text-secondary">Size:</span>
+          <span class="font-medium">{{ room.room_size }} sq ft</span>
+        </div>
+      {% endif %}
+      
+      {% if room.view_type %}
+        <div class="text-sm">
+          <span class="text-secondary">View:</span>
+          <span class="font-medium">{{ room.view_type }}</span>
+        </div>
+      {% endif %}
+      
+      {% if room.floor %}
+        <div class="text-sm">
+          <span class="text-secondary">Floor:</span>
+          <span class="font-medium">{{ room.floor }}</span>
+        </div>
+      {% endif %}
+    </div>
+    
+    <!-- Cancellation Policy -->
+    {% if room.cancellation_policy %}
+      <div class="alert alert-info mb-md" style="padding: var(--space-sm);">
+        <span class="text-xs">{{ room.cancellation_policy }}</span>
+      </div>
+    {% endif %}
+  </div>
+  
+  <!-- Room Footer: Price + Select -->
+  <div class="card-footer">
+    <div class="flex justify-between items-center">
+      <div>
+        <div class="text-xs text-secondary">Price per night</div>
+        <div class="text-2xl font-bold text-primary">
+          ₹{{ room.base_price|floatformat:0 }}
+        </div>
+        {% if room.original_price and room.original_price > room.base_price %}
+          <div class="text-xs text-tertiary" style="text-decoration: line-through;">
+            ₹{{ room.original_price|floatformat:0 }}
+          </div>
+        {% endif %}
+      </div>
+      
+      <button 
+        class="btn btn-primary"
+        data-room-select="{{ room.id }}"
+        data-price="{{ room.base_price }}"
+      >
+        Select Room
+      </button>
+    </div>
+  </div>
+</div>

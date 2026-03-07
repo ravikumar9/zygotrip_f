@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen">
+    <div class="ota-container">
+        <!-- Page header -->
+        <div class="mb-8">
+            {% block page_header %}{% endblock %}
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar filters -->
+            <aside class="lg:col-span-1">
+                {% block sidebar_filters %}{% endblock %}
+            </aside>
+
+            <!-- Main content -->
+            <main class="lg:col-span-3">
+                <!-- Search bar -->
+                {% block search_bar %}{% endblock %}
+
+                <!-- Results -->
+                {% block results_list %}{% endblock %}
+
+                <!-- Pagination -->
+                {% block pagination %}{% endblock %}
+            </main>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

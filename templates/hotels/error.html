@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Error | Zygotrip{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="text-center p-16">
+      <h1 class="mb-4">Something Went Wrong</h1>
+      <p class="mb-8">{{ error_message|default:"An unexpected error occurred. Please try again." }}</p>
+      <a href="/hotels/" class="btn btn-primary">Back to Hotels</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

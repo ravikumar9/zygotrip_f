@@ -1,0 +1,78 @@
+<div class="filters card">
+  <form method="GET" id="filter-form">
+    <!-- Preserve search params -->
+    {% if request.GET.location %}<input type="hidden" name="location" value="{{ request.GET.location }}">{% endif %}
+    {% if request.GET.checkin %}<input type="hidden" name="checkin" value="{{ request.GET.checkin }}">{% endif %}
+    {% if request.GET.checkout %}<input type="hidden" name="checkout" value="{{ request.GET.checkout }}">{% endif %}
+    {% if request.GET.guests %}<input type="hidden" name="guests" value="{{ request.GET.guests }}">{% endif %}
+    
+    <!-- City Filter -->
+    {% if filter_options.cities %}
+    <div class="filter-section">
+      <h3>📍 Location</h3>
+      <div class="filter-group">
+        {% for city in filter_options.cities %}
+        <label class="filter-option">
+          <input type="checkbox" name="city" value="{{ city.name }}" {% if city.name in selected_cities %}checked{% endif %}>
+          <span>{{ city.name }}</span>
+          <span class="filter-count">({{ city.count }})</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Price Range -->
+    <div class="filter-section">
+      <h3>💰 Price Range</h3>
+      <div class="filter-group">
+        <label class="filter-option">
+          <input type="checkbox" name="price_range" value="0-2000" {% if "0-2000" in selected_price_ranges %}checked{% endif %}>
+          <span>Under ₹2,000</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" name="price_range" value="2000-5000" {% if "2000-5000" in selected_price_ranges %}checked{% endif %}>
+          <span>₹2,000 - ₹5,000</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" name="price_range" value="5000-10000" {% if "5000-10000" in selected_price_ranges %}checked{% endif %}>
+          <span>₹5,000 - ₹10,000</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" name="price_range" value="10000-999999" {% if "10000-999999" in selected_price_ranges %}checked{% endif %}>
+          <span>Above ₹10,000</span>
+        </label>
+      </div>
+    </div>
+    
+    <!-- Rating Filter -->
+    <div class="filter-section">
+      <h3>⭐ Rating</h3>
+      <div class="filter-group">
+        <label class="filter-option">
+          <input type="checkbox" name="rating" value="4.5" {% if "4.5" in selected_ratings %}checked{% endif %}>
+          <span>4.5+ Stars</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" name="rating" value="4.0" {% if "4.0" in selected_ratings %}checked{% endif %}>
+          <span>4.0+ Stars</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" name="rating" value="3.5" {% if "3.5" in selected_ratings %}checked{% endif %}>
+          <span>3.5+ Stars</span>
+        </label>
+      </div>
+    </div>
+    
+    <button type="submit" class="btn btn-primary w-full">Apply Filters</button>
+    <a href="/hotels/" class="btn btn-ghost w-full block text-center mt-2">Reset</a>
+  </form>
+</div>
+
+<script>
+document.getElementById('filter-form').addEventListener('change', function(e) {
+  if(e.target.type === 'checkbox') {
+    this.submit();
+  }
+});
+</script>

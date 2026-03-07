@@ -1,0 +1,34 @@
+<div class="search-card">
+  <form method="get" action="/packages/" class="search-form" data-search-form>
+    <div class="search-form-group">
+      <div class="search-form-field relative">
+        <label for="package-destination">Destination</label>
+        <input
+          type="text"
+          id="package-destination"
+          name="q"
+          placeholder="Destination or package"
+          value="{{ request.GET.q|default:'' }}"
+          data-autocomplete="search"
+          autocomplete="off"
+        />
+      </div>
+      <div class="search-form-field">
+        <label for="package-date">Travel month</label>
+        <input type="month" id="package-date" name="travel_month" value="{{ request.GET.travel_month|default:'' }}" />
+      </div>
+      <div class="search-form-field">
+        <label for="package-budget">Budget</label>
+        <select id="package-budget" name="budget">
+          <option value="" {% if not request.GET.budget %}selected{% endif %}>Any</option>
+          <option value="budget" {% if request.GET.budget == "budget" %}selected{% endif %}>Budget</option>
+          <option value="mid" {% if request.GET.budget == "mid" %}selected{% endif %}>Mid</option>
+          <option value="premium" {% if request.GET.budget == "premium" %}selected{% endif %}>Premium</option>
+        </select>
+      </div>
+      <div class="search-form-field">
+        <button type="submit" class="btn btn-primary primary-button">Search Packages</button>
+      </div>
+    </div>
+  </form>
+</div>

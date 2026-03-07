@@ -1,0 +1,58 @@
+.card {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 0.9rem;
+}
+
+.label {
+  color: var(--color-text-muted);
+}
+
+.value {
+  font-weight: 500;
+}
+
+.highlight .label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.highlight .value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.discount .value {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.divider {
+  border-top: 1px dashed var(--color-border);
+  margin: 10px 0;
+}
+
+.note {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 10px;
+}

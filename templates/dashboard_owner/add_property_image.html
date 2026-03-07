@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div>
+      <h1 class="mb-4">Add Property Images</h1>
+      <p class="mb-12">
+        Upload high quality images or provide a direct image URL.
+      </p>
+
+      <div class="card">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label>Upload Image</label>
+            {{ form.image }}
+            <p class="form-hint">JPEG or PNG, landscape recommended.</p>
+          </div>
+
+          <div class="form-group">
+            <label>Image URL</label>
+            {{ form.image_url }}
+            <p class="form-hint">Optional if you uploaded an image.</p>
+          </div>
+
+          <div class="form-group">
+            <label>Caption</label>
+            {{ form.caption }}
+          </div>
+
+          <div class="grid grid-cols-2 gap-8">
+            <div class="form-group">
+              <label>Featured</label>
+              {{ form.is_featured }}
+            </div>
+            <div class="form-group">
+              <label>Display Order</label>
+              {{ form.display_order }}
+            </div>
+          </div>
+
+          <button type="submit" class="button button-accent button-block button-lg mt-8">
+            Upload Image
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

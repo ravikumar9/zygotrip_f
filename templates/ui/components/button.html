@@ -1,0 +1,20 @@
+{% if href %}
+  <a href="{{ href }}" class="ui-button ui-button--{{ variant|default:'primary' }} ui-button--{{ size|default:'md' }} {{ extra_class|default:'' }}">
+    {{ label }}
+  </a>
+{% else %}
+  <button type="{{ type|default:'button' }}" class="ui-button ui-button--{{ variant|default:'primary' }} ui-button--{{ size|default:'md' }} {{ extra_class|default:'' }}">
+    {{ label }}
+  </button>
+{% endif %}
+
+
+
+
+
+
+
+
+
+
+

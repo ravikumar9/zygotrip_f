@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Cancellation Policy — {{ property.name }} | Owner Dashboard{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 2rem auto; padding: 0 1rem;">
+  <!-- Breadcrumb -->
+  <div style="font-size:0.85rem; color:#6b7280; margin-bottom:1rem;">
+    <a href="{% url 'dashboard_owner:dashboard' %}" style="color:#2563eb;">Dashboard</a>
+    › <span>{{ property.name }}</span> › <span>Cancellation Policy</span>
+  </div>
+
+  <h1 style="font-size:1.5rem; font-weight:700; margin-bottom:0.25rem;">Cancellation Policy</h1>
+  <p style="color:#6b7280; font-size:0.9rem; margin-bottom:2rem;">
+    Configure refund rules for <strong>{{ property.name }}</strong>. These settings are shown to guests before booking.
+  </p>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div style="padding:0.75rem 1rem; border-radius:6px; margin-bottom:1rem; background:{% if msg.tags == 'error' %}#fef2f2; color:#b91c1c; border:1px solid #fecaca{% else %}#f0fdf4; color:#166534; border:1px solid #bbf7d0{% endif %}">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" action="">
+    {% csrf_token %}
+
+    <!-- Policy Type (preset buttons) -->
+    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:1.5rem; margin-bottom:1.5rem;">
+      <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">Policy Preset</h2>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.75rem;">
+        {% for value, label in policy_types %}
+          <label style="display:block; cursor:pointer;">
+            <input type="radio" name="policy_type" value="{{ value }}" {% if policy.policy_type == value %}checked{% endif %}
+              style="display:none;"
+              onchange="applyPreset('{{ value }}')" />
+            <div class="preset-card" id="preset-{{ value }}"
+              style="padding:0.75rem; border-radius:8px; border:2px solid {% if policy.policy_type == value %}#2563eb{% else %}#e5e7eb{% endif %}; text-align:center; font-size:0.8rem; font-weight:600; color:{% if policy.policy_type == value %}#2563eb{% else %}#374151{% endif %};
+              background:{% if policy.policy_type == value %}#eff6ff{% else %}#f9fafb{% endif %};">
+              {{ label }}
+            </div>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Free Cancellation Window -->
+    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:1.5rem; margin-bottom:1.5rem;">
+      <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">🟢 Free Cancellation Window</h2>
+      <div style="margin-bottom:1rem;">
+        <label style="display:block; font-size:0.875rem; font-weight:600; margin-bottom:0.35rem;">
+          Full refund if cancelled at least
+        </label>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <input type="number" name="free_cancel_hours" id="free_cancel_hours"
+            value="{{ policy.free_cancel_hours }}" min="0" max="720"
+            style="width:90px; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px; font-size:0.9rem;" />
+          <span style="color:#6b7280;">hours before check-in</span>
+        </div>
+        <p style="font-size:0.78rem; color:#9ca3af; margin-top:4px;">Set to 0 to disable free cancellation.</p>
+      </div>
+    </div>
+
+    <!-- Partial Refund Window -->
+    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:1.5rem; margin-bottom:1.5rem;">
+      <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">🟡 Partial Refund Window</h2>
+      <div style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+        <input type="checkbox" name="partial_refund_enabled" id="partial_refund_enabled"
+          {% if policy.partial_refund_enabled %}checked{% endif %}
+          style="width:16px; height:16px;" />
+        <label for="partial_refund_enabled" style="font-size:0.875rem; font-weight:600;">Enable partial refund tier</label>
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+        <div>
+          <label style="display:block; font-size:0.875rem; font-weight:600; margin-bottom:0.35rem;">Refund Percentage</label>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <input type="number" name="partial_refund_percent" id="partial_refund_percent"
+              value="{{ policy.partial_refund_percent }}" min="1" max="100" step="5"
+              style="width:80px; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px; font-size:0.9rem;" />
+            <span style="color:#6b7280;">%</span>
+          </div>
+        </div>
+        <div>
+          <label style="display:block; font-size:0.875rem; font-weight:600; margin-bottom:0.35rem;">When cancelled at least</label>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <input type="number" name="partial_cancel_hours" id="partial_cancel_hours"
+              value="{{ policy.partial_cancel_hours }}" min="0" max="720"
+              style="width:80px; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px; font-size:0.9rem;" />
+            <span style="color:#6b7280;">hrs before</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Non-Refundable Window -->
+    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:1.5rem; margin-bottom:1.5rem;">
+      <h2 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">🔴 Non-Refundable Window</h2>
+      <label style="display:block; font-size:0.875rem; font-weight:600; margin-bottom:0.35rem;">
+        No refund if cancelled within
+      </label>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <input type="number" name="non_refundable_hours" id="non_refundable_hours"
+          value="{{ policy.non_refundable_hours }}" min="0" max="720"
+          style="width:90px; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px; font-size:0.9rem;" />
+        <span style="color:#6b7280;">hours of check-in</span>
+      </div>
+    </div>
+
+    <!-- Platform Fee -->
+    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:1.5rem; margin-bottom:1.5rem;">
+      <h2 style="font-size:1rem; font-weight:700; margin-bottom:0.5rem;">Platform Fee (Always Withheld)</h2>
+      <p style="font-size:0.8rem; color:#6b7280; margin-bottom:0.75rem;">This percentage is always kept by Zygotrip even on free cancellations.</p>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <input type="number" name="platform_fee_always_withheld"
+          value="{{ policy.platform_fee_always_withheld }}" min="0" max="10" step="0.5"
+          style="width:80px; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px; font-size:0.9rem;" />
+        <span style="color:#6b7280;">%</span>
+      </div>
+    </div>
+
+    <!-- Display Note -->
+    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:1.5rem; margin-bottom:2rem;">
+      <h2 style="font-size:1rem; font-weight:700; margin-bottom:0.5rem;">Guest-Facing Summary (optional)</h2>
+      <p style="font-size:0.8rem; color:#6b7280; margin-bottom:0.75rem;">A short human-readable note shown on the booking page. Leave blank to auto-generate.</p>
+      <textarea name="display_note" rows="2"
+        style="width:100%; padding:0.6rem; border:1px solid #d1d5db; border-radius:6px; font-size:0.875rem; font-family:inherit; resize:vertical;"
+        placeholder="e.g. Free cancellation up to 48h before check-in. 50% refund within 48h.">{{ policy.display_note }}</textarea>
+    </div>
+
+    <div style="display:flex; gap:1rem;">
+      <button type="submit" style="padding:0.75rem 2rem; background:#2563eb; color:#fff; border:none; border-radius:8px; font-weight:700; font-size:0.95rem; cursor:pointer;">
+        Save Policy
+      </button>
+      <a href="{% url 'dashboard_owner:dashboard' %}" style="padding:0.75rem 1.5rem; background:#f3f4f6; color:#374151; border-radius:8px; font-weight:600; font-size:0.95rem; text-decoration:none;">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+  const PRESETS = {
+    flexible: { free_cancel_hours: 48, partial_refund_percent: 50, partial_cancel_hours: 24, non_refundable_hours: 0 },
+    moderate: { free_cancel_hours: 24, partial_refund_percent: 50, partial_cancel_hours: 12, non_refundable_hours: 0 },
+    strict: { free_cancel_hours: 168, partial_refund_percent: 50, partial_cancel_hours: 0, non_refundable_hours: 0 },
+    non_refundable: { free_cancel_hours: 0, partial_refund_percent: 0, partial_cancel_hours: 0, non_refundable_hours: 72 },
+    custom: null,
+  };
+
+  function applyPreset(type) {
+    const preset = PRESETS[type];
+    if (!preset) return;
+    document.getElementById('free_cancel_hours').value = preset.free_cancel_hours;
+    document.getElementById('partial_refund_percent').value = preset.partial_refund_percent;
+    document.getElementById('partial_cancel_hours').value = preset.partial_cancel_hours;
+    document.getElementById('non_refundable_hours').value = preset.non_refundable_hours;
+    // Update preset card styling
+    document.querySelectorAll('.preset-card').forEach(el => {
+      el.style.border = '2px solid #e5e7eb';
+      el.style.background = '#f9fafb';
+      el.style.color = '#374151';
+    });
+    const active = document.getElementById('preset-' + type);
+    if (active) {
+      active.style.border = '2px solid #2563eb';
+      active.style.background = '#eff6ff';
+      active.style.color = '#2563eb';
+    }
+  }
+</script>
+{% endblock %}

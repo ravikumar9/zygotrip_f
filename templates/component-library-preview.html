@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    
+
+
+    <!-- Header -->
+    <div class="preview-header">
+        <div class="ota-container">
+            <h1>🎨 Zygotrip Component Library</h1>
+            <p>Professional Design System - Phase 1, 2, 3 Complete</p>
+            <div>
+                <span class="badge badge-success">Production Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ota-container">
+        
+        <!-- PHASE 1: DESIGN TOKENS -->
+        <div class="section">
+            <h2 class="section-title">Phase 1: Design Tokens ✅</h2>
+            <p class="section-description">Global design system foundation with consistent colors, spacing, typography, and more.</p>
+            
+            <!-- Colors -->
+            <div class="component-group">
+                <h3>Color Palette</h3>
+                <div class="color-palette">
+                    <div class="color-swatch">
+                        <div class="color-box"></div>
+                        <div class="color-label">Primary</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-box"></div>
+                        <div class="color-label">Secondary</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-box"></div>
+                        <div class="color-label">Success</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-box"></div>
+                        <div class="color-label">Error</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-box"></div>
+                        <div class="color-label">Warning</div>
+                    </div>
+                    <div class="color-swatch">
+                        <div class="color-box"></div>
+                        <div class="color-label">Info</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Spacing -->
+            <div class="component-group">
+                <h3>Spacing Scale</h3>
+                <div class="spacing-demo">
+                    <div class="spacing-box"></div>
+                    <span>4px</span>
+                </div>
+                <div class="spacing-demo">
+                    <div class="spacing-box"></div>
+                    <span>8px</span>
+                </div>
+                <div class="spacing-demo">
+                    <div class="spacing-box"></div>
+                    <span>16px</span>
+                </div>
+                <div class="spacing-demo">
+                    <div class="spacing-box"></div>
+                    <span>24px</span>
+                </div>
+                <div class="spacing-demo">
+                    <div class="spacing-box"></div>
+                    <span>32px</span>
+                </div>
+                <div class="spacing-demo">
+                    <div class="spacing-box"></div>
+                    <span>48px</span>
+                </div>
+                <div class="spacing-demo">
+                    <div class="spacing-box"></div>
+                    <span>64px</span>
+                </div>
+            </div>
+            
+            <!-- Typography -->
+            <div class="component-group">
+                <h3>Typography Scale</h3>
+                <p>12px - Extra Small</p>
+                <p>14px - Small</p>
+                <p>16px - Base</p>
+                <p>18px - Large</p>
+                <p>20px - Extra Large</p>
+                <p>24px - 2XL</p>
+                <p>30px - 3XL</p>
+            </div>
+        </div>
+
+        <!-- PHASE 2: GRID SYSTEM -->
+        <div class="section">
+            <h2 class="section-title">Phase 2: Grid System ✅</h2>
+            <p class="section-description">Professional 12-column responsive grid with standardized gutters and breakpoints.</p>
+            
+            <div class="component-group">
+                <h3>12 Column Grid Demo</h3>
+                <div class="grid-row">
+                    <div class="grid-col-12">
+                        <div>12 columns</div>
+                    </div>
+                </div>
+                <div class="grid-row">
+                    <div class="grid-col-6">
+                        <div>6 columns</div>
+                    </div>
+                    <div class="grid-col-6">
+                        <div>6 columns</div>
+                    </div>
+                </div>
+                <div class="grid-row">
+                    <div class="grid-col-4">
+                        <div>4 cols</div>
+                    </div>
+                    <div class="grid-col-4">
+                        <div>4 cols</div>
+                    </div>
+                    <div class="grid-col-4">
+                        <div>4 cols</div>
+                    </div>
+                </div>
+                <div class="code-snippet">
+&lt;div class="grid-row"&gt;
+  &lt;div class="grid-col-12 grid-col-md-6 grid-col-lg-4"&gt;...&lt;/div&gt;
+&lt;/div&gt;
+                </div>
+            </div>
+            
+            <div class="component-group">
+                <h3>Responsive Breakpoints</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Breakpoint</th>
+                            <th>Class Prefix</th>
+                            <th>Min Width</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Extra Small</td>
+                            <td><code>grid-col-</code></td>
+                            <td>&lt; 480px</td>
+                        </tr>
+                        <tr>
+                            <td>Small</td>
+                            <td><code>grid-col-sm-</code></td>
+                            <td>≥ 480px</td>
+                        </tr>
+                        <tr>
+                            <td>Medium</td>
+                            <td><code>grid-col-md-</code></td>
+                            <td>≥ 768px</td>
+                        </tr>
+                        <tr>
+                            <td>Large</td>
+                            <td><code>grid-col-lg-</code></td>
+                            <td>≥ 1024px</td>
+                        </tr>
+                        <tr>
+                            <td>Extra Large</td>
+                            <td><code>grid-col-xl-</code></td>
+                            <td>≥ 1200px</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PHASE 3: COMPONENTS -->
+        <div class="section">
+            <h2 class="section-title">Phase 3: Component Library ✅</h2>
+            <p class="section-description">Production-ready reusable components with consistent states and interactions.</p>
+            
+            <!-- Buttons -->
+            <div class="component-group">
+                <h3>Buttons</h3>
+                <div class="component-preview">
+                    <button class="btn btn-primary">Primary</button>
+                    <button class="btn btn-secondary">Secondary</button>
+                    <button class="btn btn-outline">Outline</button>
+                    <button class="btn btn-ghost">Ghost</button>
+                    <button class="btn btn-success">Success</button>
+                    <button class="btn btn-error">Error</button>
+                    <button class="btn btn-primary" disabled>Disabled</button>
+                </div>
+                <div class="component-preview">
+                    <button class="btn btn-primary btn-sm">Small</button>
+                    <button class="btn btn-primary">Default</button>
+                    <button class="btn btn-primary btn-lg">Large</button>
+                </div>
+                <div class="code-snippet">
+&lt;button class="btn btn-primary"&gt;Primary Button&lt;/button&gt;
+&lt;button class="btn btn-outline btn-lg"&gt;Large Outline&lt;/button&gt;
+                </div>
+            </div>
+            
+            <!-- Cards -->
+            <div class="component-group">
+                <h3>Cards</h3>
+                <div class="grid-row">
+                    <div class="grid-col-12 grid-col-md-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="card-title">Card Title</h3>
+                                <p class="card-subtitle">Card subtitle</p>
+                                <p>This is a standard card component with shadow and hover effects.</p>
+                                <div class="card-actions">
+                                    <button class="btn btn-primary btn-sm">Action</button>
+                                    <button class="btn btn-ghost btn-sm">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid-col-12 grid-col-md-4">
+                        <div class="card card-bordered">
+                            <div class="card-header">
+                                <h3 class="card-title">Bordered Card</h3>
+                            </div>
+                            <div class="card-body">
+                                <p>This card has a border instead of a shadow.</p>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-outline btn-sm">View More</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid-col-12 grid-col-md-4">
+                        <div class="card card-elevated">
+                            <div class="card-body">
+                                <h3 class="card-title">Elevated Card</h3>
+                                <p>This card has a larger shadow for emphasis.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Inputs -->
+            <div class="component-group">
+                <h3>Input Fields</h3>
+                <div class="grid-row">
+                    <div class="grid-col-12 grid-col-md-6">
+                        <div class="input-group">
+                            <label class="input-label">Default Input</label>
+                            <input type="text" class="input" placeholder="Enter text...">
+                            <span class="input-hint">This is a hint text.</span>
+                        </div>
+                    </div>
+                    <div class="grid-col-12 grid-col-md-6">
+                        <div class="input-group">
+                            <label class="input-label">With Error</label>
+                            <input type="text" class="input input-error" placeholder="Invalid input" value="wrong@">
+                            <span class="input-error-message">Please enter a valid email.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-row">
+                    <div class="grid-col-12 grid-col-md-4">
+                        <div class="input-group">
+                            <label class="input-label">Small</label>
+                            <input type="text" class="input input-sm" placeholder="Small input">
+                        </div>
+                    </div>
+                    <div class="grid-col-12 grid-col-md-4">
+                        <div class="input-group">
+                            <label class="input-label">Default</label>
+                            <input type="text" class="input" placeholder="Default input">
+                        </div>
+                    </div>
+                    <div class="grid-col-12 grid-col-md-4">
+                        <div class="input-group">
+                            <label class="input-label">Large</label>
+                            <input type="text" class="input input-lg" placeholder="Large input">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Badges & Tags -->
+            <div class="component-group">
+                <h3>Badges & Tags</h3>
+                <div class="component-preview">
+                    <span class="badge badge-primary">Primary</span>
+                    <span class="badge badge-secondary">Secondary</span>
+                    <span class="badge badge-success">Success</span>
+                    <span class="badge badge-error">Error</span>
+                    <span class="badge badge-warning">Warning</span>
+                    <span class="badge badge-info">Info</span>
+                    <span class="badge badge-gray">Gray</span>
+                </div>
+                <div class="component-preview">
+                    <span class="badge badge-primary badge-dot">Active</span>
+                    <span class="badge badge-success badge-dot">Online</span>
+                    <span class="badge badge-error badge-dot">Offline</span>
+                </div>
+                <div class="component-preview">
+                    <span class="tag">Flight <button class="tag-remove">×</button></span>
+                    <span class="tag">Hotel <button class="tag-remove">×</button></span>
+                    <span class="tag">Package <button class="tag-remove">×</button></span>
+                </div>
+            </div>
+            
+            <!-- Alerts -->
+            <div class="component-group">
+                <h3>Alerts</h3>
+                <div class="alert alert-success">
+                    ✓ Your booking was successful!
+                </div>
+                <div class="alert alert-error">
+                    ✕ Payment failed. Please try again.
+                </div>
+                <div class="alert alert-warning">
+                    ⚠ This offer expires in 24 hours.
+                </div>
+                <div class="alert alert-info alert-dismissible">
+                    ℹ New features are now available!
+                    <button class="alert-close">×</button>
+                </div>
+            </div>
+            
+            <!-- Tabs -->
+            <div class="component-group">
+                <h3>Tabs</h3>
+                <div class="tabs">
+                    <button class="tab active">Hotels</button>
+                    <button class="tab">Buses</button>
+                    <button class="tab">Cabs</button>
+                    <button class="tab">Packages</button>
+                </div>
+                <div class="tab-content">
+                    <div class="tab-pane active">
+                        <p>Hotels content goes here...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Skeleton Loaders -->
+            <div class="component-group">
+                <h3>Skeleton Loaders</h3>
+                <div class="component-preview">
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-text"></div>
+                    <div>
+                        <div class="skeleton skeleton-card"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Spinners -->
+            <div class="component-group">
+                <h3>Spinners</h3>
+                <div class="component-preview">
+                    <div class="spinner spinner-sm"></div>
+                    <div class="spinner"></div>
+                    <div class="spinner spinner-lg"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="section">
+            <h2 class="section-title">✅ Implementation Status</h2>
+            <div class="grid-row">
+                <div class="grid-col-12 grid-col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <div>✅</div>
+                            <h3>Phase 1</h3>
+                            <p>Design Tokens</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-col-12 grid-col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <div>✅</div>
+                            <h3>Phase 2</h3>
+                            <p>Grid System</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-col-12 grid-col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <div>✅</div>
+                            <h3>Phase 3</h3>
+                            <p>Component Library</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <h3>📦 Files Created</h3>
+                <ul>
+                    <li><code>/static/css/design-tokens.css</code> - Global design system variables</li>
+                    <li><code>/static/css/grid-system.css</code> - 12-column responsive grid</li>
+                    <li><code>/static/css/components.css</code> - Reusable UI components</li>
+                    <li><code>/templates/component-library-preview.html</code> - This preview page</li>
+                </ul>
+                
+                <h3>🚀 Next Steps (Phases 4-10)</h3>
+                <ol>
+                    <li>Apply components to listing pages (hotels, buses, cabs, packages)</li>
+                    <li>Upgrade detail pages with new design system</li>
+                    <li>Refactor booking flow with professional UX</li>
+                    <li>Add micro-interactions and animations</li>
+                    <li>Create proper empty states</li>
+                    <li>Add trust signals and badges</li>
+                    <li>Mobile responsive polish</li>
+                </ol>
+                
+                <div>
+                    <button class="btn btn-primary btn-lg">Ready to Apply to Pages →</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,69 @@
+<!-- Offers Carousel Component -->
+<section class="section offers-section py-12">
+  <div class="ota-container">
+    <h2 class="text-3xl font-bold mb-2">Special Offers</h2>
+    <p class="mb-8">Exclusive deals and discounts for you</p>
+
+    <div class="offers-carousel relative" id="offers-carousel">
+      <!-- Offers loaded dynamically -->
+      <div class="offers-loading text-center py-12">Loading offers...</div>
+    </div>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/api/offers')
+    .then(response => response.json())
+    .then(data => {
+      const carousel = document.getElementById('offers-carousel');
+      
+      if (data.offers && data.offers.length > 0) {
+        carousel.innerHTML = `
+          <div class="offers-slider grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            ${data.offers.map(offer => `
+            <div class="offer-card rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
+            <div class="offer-badge inline-block px-3 py-1 rounded-full text-sm font-semibold mb-3">
+                  ${offer.type === 'PERCENTAGE' ? offer.discount + '% OFF' : '₹' + offer.discount + ' OFF'}
+                </div>
+                <h3 class="font-bold text-2xl mb-2">${offer.title}</h3>
+            ${offer.subtitle ? `<p class="mb-4">${offer.subtitle}</p>` : ''}
+                ${offer.code ? `
+              <div class="offer-code rounded px-4 py-2 inline-block font-mono font-bold mb-3">
+                    ${offer.code}
+                  </div>
+                ` : ''}
+            <p class="text-sm">
+                  Valid until ${new Date(offer.valid_until).toLocaleDateString()}
+                </p>
+                ${offer.category ? `
+              <span class="inline-block mt-3 px-3 py-1 rounded text-xs">
+                    For ${offer.category}
+                  </span>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        carousel.innerHTML = '<p class="text-center">No active offers at the moment</p>';
+      }
+    })
+    .catch(err => {
+      console.error('Failed to load offers:', err);
+      document.getElementById('offers-carousel').innerHTML = 
+          '<p class="text-center">Failed to load offers</p>';
+    });
+});
+</script>
+
+
+
+
+
+
+
+
+
+
+

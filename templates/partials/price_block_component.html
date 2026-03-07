@@ -1,0 +1,29 @@
+<!-- REUSABLE COMPONENT: Price Block -->
+<!-- Usage: {% include 'partials/price_block.html' with current=4500 original=6000 discount=25 %} -->
+
+<div class="price-block">
+  {% if current %}
+  <div class="d-flex align-baseline" >
+    <span class="price-value">₹{{ current|floatformat:0 }}</span>
+    
+    {% if original %}
+    <span class="price-original">₹{{ original|floatformat:0 }}</span>
+    {% endif %}
+    
+    {% if discount %}
+    <span class="price-discount-badge">{{ discount|floatformat:0 }}% off</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+
+
+
+
+
+
+
+
+
+

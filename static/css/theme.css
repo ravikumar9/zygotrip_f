@@ -1,0 +1,39 @@
+:root{
+  /* COLORS - GoExplorer Match */
+  --primary: #ff6b35;
+  --secondary: #1e3c72;
+  --accent: #2a5298;
+  --bg: #f6f7fb;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
+
+  /* SPACING SCALE */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* TYPOGRAPHY */
+  --font-family: 'Inter', system-ui, sans-serif;
+  --text-h1: 32px;
+  --text-h2: 24px;
+  --text-h3: 18px;
+  --text-body: 15px;
+  --text-small: 13px;
+
+  /* RADIUS */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* SHADOW */
+  --shadow-card: 0 4px 14px rgba(0,0,0,.08);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.07);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,.1);
+}

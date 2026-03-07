@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="text-center p-12">
+      <h1 class="mb-4">Booking Confirmed</h1>
+      <p class="mb-8" >Your bus booking has been successfully created.</p>
+
+      <div class="card text-left" >
+        <h3 class="card-title">Booking Details</h3>
+        <p><strong>Booking ID:</strong> <span id="bus-booking-uuid">{{ booking.uuid }}</span></p>
+        <p><strong>Route:</strong> {{ booking.bus.from_city }} → {{ booking.bus.to_city }}</p>
+        <p><strong>Journey Date:</strong> {{ booking.journey_date }}</p>
+        <p><strong>Seat:</strong> {% if booking.passengers.first %}{{ booking.passengers.first.seat.seat_number }}{% else %}N/A{% endif %}</p>
+        <p><strong>Total:</strong> ₹{{ booking.total_amount }}</p>
+      </div>
+
+      <div class="mt-6">
+        <a href="{% url 'buses:list' %}" class="button button-secondary">Back to Buses</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

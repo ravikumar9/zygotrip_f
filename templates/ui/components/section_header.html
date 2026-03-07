@@ -1,0 +1,25 @@
+{% comment %}
+Section Header Component
+Usage: {% include "ui/components/section_header.html" with title="Featured Hotels" subtitle="Handpicked for you" icon="🏨" %}
+{% endcomment %}
+
+<div class="section-header">
+  <div class="section-header__main">
+    {% if icon %}<span class="section-header__icon">{{ icon }}</span>{% endif %}
+    <h2 class="section-header__title">{{ title }}</h2>
+  </div>
+  {% if subtitle %}
+  <p class="section-header__subtitle">{{ subtitle }}</p>
+  {% endif %}
+</div>
+
+
+
+
+
+
+
+
+
+
+

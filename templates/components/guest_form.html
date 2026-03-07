@@ -1,0 +1,162 @@
+{% load static %}
+
+{# Guest details form for booking pages #}
+<div class="card">
+  <div class="card-body">
+    <h3 class="text-2xl font-semibold mb-lg">Guest Details</h3>
+    
+    <!-- Primary Guest -->
+    <div class="mb-lg">
+      <h4 class="text-lg font-semibold mb-md">Primary Guest</h4>
+      
+      <div class="grid grid-cols-2 gap-lg">
+        <div class="form-group">
+          <label for="first_name" class="form-label form-label-required">First Name</label>
+          <input 
+            type="text" 
+            id="first_name" 
+            name="first_name" 
+            class="form-input"
+            value="{{ form.first_name.value|default:'' }}"
+            required
+          />
+          {% if form.first_name.errors %}
+            <span class="form-error">{{ form.first_name.errors.0 }}</span>
+          {% endif %}
+        </div>
+        
+        <div class="form-group">
+          <label for="last_name" class="form-label form-label-required">Last Name</label>
+          <input 
+            type="text" 
+            id="last_name" 
+            name="last_name" 
+            class="form-input"
+            value="{{ form.last_name.value|default:'' }}"
+            required
+          />
+          {% if form.last_name.errors %}
+            <span class="form-error">{{ form.last_name.errors.0 }}</span>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-lg">
+        <div class="form-group">
+          <label for="email" class="form-label form-label-required">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            class="form-input"
+            value="{% if user.is_authenticated %}{{ user.email }}{% elif form.email.value %}{{ form.email.value }}{% endif %}"
+            required
+          />
+          <span class="form-help">Booking confirmation will be sent here</span>
+          {% if form.email.errors %}
+            <span class="form-error">{{ form.email.errors.0 }}</span>
+          {% endif %}
+        </div>
+        
+        <div class="form-group">
+          <label for="phone" class="form-label form-label-required">Phone Number</label>
+          <input 
+            type="tel" 
+            id="phone" 
+            name="phone" 
+            class="form-input"
+            value="{{ form.phone.value|default:'' }}"
+            pattern="[0-9]{10}"
+            required
+          />
+          <span class="form-help">10-digit mobile number</span>
+          {% if form.phone.errors %}
+            <span class="form-error">{{ form.phone.errors.0 }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Additional Guests (optional) -->
+    {% if rooms > 1 or guests.adults > 1 %}
+      <div class="mb-lg pb-lg border-t">
+        <div class="flex justify-between items-center mb-md mt-lg">
+          <h4 class="text-lg font-semibold">Additional Guests</h4>
+          <span class="text-sm text-secondary">Optional</span>
+        </div>
+        
+        <div class="form-group">
+          <label for="additional_guests" class="form-label">Guest Names</label>
+          <textarea 
+            id="additional_guests" 
+            name="additional_guests" 
+            class="form-textarea"
+            rows="3"
+            placeholder="Enter names of other guests (one per line)"
+          >{{ form.additional_guests.value|default:'' }}</textarea>
+          <span class="form-help">Not mandatory but helps with check-in</span>
+        </div>
+      </div>
+    {% endif %}
+    
+    <!-- Special Requests -->
+    <div class="mb-lg pb-lg border-t">
+      <h4 class="text-lg font-semibold mb-md mt-lg">Special Requests</h4>
+      
+      <div class="form-group">
+        <label for="special_requests" class="form-label">Any special requirements?</label>
+        <textarea 
+          id="special_requests" 
+          name="special_requests" 
+          class="form-textarea"
+          rows="4"
+          placeholder="E.g., early check-in, late check-out, room preferences, dietary requirements, etc."
+        >{{ form.special_requests.value|default:'' }}</textarea>
+        <span class="form-help">We'll do our best to accommodate your requests</span>
+      </div>
+    </div>
+    
+    <!-- Arrival Time -->
+    <div class="mb-lg pb-lg border-t">
+      <h4 class="text-lg font-semibold mb-md mt-lg">Arrival Time</h4>
+      
+      <div class="form-group">
+        <label for="arrival_time" class="form-label">Expected check-in time</label>
+        <select id="arrival_time" name="arrival_time" class="form-select">
+          <option value="">Select arrival time</option>
+          <option value="morning">Morning (6 AM - 12 PM)</option>
+          <option value="afternoon">Afternoon (12 PM - 6 PM)</option>
+          <option value="evening">Evening (6 PM - 10 PM)</option>
+          <option value="night">Night (10 PM - 6 AM)</option>
+        </select>
+        <span class="form-help">Standard check-in is usually from 2 PM</span>
+      </div>
+    </div>
+    
+    <!-- Terms & Conditions -->
+    <div class="border-t pt-lg">
+      <div class="form-checkbox mb-md">
+        <input 
+          type="checkbox" 
+          id="terms_accepted" 
+          name="terms_accepted" 
+          required
+        />
+        <label for="terms_accepted" class="text-sm">
+          I agree to the <a href="/terms/" target="_blank" class="text-primary">Terms & Conditions</a> and <a href="/privacy/" target="_blank" class="text-primary">Privacy Policy</a>
+        </label>
+      </div>
+      
+      <div class="form-checkbox">
+        <input 
+          type="checkbox" 
+          id="marketing_consent" 
+          name="marketing_consent"
+        />
+        <label for="marketing_consent" class="text-sm">
+          Send me promotional offers and updates via email
+        </label>
+      </div>
+    </div>
+  </div>
+</div>

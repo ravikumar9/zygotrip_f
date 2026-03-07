@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="d-flex justify-between align-center mb-12">
+      <div>
+        <h1>Your Profile</h1>
+        <p class="">Manage your bookings and invoices</p>
+      </div>
+    </div>
+
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-title">Account</div>
+        <a href="#" class="sidebar-link active">Bookings</a>
+        <a href="#" class="sidebar-link">Saved Properties</a>
+        <a href="#" class="sidebar-link">Reviews</a>
+        <a href="#" class="sidebar-link">Settings</a>
+        <a href="{% url 'account_logout' %}" class="sidebar-link mt-6" >Logout</a>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <div class="d-flex justify-between align-center mb-8">
+          <h2 class="section-title m-0">Recent Bookings</h2>
+          <span class="badge badge-info">{{ invoices.count }} bookings</span>
+        </div>
+
+        {% if invoices %}
+          <div class="grid md:grid-cols-2">
+            {% for invoice in invoices %}
+              <div class="card">
+                <div class="d-flex justify-between mb-4 align-start" >
+                  <div>
+                    <h3 class="card-title">{{ invoice.booking.property.name }}</h3>
+                    <p class="card-meta">{{ invoice.booking.property.city }}, {{ invoice.booking.property.country }}</p>
+                  </div>
+                  {% if invoice.status == 'paid' %}
+                    <span class="badge badge-success">Paid</span>
+                  {% else %}
+                    <span class="badge badge-warning">Pending</span>
+                  {% endif %}
+                </div>
+
+                <div class="p-4 rounded-lg mb-4" >
+                  <div class="d-flex justify-between mb-3">
+                    <span class="">Check In</span>
+                    <strong>{{ invoice.booking.check_in }}</strong>
+                  </div>
+                  <div class="d-flex justify-between mb-3">
+                    <span class="">Check Out</span>
+                    <strong>{{ invoice.booking.check_out }}</strong>
+                  </div>
+                  <div class="d-flex justify-between pt-3 border-top">
+                    <span class="">Amount</span>
+                    <strong >₹{{ invoice.total_amount }}</strong>
+                  </div>
+                </div>
+
+                <p class="mb-4 text-xs" >
+                  Invoice ID: <code class="">{{ invoice.uuid|truncatechars:12 }}</code>
+                </p>
+
+                <div class="card-footer">
+                  <a href="/invoice/{{ invoice.uuid }}/" class="button button-primary button-block">View Invoice</a>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-state-icon">🎫</div>
+            <h3 class="empty-state-title">No Bookings Yet</h3>
+            <p class="empty-state-text">Start your journey with us and book your first stay today</p>
+            <a href="/hotels/" class="button button-primary">Browse Hotels</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

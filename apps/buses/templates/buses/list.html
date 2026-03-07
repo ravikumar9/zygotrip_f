@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block hero %}
+<section class="hero hero--search">
+  <div class="hero-gradient">
+    <div class="hero-content">
+      <p class="hero-eyebrow">Zygotrip Buses</p>
+      <h1 class="hero-title">Book affordable bus tickets instantly</h1>
+      <p class="hero-subtitle">Search and compare buses with live seat availability.</p>
+      <div class="search-card">
+        <form method="get" action="{% url 'buses:list' %}" class="search-form">
+          <div class="search-form-group">
+            <div class="search-form-field">
+              <label for="from-city" class="text-[11px] uppercase tracking-wider text-gray-500">From</label>
+              <input type="text" id="from-city" name="from_city" placeholder="City" value="{{ request.GET.from_city|default:'' }}" class="text-[16px] h-12" />
+            </div>
+            <div class="search-form-field">
+              <label for="to-city" class="text-[11px] uppercase tracking-wider text-gray-500">To</label>
+              <input type="text" id="to-city" name="to_city" placeholder="City" value="{{ request.GET.to_city|default:'' }}" class="text-[16px] h-12" />
+            </div>
+            <div class="search-form-field">
+              <label for="bus-date" class="text-[11px] uppercase tracking-wider text-gray-500">Date</label>
+              <input type="date" id="bus-date" name="date" value="{{ request.GET.date|default:'' }}" />
+            </div>
+            <div class="search-form-field">
+              <button type="submit" class="btn btn-primary primary-button h-[52px] min-w-[160px] rounded-xl text-[15px]">Search Buses</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="max-w-7xl mx-auto px-4">
+    {% if buses %}
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-4">Available Buses</h2>
+      <p class="text-sm text-gray-500 mb-6">
+        {% if request.GET.from_city and request.GET.to_city %}
+          {{ buses|length }} buses from {{ request.GET.from_city }} to {{ request.GET.to_city }}
+        {% else %}
+          {{ buses|length }} buses available
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="grid gap-4">
+      {% for bus in buses %}
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition p-4">
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-6 items-center">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">{{ bus.operator|default:"Bus Operator" }}</h3>
+            <p class="text-sm text-gray-500 mt-1">{{ bus.bus_type|default:"Standard Bus" }}</p>
+            <div class="flex gap-4 mt-3">
+              <div>
+                <p class="text-xs text-gray-500">Departure</p>
+                <p class="text-sm font-semibold">{{ bus.departure_time|default:"09:00 AM" }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Duration</p>
+                <p class="text-sm font-semibold">{{ bus.duration|default:"8h 30m" }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Arrival</p>
+                <p class="text-sm font-semibold">{{ bus.arrival_time|default:"06:00 PM" }}</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-3">
+              <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">AC</span>
+              <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">WiFi</span>
+              <span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-700">Charging</span>
+            </div>
+          </div>
+
+          <div class="text-center flex flex-col items-center gap-2">
+            <p class="text-xs text-gray-500">Seats Available</p>
+            <p class="text-2xl font-bold text-green-600">{{ bus.available_seats|default:8 }}</p>
+          </div>
+
+          <div class="flex flex-col items-end gap-3">
+            <div>
+              <p class="text-xs text-gray-500">Price From</p>
+              <p class="text-[22px] font-bold text-gray-900">₹{{ bus.price|default:450|floatformat:0 }}</p>
+              <p class="text-xs text-gray-500">per seat</p>
+            </div>
+            <a href="{% url 'buses:detail' bus.id %}" class="btn btn-primary h-10 px-6 rounded-lg whitespace-nowrap">View Seats</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-2xl shadow-sm py-16 text-center">
+      <div class="text-4xl mb-4">🚌</div>
+      <h3 class="text-xl font-semibold mb-2">Start searching for buses</h3>
+      <p class="text-sm text-gray-500">Enter your route and date to find available buses</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

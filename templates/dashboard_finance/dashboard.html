@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="d-flex justify-between align-center mb-12">
+      <div>
+        <h1>Finance Dashboard</h1>
+        <p class="">Monitor payments and wallet balances</p>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid md:grid-cols-4 gap-6 mb-12">
+      <div class="card text-center">
+        <p class="m-2 text-sm" >Total Revenue</p>
+        <p class="font-bold text-3xl m-0" >₹125,430</p>
+        <p class="m-2 text-xs" >↑ 12% this month</p>
+      </div>
+      
+      <div class="card text-center">
+        <p class="m-2 text-sm" >Pending Payments</p>
+        <p class="font-bold text-3xl m-0" >₹8,940</p>
+        <p class="m-2 text-xs" >5 transactions</p>
+      </div>
+      
+      <div class="card text-center">
+        <p class="m-2 text-sm" >Total Wallets</p>
+        <p class="font-bold text-3xl m-0" >₹45,300</p>
+        <p class="m-2 text-xs" >Across 234 users</p>
+      </div>
+      
+      <div class="card text-center">
+        <p class="m-2 text-sm" >Conversion Rate</p>
+        <p class="font-bold text-3xl m-0" >82%</p>
+        <p class="m-2 text-xs" >↑ 3% from last week</p>
+      </div>
+    </div>
+
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-title">Finance</div>
+        <a href="/finance/dashboard/" class="sidebar-link active">Dashboard</a>
+        <a href="#" class="sidebar-link">Transactions</a>
+        <a href="#" class="sidebar-link">Settlements</a>
+        <a href="#" class="sidebar-link">Disputes</a>
+        
+        <div class="mt-8 pt-8 border-top">
+          <div class="sidebar-title">Period</div>
+          <select class="w-full p-2">
+            <option>This Month</option>
+            <option>Last Month</option>
+            <option>Last 3 Months</option>
+            <option>Last Year</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <!-- Payments Section -->
+        <div class="card mb-8">
+          <h3 class="card-title">Recent Payments</h3>
+          
+          {% if payments %}
+            <div class="overflow-x-auto">
+              <table class="price-table">
+                <thead>
+                  <tr>
+                    <th>Transaction ID</th>
+                    <th>Customer</th>
+                    <th>Property</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for payment in payments|default_if_none:"" %}
+                    <tr>
+                      <td>
+                        <code class="text-xs" >
+                          {{ payment.booking.uuid|truncatechars:12 }}
+                        </code>
+                      </td>
+                      <td>{{ payment.booking.user.full_name }}</td>
+                      <td>{{ payment.booking.property.name|truncatewords:2 }}</td>
+                      <td class="font-semibold">₹{{ payment.amount }}</td>
+                      <td>
+                        {% if payment.method == 'wallet' %}
+                          <span class="badge badge-info">Wallet</span>
+                        {% elif payment.method == 'card' %}
+                          <span class="badge badge-info">Card</span>
+                        {% else %}
+                          <span class="badge badge-success">Mixed</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if payment.status == 'completed' %}
+                          <span class="badge badge-success">✓ Completed</span>
+                        {% else %}
+                          <span class="badge badge-warning">⏳ Pending</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-sm">{{ payment.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-state-icon">💳</div>
+              <p class="empty-state-text">No payments yet</p>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Wallet Balances Section -->
+        <div class="card">
+          <h3 class="card-title">Top Wallet Balances</h3>
+          
+          {% if wallets %}
+            <div class="grid md:grid-cols-2 gap-4">
+              {% for wallet in wallets|default_if_none:""|slice:":10" %}
+                <div class="p-4 rounded-lg d-flex justify-between align-center" >
+                  <div>
+                    <p class="font-semibold m-1">{{ wallet.user.full_name }}</p>
+                    <p class="text-sm m-0" >{{ wallet.user.email|truncatechars:25 }}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-bold m-0 text-lg" >₹{{ wallet.balance }}</p>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-state-icon">💰</div>
+              <p class="empty-state-text">No wallets created yet</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

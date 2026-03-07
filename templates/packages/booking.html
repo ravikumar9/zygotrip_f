@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="mb-8">
+      <a href="{% url 'packages:detail' package.id %}" >← Back to Package</a>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-8">
+      <div class="md:col-span-2">
+        <div class="card">
+          <h2 class="card-title">Book {{ package.name }}</h2>
+
+          <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+              <label>Start Date</label>
+              {{ form.start_date }}
+            </div>
+
+            <div class="form-group">
+              <label>End Date</label>
+              {{ form.end_date }}
+            </div>
+
+            <div class="form-group">
+              <label>Number of Travelers</label>
+              {{ form.number_of_travellers }}
+            </div>
+
+            <div class="form-group">
+              <label>Promo Code (Optional)</label>
+              {{ form.promo_code }}
+            </div>
+
+            <hr class="m-6" />
+
+            <div class="form-group">
+              <label>Traveler Name</label>
+              {{ form.traveler_full_name }}
+            </div>
+
+            <div class="form-group">
+              <label>Traveler Age</label>
+              {{ form.traveler_age }}
+            </div>
+
+            <div class="form-group">
+              <label>Relationship (Optional)</label>
+              {{ form.traveler_relationship }}
+            </div>
+
+            <div class="form-group">
+              <label>Email (Optional)</label>
+              {{ form.traveler_email }}
+            </div>
+
+            <div class="form-group">
+              <label>Phone (Optional)</label>
+              {{ form.traveler_phone }}
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full">Confirm Booking</button>
+          </form>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3 class="card-title">Package Summary</h3>
+          <p class="m-2">{{ package.destination }} · {{ package.duration_days }} days</p>
+          <p class="m-2">Difficulty: {{ package.get_difficulty_level_display }}</p>
+          <p class="font-semibold m-0">Price per traveler: ₹{{ package.base_price|floatformat:0 }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

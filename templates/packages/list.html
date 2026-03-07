@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block hero %}
+<section class="hero hero--search">
+  <div class="hero-gradient">
+    <div class="hero-content">
+      <p class="hero-eyebrow">Zygotrip Packages</p>
+      <h1 class="hero-title">Curated packages for every season</h1>
+      <p class="hero-subtitle">Discover destinations, budgets, and curated itineraries.</p>
+      {% include "components/search/package_search.html" %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="sidebar-layout">
+      <aside class="filters">
+        <div class="card filter-card">
+          <h3 class="text-lg font-semibold mb-4">Filters</h3>
+          <form method="get">
+            <div class="mb-6">
+              <label class="text-sm font-semibold mb-2">Destination</label>
+              <input type="text" name="q" class="form-control" placeholder="Enter destination" value="{{ request.GET.q|default:'' }}" />
+            </div>
+            <div class="mb-6">
+              <label class="text-sm font-semibold mb-2">Price Range</label>
+              <input type="number" name="min_price" class="form-control mb-2" placeholder="Min" value="{{ request.GET.min_price|default:'' }}" />
+              <input type="number" name="max_price" class="form-control" placeholder="Max" value="{{ request.GET.max_price|default:'' }}" />
+            </div>
+            <button type="submit" class="btn btn-primary primary-button w-full">Apply Filters</button>
+            <a href="{% url 'packages:list' %}" class="btn btn-ghost w-full">Reset</a>
+          </form>
+        </div>
+      </aside>
+
+      <main>
+        <div class="service-grid">
+      {% for package in packages %}
+      <article class="card">
+        <img src="{{ package.image_url|default:'https://via.placeholder.com/400x200?text=Package' }}" alt="{{ package.name }}" class="card-image" loading="lazy">
+        
+        <h3 class="card-title">{{ package.name }}</h3>
+        
+        <div class="card-description">
+          📍 {{ package.destination }} • {{ package.duration }} days
+          {% if package.rating %}
+            <span class="bus-rating">★ {{ package.rating }}</span>
+          {% endif %}
+        </div>
+        
+        <div class="bus-amenities">
+          {% if package.hotel_included %}<span class="chip chip--primary">Hotel</span>{% endif %}
+          {% if package.meals_included %}<span class="chip chip--primary">Meals</span>{% endif %}
+          {% if package.transport_included %}<span class="chip chip--primary">Transport</span>{% endif %}
+          {% if package.guide_included %}<span class="chip chip--primary">Guide</span>{% endif %}
+        </div>
+        
+        <div class="card-price">₹{{ package.price|default:0 }}<span class="card-price-label">/ person</span></div>
+        
+        <div class="card-footer">
+          <a href="{% url 'packages:detail' package.id %}" class="btn btn-primary w-full">View Package</a>
+        </div>
+      </article>
+      {% empty %}
+      <div class="col-span-full">
+        <div class="empty-state">
+          <div class="empty-state-icon">📦</div>
+          <h3 class="empty-state-title">No packages available</h3>
+          <p class="empty-state-description">Check back soon for exciting tour packages and deals.</p>
+          <a href="{% url 'packages:list' %}" class="btn btn-primary">Browse Packages</a>
+        </div>
+      </div>
+      {% endfor %}
+        </div>
+      </main>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

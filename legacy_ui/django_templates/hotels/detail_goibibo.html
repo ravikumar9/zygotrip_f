@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ property.name }} - {{ property.city }} | Zygotrip{% endblock %}
+
+{% block meta_description %}Book {{ property.name }} in {{ property.city }}. {{ property.star_category }}-Star {{ property.property_type }} with {{ property.amenities.count }} amenities. Starting from ₹{{ property.base_price }}/night.{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Gallery styles */
+  .hotel-gallery {
+    width: 100%;
+    height: 450px;
+    background: var(--bg-gray);
+    margin-bottom: var(--space-lg);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .hotel-gallery-main {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .gallery-overlay-btn {
+    position: absolute;
+    bottom: var(--space-md);
+    right: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-white);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: var(--font-semibold);
+    box-shadow: var(--shadow-card);
+  }
+  
+  /* Trust badges */
+  .trust-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+  }
+  
+  .trust-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-light);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+  
+  .trust-badge.verified {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+  }
+  
+  /* Detail sections */
+  .detail-section {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-md);
+    box-shadow: var(--shadow-card);
+  }
+  
+  .section-title {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-semibold);
+    margin-bottom: var(--space-md);
+  }
+  
+  /* Amenities grid */
+  .amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-md);
+  }
+  
+  .amenity-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+  }
+  
+  .amenity-icon {
+    font-size: var(--text-lg);
+  }
+  
+  /* Horizontal room scroll on mobile */
+  @media (max-width: 768px) {
+    .room-scroll-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Breadcrumb -->
+  <nav class="mt-md mb-md" aria-label="Breadcrumb">
+    <div class="flex items-center gap-xs text-sm text-secondary">
+      <a href="{% url 'core:home' %}" class="text-primary">Home</a>
+      <span>›</span>
+      <a href="{% url 'hotels:listing' %}" class="text-primary">Hotels</a>
+      <span>›</span>
+      <a href="{% url 'hotels:listing' %}?location={{ property.city }}" class="text-primary">{{ property.city }}</a>
+      <span>›</span>
+      <span class="text-primary">{{ property.name }}</span>
+    </div>
+  </nav>
+  
+  <!-- Booking Summary Bar (if dates selected) -->
+  {% if canonical_dates.checkin and canonical_dates.checkout %}
+    <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 12px; padding: 16px 24px; margin-bottom: 24px; color: white;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; align-items: center;">
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; opacity: 0.85; margin-bottom: 4px;">Check-in</div>
+          <div style="font-size: 16px; font-weight: 700;">{{ canonical_dates.checkin }}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; opacity: 0.85; margin-bottom: 4px;">Check-out</div>
+          <div style="font-size: 16px; font-weight: 700;">{{ canonical_dates.checkout }}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; opacity: 0.85; margin-bottom: 4px;">Guests</div>
+          <div style="font-size: 16px; font-weight: 700;">{{ canonical_dates.adults|default:1 }} Adult{{ canonical_dates.adults|pluralize }}{% if canonical_dates.children %}, {{ canonical_dates.children }} Child{{ canonical_dates.children|pluralize:"ren" }}{% endif %}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; opacity: 0.85; margin-bottom: 4px;">Rooms</div>
+          <div style="font-size: 16px; font-weight: 700;">{{ canonical_dates.rooms|default:1 }} Room{{ canonical_dates.rooms|pluralize }}</div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+  
+  <!-- Hotel Gallery -->
+  <div class="hotel-gallery">
+    {% with primary_image=property.images.first %}
+      {% if primary_image and primary_image.resolved_url %}
+        <img src="{{ primary_image.resolved_url }}" alt="{{ property.name }}" class="hotel-gallery-main" />
+      {% else %}
+        <div class="flex items-center justify-center" style="height: 100%; font-size: 96px;">🏨</div>
+      {% endif %}
+    {% endwith %}
+    
+    {% if property.images.count > 1 %}
+      <button class="gallery-overlay-btn" id="openGalleryBtn">
+        View all {{ property.images.count }} photos
+      </button>
+    {% endif %}
+  </div>
+  
+  <!-- Gallery Modal -->
+  <div id="galleryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; overflow: auto;">
+    <div style="position: relative; max-width: 1200px; margin: 0 auto; padding: 40px 20px;">
+      <button id="closeGalleryBtn" style="position: fixed; top: 20px; right: 20px; background: white; width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; font-size: 24px; z-index: 10000;">×</button>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+        {% for image in property.images.all %}
+          <div style="border-radius: 8px; overflow: hidden; aspect-ratio: 4/3;">
+            {% if image.resolved_url %}
+              <img src="{{ image.resolved_url }}" alt="{{ property.name }} - Photo {{ forloop.counter }}" style="width: 100%; height: 100%; object-fit: cover;" />
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Two-Column Layout -->
+  <div class="layout-detail">
+    <!-- LEFT: Hotel Details -->
+    <div class="content-main">
+      <!-- Hotel Header -->
+      <div class="detail-section">
+        <div class="flex justify-between items-start gap-md mb-sm">
+          <div style="flex: 1;">
+            <h1 class="text-4xl font-bold mb-xs">{{ property.name }}</h1>
+            {% if property.star_category %}
+              <div class="text-lg text-secondary mb-sm">
+                {% for i in "x"|ljust:property.star_category %}⭐{% endfor %} 
+                {{ property.star_category }}-Star {{ property.property_type }}
+              </div>
+            {% endif %}
+          </div>
+          
+          {% if property.rating %}
+            <div class="flex items-center gap-sm">
+              <div style="padding: 8px 16px; background: var(--color-success); color: white; border-radius: var(--radius-md); font-weight: var(--font-semibold);">
+                {{ property.rating|floatformat:1 }} ⭐
+              </div>
+              <div class="text-sm text-secondary">
+                {{ property.review_count }} reviews
+              </div>
+            </div>
+          {% endif %}
+        </div>
+        
+        <div class="flex items-center gap-sm text-sm text-secondary mb-md">
+          <span>📍</span>
+          <span>{{ property.address }}, {{ property.city }}, {{ property.country }}</span>
+        </div>
+        
+        <!-- Trust Badges -->
+        <div class="trust-badges">
+          {% if property.is_trending %}
+            <span class="trust-badge">🔥 Trending</span>
+          {% endif %}
+          {% if property.has_free_cancellation %}
+            <span class="trust-badge verified">✓ Free Cancellation</span>
+          {% endif %}
+          <span class="trust-badge verified">✔ Verified Property</span>
+          {% if property.offers.count > 0 %}
+            <span class="trust-badge">🎁 {{ property.offers.count }} Offer{% if property.offers.count != 1 %}s{% endif %}</span>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Overview Section -->
+      <div class="detail-section">
+        <h2 class="section-title">About This Property</h2>
+        <p class="text-base text-secondary leading-relaxed">
+          {{ property.description|default:"Experience a comfortable stay at this property with excellent facilities and warm hospitality." }}
+        </p>
+        
+        {% if property.offers.all %}
+          <div class="mt-lg">
+            <h3 class="text-lg font-semibold mb-md">Special Offers</h3>
+            <div class="flex flex-col gap-sm">
+              {% for offer in property.offers.all|slice:":3" %}
+                <div class="p-md bg-light rounded-md" style="border-left:3px solid #22c55e;">
+                  <div class="font-semibold">{{ offer.title }}</div>
+                  {% if offer.description %}<div class="text-sm text-secondary" style="margin-top:3px;">{{ offer.description }}</div>{% endif %}
+                  {% if offer.valid_until %}
+                    <div class="text-sm" style="color:#16a34a;margin-top:3px;">✓ Valid until {{ offer.valid_until|date:"d M, Y" }}</div>
+                  {% else %}
+                    <div class="text-sm" style="color:#16a34a;margin-top:3px;">✓ Limited period offer</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      
+      <!-- Rooms Section -->
+      <div class="detail-section">
+        <h2 class="section-title">Available Rooms</h2>
+        <p class="text-sm text-secondary mb-lg">Select a room that suits your needs</p>
+        
+        <div class="flex flex-col gap-md">
+          {% for room in property.room_types.all %}
+            {% include "hotels/components/room_card.html" with room=room property=property discount_percent=discount_percent %}
+          {% empty %}
+            <div class="alert alert-info">
+              No rooms available for the selected dates. Please try different dates.
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      
+      <!-- Amenities Section -->
+      <div class="detail-section">
+        <h2 class="section-title">Amenities</h2>
+        <div class="amenities-grid">
+          {% for amenity in property.amenities.all %}
+            <div class="amenity-item">
+              <span class="amenity-icon">{{ amenity.icon|default:"✓" }}</span>
+              <span>{{ amenity.name }}</span>
+            </div>
+          {% empty %}
+            <p class="text-secondary">Amenity information will be updated soon.</p>
+          {% endfor %}
+        </div>
+      </div>
+      
+      <!-- Policies Section -->
+      <div class="detail-section">
+        <h2 class="section-title">Policies</h2>
+        
+        <div class="flex flex-col gap-md">
+          <div>
+            <h3 class="font-semibold mb-sm">Check-in / Check-out</h3>
+            <div class="grid grid-cols-2 gap-md text-sm">
+              <div>
+                <span class="text-secondary">Check-in:</span>
+                <span class="font-medium">{{ property.check_in_time|default:"2:00 PM" }}</span>
+              </div>
+              <div>
+                <span class="text-secondary">Check-out:</span>
+                <span class="font-medium">{{ property.check_out_time|default:"11:00 AM" }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h3 class="font-semibold mb-sm">Cancellation Policy</h3>
+            <p class="text-sm text-secondary">
+              {% if property.has_free_cancellation %}
+                Free cancellation up to {{ property.cancellation_hours|default:24 }} hours before check-in. 
+                Full refund will be processed within 7-10 business days.
+              {% else %}
+                Non-refundable booking. No refund will be provided for cancellations.
+              {% endif %}
+            </p>
+          </div>
+          
+          <div>
+            <h3 class="font-semibold mb-sm">House Rules</h3>
+            <ul class="text-sm text-secondary" style="list-style: disc; margin-left: var(--space-md);">
+              <li>Valid ID proof required at check-in</li>
+              <li>Pets are not allowed</li>
+              <li>Smoking is prohibited in rooms</li>
+              <li>Outside food and alcohol are not permitted</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Reviews Section -->
+      {% if property.rating %}
+        <div class="detail-section">
+          <h2 class="section-title">Guest Reviews</h2>
+          
+          <div class="flex items-center gap-lg mb-lg">
+            <div class="text-center">
+              <div style="font-size: 48px; font-weight: var(--font-bold); color: var(--color-primary);">
+                {{ property.rating|floatformat:1 }}
+              </div>
+              <div class="text-sm text-secondary">{{ property.review_count }} reviews</div>
+            </div>
+            
+            <div style="flex: 1;">
+              <div class="text-lg font-semibold mb-sm">Excellent</div>
+              <p class="text-sm text-secondary">
+                Guests loved the cleanliness, service, and location of this property.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Rating breakdown from RatingAggregate model -->
+          {% if rating_breakdown %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 16px;">
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.cleanliness|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Cleanliness</div>
+              </div>
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.service|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Service</div>
+              </div>
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.location|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Location</div>
+              </div>
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.amenities|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Amenities</div>
+              </div>
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.value_for_money|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Value for Money</div>
+              </div>
+            </div>
+          {% else %}
+            <div class="p-md bg-light rounded-md text-center text-secondary">
+              No guest reviews yet.
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+    
+    <!-- RIGHT: Price Card (Sticky) -->
+    <aside>
+      {% include "components/price_card.html" with hotel=property check_in=booking_dates.checkin check_out=booking_dates.checkout nights=booking_dates.nights guests=booking_dates.guest_info rooms=booking_dates.rooms subtotal=booking_dates.min_price total_amount=booking_dates.min_price show_cta=True cta_text="Select Room" show_cancellation_info=True %}
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Image error handling - show placeholder if image fails to load
+  document.querySelectorAll('img').forEach(img => {
+    img.addEventListener('error', function() {
+      this.style.display = 'none';
+      const parent = this.parentElement;
+      if (!parent.querySelector('.image-placeholder')) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'image-placeholder flex items-center justify-center';
+        placeholder.style.cssText = 'height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 96px;';
+        placeholder.textContent = '🏨';
+        parent.appendChild(placeholder);
+      }
+    });
+  });
+  
+  // Gallery modal handlers
+  const galleryModal = document.getElementById('galleryModal');
+  const openGalleryBtn = document.getElementById('openGalleryBtn');
+  const closeGalleryBtn = document.getElementById('closeGalleryBtn');
+  
+  if (openGalleryBtn) {
+    openGalleryBtn.addEventListener('click', function() {
+      galleryModal.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    });
+  }
+  
+  if (closeGalleryBtn) {
+    closeGalleryBtn.addEventListener('click', function() {
+      galleryModal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    });
+  }
+  
+  // Close on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && galleryModal.style.display === 'block') {
+      galleryModal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }
+  });
+  
+  // Room selection handler
+  document.querySelectorAll('[data-room-select]').forEach(button => {
+    button.addEventListener('click', function() {
+      const roomCard = this.closest('[data-room-card]');
+      const roomId = roomCard ? roomCard.dataset.roomId : null;
+      const propertySlug = '{{ property.slug }}';
+      const params = new URLSearchParams(window.location.search);
+      
+      if (roomId) {
+        // Ensure required params are present
+        if (!params.get('checkin') || !params.get('checkout')) {
+          alert('Please select check-in and check-out dates first.');
+          return;
+        }
+        if (!params.get('adults')) {
+          params.set('adults', '1');
+        }
+        if (!params.get('rooms')) {
+          params.set('rooms', '1');
+        }
+        
+        // Redirect to booking page with room selection
+        params.set('property', propertySlug);
+        params.set('room_type', roomId);
+        window.location.href = `/hotels/nhotel-booking/?${params.toString()}`;
+      }
+    });
+  });
+</script>
+{% endblock %}

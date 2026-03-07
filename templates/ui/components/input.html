@@ -1,0 +1,25 @@
+<label class="ui-field {{ field_class|default:'' }}">
+  {% if label %}
+    <span class="ui-label">{{ label }}</span>
+  {% endif %}
+  <input
+    class="ui-input {{ input_class|default:'' }}"
+    type="{{ type|default:'text' }}"
+    name="{{ name }}"
+    id="{{ id|default:name }}"
+    value="{{ value|default:'' }}"
+    placeholder="{{ placeholder|default:'' }}"
+    {{ attrs|default:'' }}
+  />
+</label>
+
+
+
+
+
+
+
+
+
+
+

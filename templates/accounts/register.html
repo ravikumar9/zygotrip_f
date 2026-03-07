@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="container auth-container">
+    <div class="card auth-card">
+      <h1 class="text-center mb-2">Create Account</h1>
+      <p class="text-center mb-6">Register to manage bookings and trips</p>
+
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-4">
+          <label class="auth-label">Email Address</label>
+          {{ form.email }}
+          {% if form.email.errors %}
+            <p class="form-error">{{ form.email.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label class="auth-label">Full Name</label>
+          {{ form.full_name }}
+          {% if form.full_name.errors %}
+            <p class="form-error">{{ form.full_name.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label class="auth-label">Password</label>
+          {{ form.password1 }}
+          {% if form.password1.errors %}
+            <p class="form-error">{{ form.password1.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label class="auth-label">Confirm Password</label>
+          {{ form.password2 }}
+          {% if form.password2.errors %}
+            <p class="form-error">{{ form.password2.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full btn-lg mb-4">
+          Create Account
+        </button>
+
+        <p class="text-center mb-2">
+          Already have an account?
+        </p>
+        <a href="/login/" class="btn btn-secondary w-full">
+          Sign In
+        </a>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,29 @@
+{# PHASE 5: Price block with visual hierarchy #}
+<div class="price-block text-right">
+  <p class="text-xs uppercase tracking-wide mb-2">Price</p>
+  <div class="flex flex-col items-end gap-1">
+    {% if item.price_current and item.price_original %}
+      <span class="price-base text-sm line-through">₹{{ item.price_original|floatformat:0 }}</span>
+      <span class="price-discount text-2xl font-bold">₹{{ item.price_current|floatformat:0 }}</span>
+      {% if item.discount_percent %}<span class="text-xs px-2 py-1 rounded">{{ item.discount_percent|floatformat:0 }}% off</span>{% endif %}
+    {% elif item.price_current %}
+      <span class="price-discount text-2xl font-bold">₹{{ item.price_current|floatformat:0 }}</span>
+    {% endif %}
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

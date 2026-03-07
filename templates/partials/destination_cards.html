@@ -1,0 +1,62 @@
+<!-- Trending Destinations Component -->
+<section class="section destinations-section py-12">
+  <div class="ota-container">
+    <h2 class="text-3xl font-bold mb-2">Trending Destinations</h2>
+    <p class="mb-8">Popular places travelers are exploring now</p>
+
+    <div class="destinations-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="destinations-container">
+      <!-- Destinations loaded dynamically -->
+      <div class="destination-loading">Loading destinations...</div>
+    </div>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/api/trending-destinations')
+    .then(response => response.json())
+    .then(data => {
+      const container = document.getElementById('destinations-container');
+      
+      if (data.destinations && data.destinations.length > 0) {
+        container.innerHTML = data.destinations.map(dest => `
+          <div class="destination-card rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-1">
+          ${dest.image ? `
+            <img class="destination-image h-48 w-full object-cover" src="${dest.image}" alt="${dest.name}" />
+          ` : `
+            <div class="destination-image h-48 flex items-center justify-center">
+            <span class="text-4xl">📍</span>
+            </div>
+          `}
+          <div class="p-6">
+            <h3 class="font-bold text-xl mb-2">${dest.name}</h3>
+            <p class="text-sm mb-4">${dest.state}, ${dest.country}</p>
+            <p class="text-sm mb-4">${dest.description}</p>
+            <a href="/search/?destination=${dest.slug}" class="inline-block px-4 py-2 rounded-lg transition">
+            Explore →
+            </a>
+          </div>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<p class="col-span-full text-center">No destinations available</p>';
+      }
+    })
+    .catch(err => {
+      console.error('Failed to load destinations:', err);
+      document.getElementById('destinations-container').innerHTML = 
+          '<p class="col-span-full text-center">Failed to load destinations</p>';
+    });
+});
+</script>
+
+
+
+
+
+
+
+
+
+
+

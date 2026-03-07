@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="text-center p-16">
+      <div class="mb-6" >🔍</div>
+      <h1 class="mb-4" >Property not available</h1>
+      <p class="mb-8 ml-auto mr-auto text-lg" >
+        The property you're looking for is either not yet approved or no longer available. Browse our collection of verified listings instead.
+      </p>
+      
+      <div class="card p-8 text-left m-8" >
+        <h3 class="m-4">Why properties aren't available:</h3>
+        <ul class="pl-6" >
+          <li>Under admin review</li>
+          <li>Not yet approved</li>
+          <li>Temporarily unlisted</li>
+          <li>No longer active</li>
+        </ul>
+      </div>
+      
+      <a href="{% url 'hotels:listing' %}" class="button button-primary button-lg">Browse Available Hotels</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

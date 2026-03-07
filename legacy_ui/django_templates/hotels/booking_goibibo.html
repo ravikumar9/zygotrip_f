@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Complete Booking - {{ property.name }} | Zygotrip{% endblock %}
+
+{% block meta_description %}Complete your booking at {{ property.name }}, {{ property.city }}. Secure payment with instant confirmation.{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Breadcrumb / Progress -->
+  <div class="mt-lg mb-lg">
+    <div class="flex items-center gap-sm text-sm">
+      <a href="{% url 'hotels:listing' %}" class="text-primary">Search</a>
+      <span class="text-secondary">›</span>
+      <a href="{% url 'hotels:details' %}?property={{ property.slug }}&checkin={{ checkin|date:'Y-m-d' }}&checkout={{ checkout|date:'Y-m-d' }}&adults={{ adults }}&children={{ children }}&rooms={{ rooms }}" class="text-primary">Hotel Details</a>
+      <span class="text-secondary">›</span>
+      <span class="font-semibold text-primary">Booking</span>
+    </div>
+  </div>
+  
+  <!-- Page Header -->
+  <div class="mb-xl">
+    <h1 class="text-3xl font-bold mb-sm">Complete Your Booking</h1>
+    <p class="text-secondary">{{ property.name }}, {{ property.city }}</p>
+  </div>
+  
+  <!-- Two-Column Layout -->
+  <div class="layout-booking">
+    <!-- LEFT: Guest Form -->
+    <div class="content-main">
+      <form method="post" action="{% url 'booking:create_booking_from_form' %}" id="bookingForm" class="booking-form">
+        {% csrf_token %}
+        
+        <!-- Hidden Fields -->
+        <input type="hidden" name="property_id" value="{{ property.id }}" />
+        <input type="hidden" name="room_type_id" value="{{ room_type.id }}" />
+        <input type="hidden" name="checkin" value="{{ checkin|date:'Y-m-d' }}" />
+        <input type="hidden" name="checkout" value="{{ checkout|date:'Y-m-d' }}" />
+        <input type="hidden" name="adults" value="{{ adults }}" />
+        <input type="hidden" name="children" value="{{ children }}" />
+        <input type="hidden" name="rooms" value="{{ rooms }}" />
+        <input type="hidden" name="coupon_code" value="{{ applied_coupon_code|default:'' }}" />
+        
+        <!-- Guest Details Component -->
+        {% include "components/guest_form.html" with form=form guests=booking_params rooms=rooms %}
+        
+      </form>
+    </div>
+    
+    <!-- RIGHT: Sticky Price Details Card - PROFESSIONAL COMPACT OTA STYLE -->
+    <aside>
+      <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: sticky; top: 20px; overflow: hidden;">
+        
+        <!-- STAY CONFIRMATION BOX - PROMINENT BLUE HEADER -->
+        <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 16px 18px; color: white;">
+          <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; opacity: 0.9;">Your Stay</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <div style="font-size: 11px; opacity: 0.85;">Check-in</div>
+              <div style="font-size: 14px; font-weight: 700;">{{ checkin|date:'M d' }}</div>
+            </div>
+            <div>
+              <div style="font-size: 11px; opacity: 0.85;">Check-out</div>
+              <div style="font-size: 14px; font-weight: 700;">{{ checkout|date:'M d' }}</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; font-size: 11px; color: rgba(255,255,255,0.9);">
+            <span>{{ num_nights }} night{{ num_nights|pluralize }}</span>
+            <span>·</span>
+            <span>{{ rooms }} room{{ rooms|pluralize }}</span>
+          </div>
+        </div>
+        
+        <!-- PROPERTY & ROOM INFO - MINIMAL -->
+        <div style="padding: 16px 18px; border-bottom: 1px solid #f3f4f6;">
+          {% with primary_image=property.images.first %}
+          {% if primary_image %}
+            <div style="width: 100%; height: 100px; border-radius: 6px; margin-bottom: 10px; overflow: hidden;">
+              <img src="{{ primary_image.resolved_url }}" alt="{{ property.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+          {% else %}
+            <div style="width: 100%; height: 100px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 6px; margin-bottom: 10px;"></div>
+          {% endif %}
+          {% endwith %}
+          <div style="font-size: 13px; font-weight: 600; color: #111827; margin-bottom: 4px;">{{ property.name }}</div>
+          <div style="font-size: 12px; color: #6b7280;">{{ property.city }}</div>
+          <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">{{ room_type.name }}</div>
+          {% if room_type.meal_plan %}
+            <div style="font-size: 12px; color: #059669; font-weight: 600; margin-top: 6px;">Meal Plan: {{ room_type.get_meal_plan_display }}</div>
+          {% endif %}
+        </div>
+        
+        <!-- PRICE SUMMARY - CLEAN & MINIMAL -->
+        <div style="padding: 16px 18px;">
+          <!-- Room Price -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f3f4f6;">
+            <span style="font-size: 14px; color: #6b7280;">Room Price</span>
+            <span style="font-size: 14px; font-weight: 600; color: #111827;">₹{{ price_breakdown.base_price|floatformat:0 }}</span>
+          </div>
+          
+          <!-- Discount (if any) -->
+          {% with total_discount=price_breakdown.property_discount|add:price_breakdown.platform_discount|add:price_breakdown.coupon_discount %}
+            {% if total_discount > 0 %}
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-size: 14px; color: #6b7280;">Discount</span>
+                <span style="font-size: 14px; font-weight: 600; color: #10b981;">-₹{{ total_discount|floatformat:0 }}</span>
+              </div>
+            {% endif %}
+          {% endwith %}
+
+          {% if price_breakdown.add_ons_total and price_breakdown.add_ons_total > 0 %}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 14px; color: #6b7280;">Meals</span>
+              <span style="font-size: 14px; font-weight: 600; color: #111827;">₹{{ price_breakdown.add_ons_total|floatformat:0 }}</span>
+            </div>
+          {% endif %}
+          
+          <!-- Hotel Taxes - Collapsible -->
+          <div style="margin-bottom: 12px;">
+            <button 
+              type="button" 
+              onclick="toggleTaxDetails()"
+              style="width: 100%; background: none; border: none; padding: 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #6b7280; transition: color 0.2s;"
+              onmouseover="this.style.color='#111827'"
+              onmouseout="this.style.color='#6b7280'"
+            >
+              <span>Hotel Taxes</span>
+              <span style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #111827; font-weight: 600;">₹{{ price_breakdown.service_fee|add:price_breakdown.gst|floatformat:0 }}</span>
+                <span id="taxToggleIcon" style="font-size: 12px; width: 16px; display: inline-flex; justify-content: center; transition: transform 0.2s;">▼</span>
+              </span>
+            </button>
+            
+            <!-- Hidden Tax Details -->
+            <div id="taxDetails" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f3f4f6; font-size: 12px; color: #6b7280;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span>Service Fee</span>
+                <span style="color: #111827; font-weight: 500;">₹{{ price_breakdown.service_fee|floatformat:0 }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span>GST</span>
+                <span style="color: #111827; font-weight: 500;">₹{{ price_breakdown.gst|floatformat:0 }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- FINAL TOTAL - PROMINENT ORANGE BOX -->
+          <div style="background: linear-gradient(135deg, #ff6b35 0%, #ff8a5a 100%); color: white; padding: 14px 12px; border-radius: 6px; margin-bottom: 16px;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.95; margin-bottom: 6px;">Total to Pay</div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font-size: 12px; opacity: 0.95;">Including all taxes</span>
+              <span style="font-size: 22px; font-weight: 700;">₹{{ price_breakdown.final_price|floatformat:0 }}</span>
+            </div>
+          </div>
+          
+          <!-- PROMO CODE - SINGLE LINE INPUT -->
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px;">Promo Code</div>
+            <div style="display: flex; gap: 8px;">
+              <input 
+                type="text"
+                id="couponInput"
+                placeholder="Enter code"
+                value="{{ applied_coupon_code|default:'' }}"
+                style="flex: 1; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s;"
+                onfocus="this.style.borderColor='#2563eb'"
+                onblur="this.style.borderColor='#d1d5db'"
+              />
+              <button 
+                type="button"
+                onclick="applyCoupon()"
+                style="padding: 10px 14px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.2s;"
+                onmouseover="this.style.background='#1d4ed8'"
+                onmouseout="this.style.background='#2563eb'"
+              >
+                APPLY
+              </button>
+            </div>
+          </div>
+
+          {% if applied_coupon_code and applied_coupon %}
+            <div style="margin-bottom: 12px; padding: 8px 10px; background: #eff6ff; border-radius: 6px; font-size: 12px; color: #1d4ed8; font-weight: 600; display:flex; justify-content:space-between; align-items:center;">
+              <span>✓ Applied: {{ applied_coupon.coupon_code }}</span>
+              <button type="button" onclick="removeCoupon()" style="background:none;border:none;color:#b91c1c;cursor:pointer;font-size:12px;font-weight:700;">✕ Remove</button>
+            </div>
+          {% elif applied_coupon_code and not applied_coupon %}
+            <div style="margin-bottom: 12px; padding: 8px 10px; background: #fef2f2; border-radius: 6px; font-size: 12px; color: #b91c1c; font-weight: 600;">
+              Coupon not applicable. Please try a valid code.
+            </div>
+          {% endif %}
+
+          {% if coupons %}
+            <div style="margin-bottom: 16px;">
+              <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px;">Best Offers</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                {% for coupon in coupons|slice:":4" %}
+                  <button
+                    type="button"
+                    data-coupon-code="{{ coupon.code }}"
+                    class="coupon-chip"
+                    style="padding: 6px 10px; border-radius: 999px; border: 1px dashed #93c5fd; background: #eff6ff; color: #1d4ed8; font-size: 11px; font-weight: 700; cursor: pointer;"
+                    title="{{ coupon.title }}"
+                  >
+                    {{ coupon.code }}
+                  </button>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+          
+          <!-- CTA BUTTON - GREEN, PROMINENT -->
+          <button 
+            type="submit" 
+            form="bookingForm"
+            style="width: 100%; padding: 13px 14px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);"
+            onmouseover="this.style.boxShadow='0 6px 16px rgba(16, 185, 129, 0.4)'"
+            onmouseout="this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)'"
+          >
+            ✓ Proceed to Payment
+          </button>
+          
+          <!-- Trust Badge -->
+          <div style="margin-top: 12px; padding: 8px 10px; background: #ecfdf5; border-radius: 6px; text-align: center; font-size: 11px; color: #065f46; font-weight: 600;">
+            ✓ Secure booking · Instant confirmation
+          </div>
+        </div>
+      </div>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function applyCoupon() {
+    const input = document.getElementById('couponInput');
+    const code = (input && input.value || '').trim();
+    if (!code) {
+      alert('Please enter a promo code');
+      return;
+    }
+
+    const hidden = document.querySelector('input[name="coupon_code"]');
+    if (hidden) {
+      hidden.value = code;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    params.set('coupon_code', code);
+    window.location.search = params.toString();
+  }
+
+  // Form validation
+  document.getElementById('bookingForm').addEventListener('submit', function(e) {
+    const email = document.getElementById('email');
+    const phone = document.getElementById('phone');
+    const firstName = document.getElementById('first_name');
+    const lastName = document.getElementById('last_name');
+    const terms = document.getElementById('terms_accepted');
+    
+    if (!email.value || !phone.value || !firstName.value || !lastName.value) {
+      e.preventDefault();
+      alert('Please fill in all required fields');
+      return false;
+    }
+    
+    if (!terms.checked) {
+      e.preventDefault();
+      alert('Please accept the terms and conditions');
+      return false;
+    }
+    
+    // Phone validation (10 digits)
+    const phonePattern = /^[0-9]{10}$/;
+    if (!phonePattern.test(phone.value)) {
+      e.preventDefault();
+      alert('Please enter a valid 10-digit phone number');
+      return false;
+    }
+    
+    return true;
+  });
+  
+  // Toggle tax details visibility (Goibibo style)
+  function toggleTaxDetails() {
+    const taxDetails = document.getElementById('taxDetails');
+    const icon = document.getElementById('taxToggleIcon');
+    const isVisible = taxDetails.style.display !== 'none';
+    taxDetails.style.display = isVisible ? 'none' : 'block';
+    icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+
+  const couponInput = document.getElementById('couponInput');
+  if (couponInput) {
+    couponInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyCoupon();
+      }
+    });
+  }
+
+  document.querySelectorAll('[data-coupon-code]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const code = btn.getAttribute('data-coupon-code');
+      if (couponInput) {
+        couponInput.value = code;
+      }
+      applyCoupon();
+    });
+  });
+
+  /**
+   * Phase 9: AJAX-style promo apply.
+   * Redirects to same page with coupon_code param — no full page reload needed
+   * if we hit an AJAX endpoint, but for compatibility we use URL redirect approach.
+   */
+  function applyCoupon() {
+    const code = (couponInput ? couponInput.value : '').trim().toUpperCase();
+    if (!code) {
+      alert('Please enter a promo code.');
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set('coupon_code', code);
+    // Show loading state
+    const applyBtn = document.querySelector('[onclick="applyCoupon()"]');
+    if (applyBtn) {
+      applyBtn.textContent = '...';
+      applyBtn.disabled = true;
+    }
+    window.location.href = url.toString();
+  }
+
+  function removeCoupon() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('coupon_code');
+    window.location.href = url.toString();
+  }
+
+</script>
+{% endblock %}

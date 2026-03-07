@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+  /* Home page styles */
+  .home-hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+
+  .home-hero h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .home-hero p {
+    font-size: 1.125rem;
+    margin-bottom: 2rem;
+    opacity: 0.95;
+  }
+
+  .home-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  /* 2x2 Service Grid */
+  .services-section {
+    padding: 3rem 0;
+  }
+
+  .services-title {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+
+  @media (max-width: 768px) {
+    .services-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .service-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    min-height: 240px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .service-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+    border-color: #2563eb;
+  }
+
+  .service-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .service-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #111827;
+  }
+
+  .service-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    flex-grow: 1;
+  }
+
+  .service-cta {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: #2563eb;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: background 0.2s ease;
+  }
+
+  .service-cta:hover {
+    background: #1d4ed8;
+  }
+
+  /* Features section */
+  .features-section {
+    padding: 2rem 0;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .features-title {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    .features-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .feature-item {
+    text-align: center;
+    padding: 1.5rem;
+  }
+
+  .feature-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .feature-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #111827;
+  }
+
+  .feature-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+</style>
+{% endblock %}
+
+{% block hero %}
+<section class="home-hero">
+  <div class="home-container">
+    <h1>Discover Your Perfect Journey</h1>
+    <p>Book hotels, buses, cabs, and packages with live availability</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="home-container">
+  <!-- Main Services Grid: 2x2 -->
+  <section class="services-section">
+    <h2 class="services-title">Travel Services</h2>
+    
+    <div class="services-grid">
+      <!-- Hotels -->
+      <div class="service-card">
+        <div class="service-icon">🏨</div>
+        <h3 class="service-title">Hotels</h3>
+        <p class="service-description">Find and book verified hotels with best prices guaranteed</p>
+        <a href="{% url 'hotels:listing' %}" class="service-cta">Browse Hotels</a>
+      </div>
+
+      <!-- Buses -->
+      <div class="service-card">
+        <div class="service-icon">🚌</div>
+        <h3 class="service-title">Buses</h3>
+        <p class="service-description">Book intercity buses with live seat availability</p>
+        <a href="{% url 'buses:list' %}" class="service-cta">Find Buses</a>
+      </div>
+
+      <!-- Cabs -->
+      <div class="service-card">
+        <div class="service-icon">🚕</div>
+        <h3 class="service-title">Cabs</h3>
+        <p class="service-description">Rent cars for local or outstation trips</p>
+        <a href="{% url 'cabs:list' %}" class="service-cta">Book Cabs</a>
+      </div>
+
+      <!-- Packages -->
+      <div class="service-card">
+        <div class="service-icon">📦</div>
+        <h3 class="service-title">Packages</h3>
+        <p class="service-description">Curated tour packages with hotels and transport</p>
+        <a href="{% url 'packages:list' %}" class="service-cta">View Packages</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why Choose Us -->
+  <section class="features-section">
+    <h2 class="features-title">Why Choose Zygotrip?</h2>
+    
+    <div class="features-grid">
+      <div class="feature-item">
+        <div class="feature-icon">✓</div>
+        <h3 class="feature-title">Verified Listings</h3>
+        <p class="feature-text">All properties are verified by our team</p>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">💰</div>
+        <h3 class="feature-title">Best Prices</h3>
+        <p class="feature-text">Competitive rates or we'll refund the difference</p>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">🔒</div>
+        <h3 class="feature-title">Secure Payments</h3>
+        <p class="feature-text">Your data is always protected</p>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,20 @@
+{% comment %}
+Scarcity Badge Component
+Usage: {% include "ui/components/scarcity_badge.html" with text="Only 2 rooms left" type="warning" %}
+{% endcomment %}
+
+<span class="scarcity-badge {% if type %}scarcity-badge--{{ type }}{% else %}scarcity-badge--urgent{% endif %}">
+  <span class="scarcity-badge__icon">🔥</span>
+  <span class="scarcity-badge__text">{{ text }}</span>
+</span>
+
+
+
+
+
+
+
+
+
+
+

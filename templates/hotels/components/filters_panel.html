@@ -1,0 +1,72 @@
+<div class="hotel-filter-panel" data-filter-panel>
+  <div class="hotel-filter-panel__backdrop" data-filter-close></div>
+  <div class="hotel-filter-panel__panel" role="dialog" aria-label="Room filters">
+    <div class="hotel-filter-panel__header">
+      <h3 class="heading-md">Filter rooms</h3>
+      <button class="btn btn-secondary btn-sm" type="button" data-filter-close>Close</button>
+    </div>
+
+    <form class="hotel-filter-form" data-filter-form>
+      <div class="hotel-filter-group">
+        <label class="hotel-filter-label" for="room-price">Price range</label>
+        <input class="hotel-filter-range" type="range" id="room-price" name="price" min="0" max="20000" step="500" value="20000" data-filter-input="price" />
+        <div class="hotel-filter-range__meta">
+          <span data-filter-min>₹0</span>
+          <span data-filter-max>₹20000</span>
+        </div>
+      </div>
+
+      <div class="hotel-filter-group">
+        <span class="hotel-filter-label">Rating</span>
+        <div class="hotel-filter-chips" role="group" aria-label="Rating">
+          <button class="hotel-filter-chip" type="button" data-filter-chip="3">3+</button>
+          <button class="hotel-filter-chip" type="button" data-filter-chip="4">4+</button>
+          <button class="hotel-filter-chip" type="button" data-filter-chip="4.5">4.5+</button>
+        </div>
+      </div>
+
+      <div class="hotel-filter-group">
+        <span class="hotel-filter-label">Amenities</span>
+        <div class="hotel-filter-checklist">
+          {% for amenity in property.amenities.all|slice:":8" %}
+            <label class="hotel-filter-checkbox">
+              <input type="checkbox" value="{{ amenity.name|lower|cut:' ' }}" data-filter-input="amenity" />
+              <span>{{ amenity.name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="hotel-filter-group">
+        <span class="hotel-filter-label">Property type</span>
+        <div class="hotel-filter-pills">
+          <button class="hotel-filter-pill" type="button" data-filter-pill="{{ property.property_type|lower|cut:' ' }}">{{ property.property_type }}</button>
+          {% for category in property.categories.all|slice:":3" %}
+            <button class="hotel-filter-pill" type="button" data-filter-pill="{{ category.name|lower|cut:' ' }}">{{ category.name }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <label class="hotel-filter-toggle">
+        <input type="checkbox" data-filter-instant checked />
+        <span>Instant apply</span>
+      </label>
+
+      <div class="hotel-filter-actions">
+        <button class="btn btn-primary" type="button" data-filter-apply>Apply filters</button>
+        <button class="btn btn-secondary" type="button" data-filter-clear>Clear all</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+

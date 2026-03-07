@@ -1,0 +1,95 @@
+{% load hotel_filters %}
+<article class="room-card reveal-on-scroll" data-room-card data-room-id="{{ room.id }}" data-price="{{ room.base_price|default:0 }}" data-bed="{{ room.bed_type|default:'' }}" data-cancel="{% if property.has_free_cancellation %}free{% else %}paid{% endif %}" data-amenities="{% for amenity in room.amenities.all %}{{ amenity.name|lower|cut:' ' }}{% if not forloop.last %},{% endif %}{% endfor %}">
+  <div class="room-card__media">
+    {% with room_image=room.images.first %}
+      {% if room_image %}
+        {% if room_image.image and room_image.image.name %}
+          <img class="room-card__image" src="{{ room_image.image.url }}" alt="{{ room.name }}" loading="lazy" decoding="async" srcset="{{ room_image.image.url }} 1x, {{ room_image.image.url }} 2x" sizes="(max-width: 768px) 100vw, 300px" />
+        {% elif room_image.image_url %}
+          <img class="room-card__image" src="{{ room_image.image_url }}" alt="{{ room.name }}" loading="lazy" decoding="async" srcset="{{ room_image.image_url }} 1x, {{ room_image.image_url }} 2x" sizes="(max-width: 768px) 100vw, 300px" />
+        {% else %}
+          <div class="room-card__image-placeholder">Photo unavailable</div>
+        {% endif %}
+      {% else %}
+        <div class="room-card__image-placeholder">Photo unavailable</div>
+      {% endif %}
+    {% endwith %}
+  </div>
+  <div class="room-card__body">
+    <div class="room-card__header">
+      <div>
+        <h3 class="heading-md">{{ room.name }}</h3>
+        <p class="body-sm">{{ room.bed_type|default:"Standard bed" }}{% if room.room_size_sqm and room.room_size_sqm > 0 %} • {{ room.room_size_sqm }}m²{% elif room.room_size and room.room_size > 0 %} • {{ room.room_size }} sq.ft{% endif %} • Max {{ room.max_guests|default:2 }} guests</p>
+        {% if room.meal_plan %}
+          <p class="body-sm" style="color: #10b981; font-weight: 500; margin-top: 0.25rem;">
+            🍽️ {{ room.get_meal_plan_display }}
+          </p>
+        {% endif %}
+      </div>
+      <div class="room-card__price">
+        {% if discount_percent %}
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem;">
+            <span class="room-card__discount-badge" style="background-color: #10b981; color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600;">
+              {{ discount_percent|floatformat:0 }}% OFF
+            </span>
+            <span class="room-card__original-price" style="text-decoration: line-through; color: #9ca3af; font-size: 0.875rem; margin-top: 0.25rem;">
+              ₹{{ room.base_price|floatformat:0 }}
+            </span>
+            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+              <span class="room-card__amount" style="color: #10b981; font-weight: 700;">
+                ₹{{ room.base_price|calculate_discount_price:discount_percent|floatformat:0 }}
+              </span>
+              <span class="room-card__unit">/ night</span>
+            </div>
+          </div>
+        {% else %}
+          <span class="room-card__amount">₹{{ room.base_price|default:0 }}</span>
+          <span class="room-card__unit">/ night</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="room-card__meta">
+      <span class="room-card__policy">{% if property.has_free_cancellation %}Free cancellation{% else %}Non-refundable{% endif %}</span>
+      <span class="room-card__policy">Pay at hotel available</span>
+    </div>
+
+    <div class="room-card__amenities" data-room-amenities>
+      {% if room.amenities.all %}
+        {% for amenity in room.amenities.all|slice:":4" %}
+          <span class="room-card__amenity">
+            <span class="room-card__amenity-icon" aria-hidden="true">{{ amenity.icon|default:"•" }}</span>
+            <span>{{ amenity.name }}</span>
+          </span>
+        {% endfor %}
+      {% else %}
+        {% for amenity in property.amenities.all|slice:":4" %}
+          <span class="room-card__amenity">
+            <span class="room-card__amenity-icon" aria-hidden="true">{{ amenity.icon|default:"•" }}</span>
+            <span>{{ amenity.name }}</span>
+          </span>
+        {% endfor %}
+      {% endif %}
+    </div>
+
+    <div class="room-card__actions">
+      <button class="btn btn-secondary btn-sm" type="button" data-room-details>
+        View details
+      </button>
+      <button class="btn btn-primary btn-sm" type="button" data-room-select>
+        Select room
+      </button>
+    </div>
+  </div>
+</article>
+
+
+
+
+
+
+
+
+
+
+

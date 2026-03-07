@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Image placeholder">
+  <rect width="800" height="600" fill="#e5e7eb"/>
+  <rect x="40" y="40" width="720" height="520" fill="#f9fafb" stroke="#d1d5db" stroke-width="4"/>
+  <g fill="#9ca3af" font-family="Arial, sans-serif" font-size="32" text-anchor="middle">
+    <text x="400" y="310">Image unavailable</text>
+  </g>
+</svg>

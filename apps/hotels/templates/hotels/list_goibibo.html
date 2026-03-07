@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ selected_filters.location|default:"Search" }} Hotels - Zygotrip{% endblock %}
+
+{% block meta_description %}Find the best hotels in {{ selected_filters.location|default:"your destination" }}. Compare prices, amenities, and book instantly.{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Additional page-specific styles */
+  .results-header {
+    background: var(--bg-white);
+    padding: var(--space-md) 0;
+    border-bottom: 1px solid var(--border-light);
+    margin-bottom: var(--space-lg);
+  }
+  
+  .results-count-text {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+  }
+  
+  .sort-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    align-items: center;
+    margin-top: var(--space-sm);
+  }
+  
+  .sort-pill {
+    padding: 8px 16px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-white);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    color: var(--text-secondary);
+  }
+  
+  .sort-pill:hover,
+  .sort-pill.active {
+    background: var(--color-primary);
+    color: var(--text-inverse);
+    border-color: var(--color-primary);
+  }
+  
+  .filter-section-collapsible {
+    margin-bottom: var(--space-md);
+  }
+  
+  .filter-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: var(--space-sm) 0;
+    user-select: none;
+  }
+  
+  .filter-section-content {
+    padding-top: var(--space-sm);
+  }
+  
+  .filter-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 6px 0;
+  }
+  
+  .filter-checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+  }
+  
+  .filter-checkbox-item label {
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .filter-count {
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+  }
+  
+  .price-range-inputs {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: var(--space-xs);
+    align-items: center;
+  }
+  
+  .price-range-inputs input {
+    width: 100%;
+  }
+  
+  .autosuggest-container {
+    position: relative;
+  }
+  
+  .autosuggest-results {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--bg-white);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-dropdown);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: var(--z-dropdown);
+    display: none;
+  }
+  
+  .autosuggest-results.active {
+    display: block;
+  }
+  
+  .autosuggest-item {
+    padding: var(--space-sm);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    transition: background var(--transition-fast);
+  }
+  
+  .autosuggest-item:hover {
+    background: var(--bg-light);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Results Header -->
+  <div class="results-header">
+    <div class="flex justify-between items-start gap-md">
+      <div>
+        <h1 class="results-count-text">
+          {% if ota_hotels %}
+            {{ ota_hotels|length }} hotel{% if ota_hotels|length != 1 %}s{% endif %} found
+            {% if selected_filters.location %} in {{ selected_filters.location }}{% endif %}
+          {% else %}
+            No hotels found
+          {% endif %}
+        </h1>
+        
+        {% if current_query.checkin and current_query.checkout %}
+          <p class="text-sm text-secondary mt-xs">
+            {{ current_query.checkin|date:"d M" }} - {{ current_query.checkout|date:"d M" }} · 
+            {{ current_query.adults|default:1 }} Guest{% if current_query.adults != 1 %}s{% endif %} · 
+            {{ current_query.rooms|default:1 }} Room{% if current_query.rooms != 1 %}s{% endif %}
+          </p>
+        {% endif %}
+      </div>
+      
+      <!-- Sort Options -->
+      <div class="sort-bar">
+        <span class="text-sm font-medium text-secondary">Sort by:</span>
+        <a href="?{{ query_params }}&sort=recommended" class="sort-pill {% if current_sort == 'recommended' or not current_sort %}active{% endif %}">
+          Recommended
+        </a>
+        <a href="?{{ query_params }}&sort=price_low" class="sort-pill {% if current_sort == 'price_low' %}active{% endif %}">
+          Price: Low to High
+        </a>
+        <a href="?{{ query_params }}&sort=price_high" class="sort-pill {% if current_sort == 'price_high' %}active{% endif %}">
+          Price: High to Low
+        </a>
+        <a href="?{{ query_params }}&sort=rating" class="sort-pill {% if current_sort == 'rating' %}active{% endif %}">
+          Rating
+        </a>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Two-Column Layout -->
+  <div class="layout-listing">
+    <!-- LEFT: Filter Sidebar -->
+    <aside class="sidebar">
+      <form id="filterForm" method="get" action="{% url 'hotels:listing' %}">
+        <!-- Preserve search params -->
+        {% if current_query.checkin %}<input type="hidden" name="checkin" value="{{ current_query.checkin|date:'Y-m-d' }}" />{% endif %}
+        {% if current_query.checkout %}<input type="hidden" name="checkout" value="{{ current_query.checkout|date:'Y-m-d' }}" />{% endif %}
+        {% if current_query.adults %}<input type="hidden" name="adults" value="{{ current_query.adults }}" />{% endif %}
+        {% if current_query.rooms %}<input type="hidden" name="rooms" value="{{ current_query.rooms }}" />{% endif %}
+        {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}" />{% endif %}
+        
+        <!-- Location Filter -->
+        <div class="filter-section-collapsible">
+          <div class="sidebar-title">Search Location</div>
+          <div class="autosuggest-container">
+            <input 
+              type="text" 
+              name="location" 
+              id="locationInput"
+              class="form-input" 
+              placeholder="City, area, or landmark"
+              value="{{ selected_filters.location|default:'' }}"
+              autocomplete="off"
+            />
+            <div class="autosuggest-results" id="locationSuggestions"></div>
+          </div>
+        </div>
+        
+        <!-- Price Range Filter -->
+        <div class="filter-section-collapsible">
+          <div class="sidebar-title">Price Range</div>
+          <div class="filter-section-content">
+            <div class="price-range-inputs">
+              <input 
+                type="number" 
+                name="price_min" 
+                class="form-input" 
+                placeholder="Min"
+                value="{{ selected_filters.price_min|default:'' }}"
+              />
+              <span class="text-secondary">-</span>
+              <input 
+                type="number" 
+                name="price_max" 
+                class="form-input" 
+                placeholder="Max"
+                value="{{ selected_filters.price_max|default:'' }}"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <!-- Star Rating Filter -->
+        <div class="filter-section-collapsible">
+          <div class="sidebar-title">Star Rating</div>
+          <div class="filter-section-content">
+            <div class="filter-checkbox-item">
+              <input type="checkbox" name="star_5" id="star5" value="on" {% if 'star_5' in selected_filters.star_ratings %}checked{% endif %} />
+              <label for="star5">
+                <span>⭐⭐⭐⭐⭐ 5 Star</span>
+                <span class="filter-count">({{ filter_options.ratings.rating_5|default:0 }})</span>
+              </label>
+            </div>
+            <div class="filter-checkbox-item">
+              <input type="checkbox" name="star_4" id="star4" value="on" {% if 'star_4' in selected_filters.star_ratings %}checked{% endif %} />
+              <label for="star4">
+                <span>⭐⭐⭐⭐ 4 Star+</span>
+                <span class="filter-count">({{ filter_options.ratings.rating_4plus|default:0 }})</span>
+              </label>
+            </div>
+            <div class="filter-checkbox-item">
+              <input type="checkbox" name="star_3" id="star3" value="on" {% if 'star_3' in selected_filters.star_ratings %}checked{% endif %} />
+              <label for="star3">
+                <span>⭐⭐⭐ 3 Star+</span>
+                <span class="filter-count">({{ filter_options.ratings.rating_3plus|default:0 }})</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- User Rating Filter -->
+        <div class="filter-section-collapsible">
+          <div class="sidebar-title">Guest Rating</div>
+          <div class="filter-section-content">
+            <div class="filter-checkbox-item">
+              <input type="checkbox" name="rating_4_5" id="rating45" value="on" {% if 'rating_4_5' in selected_filters.user_ratings %}checked{% endif %} />
+              <label for="rating45">
+                <span>4.5+ ⭐ Excellent</span>
+                <span class="filter-count">({{ filter_options.user_ratings.rating_4_5plus|default:0 }})</span>
+              </label>
+            </div>
+            <div class="filter-checkbox-item">
+              <input type="checkbox" name="rating_4" id="rating40" value="on" {% if 'rating_4' in selected_filters.user_ratings %}checked{% endif %} />
+              <label for="rating40">
+                <span>4.0+ ⭐ Very Good</span>
+                <span class="filter-count">({{ filter_options.user_ratings.rating_4_0plus|default:0 }})</span>
+              </label>
+            </div>
+            <div class="filter-checkbox-item">
+              <input type="checkbox" name="rating_3_5" id="rating35" value="on" {% if 'rating_3_5' in selected_filters.user_ratings %}checked{% endif %} />
+              <label for="rating35">
+                <span>3.5+ ⭐ Good</span>
+                <span class="filter-count">({{ filter_options.user_ratings.rating_3_5plus|default:0 }})</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Property Type Filter -->
+        {% if filter_options.property_types %}
+          <div class="filter-section-collapsible">
+            <div class="sidebar-title">Property Type</div>
+            <div class="filter-section-content">
+              {% for property_type, count in filter_options.property_types.items %}
+                <div class="filter-checkbox-item">
+                  <input 
+                    type="checkbox" 
+                    name="property_type" 
+                    value="{{ property_type }}" 
+                    id="proptype{{ forloop.counter }}"
+                    {% if property_type in selected_filters.property_types %}checked{% endif %}
+                  />
+                  <label for="proptype{{ forloop.counter }}">
+                    <span>{{ property_type }}</span>
+                    <span class="filter-count">({{ count }})</span>
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+        
+        <!-- Amenities Filter -->
+        {% if filter_options.amenities %}
+          <div class="filter-section-collapsible">
+            <div class="sidebar-title">Amenities</div>
+            <div class="filter-section-content">
+              {% for amenity, count in filter_options.amenities.items %}
+                <div class="filter-checkbox-item">
+                  <input 
+                    type="checkbox" 
+                    name="amenity" 
+                    value="{{ amenity }}" 
+                    id="amenity{{ forloop.counter }}"
+                    {% if amenity in selected_filters.amenities %}checked{% endif %}
+                  />
+                  <label for="amenity{{ forloop.counter }}">
+                    <span>{{ amenity }}</span>
+                    <span class="filter-count">({{ count }})</span>
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+        
+        <!-- Filter Action Buttons -->
+        <div class="flex flex-col gap-sm mt-lg">
+          <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+          <a href="{% url 'hotels:listing' %}" class="btn btn-outline btn-block">Reset All</a>
+        </div>
+      </form>
+    </aside>
+    
+    <!-- RIGHT: Hotel Results -->
+    <div class="content-main">
+      {% if ota_hotels %}
+        <div class="content-list">
+          {% for hotel in ota_hotels %}
+            {% include "components/hotel_card_goibibo.html" with hotel=hotel %}
+          {% endfor %}
+        </div>
+        
+        <!-- Pagination (if available) -->
+        {% if has_pagination %}
+          <div class="flex justify-center mt-xl">
+            {% include "components/pagination.html" %}
+          </div>
+        {% endif %}
+        
+      {% else %}
+        <!-- Empty State -->
+        <div class="card text-center p-xl">
+          <div style="font-size: 64px; margin-bottom: var(--space-md);">🏨</div>
+          <h2 class="text-2xl font-semibold mb-sm">No hotels found</h2>
+          <p class="text-secondary mb-lg">
+            {{ empty_state_message|default:"Try adjusting your filters or search criteria." }}
+          </p>
+          <a href="{% url 'hotels:listing' %}" class="btn btn-primary">Clear All Filters</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Auto-submit form on filter change
+  const filterForm = document.getElementById('filterForm');
+  const filterInputs = filterForm.querySelectorAll('input[type="checkbox"], input[type="number"]');
+  
+  let submitTimeout;
+  filterInputs.forEach(input => {
+    input.addEventListener('change', () => {
+      clearTimeout(submitTimeout);
+      submitTimeout = setTimeout(() => {
+        filterForm.submit();
+      }, 500);
+    });
+  });
+  
+  // Location autocomplete
+  const locationInput = document.getElementById('locationInput');
+  const locationSuggestions = document.getElementById('locationSuggestions');
+  
+  if (locationInput && locationSuggestions) {
+    let suggestionTimeout;
+    
+    locationInput.addEventListener('input', function() {
+      const query = this.value.trim();
+      
+      clearTimeout(suggestionTimeout);
+      
+      if (query.length < 2) {
+        locationSuggestions.classList.remove('active');
+        return;
+      }
+      
+      suggestionTimeout = setTimeout(() => {
+        fetch(`/api/hotels/location-suggestions/?q=${encodeURIComponent(query)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.results && data.results.length > 0) {
+              locationSuggestions.innerHTML = data.results.map(item => 
+                `<div class="autosuggest-item" data-value="${item.value}">${item.label}</div>`
+              ).join('');
+              locationSuggestions.classList.add('active');
+            } else {
+              locationSuggestions.classList.remove('active');
+            }
+          })
+          .catch(() => {
+            locationSuggestions.classList.remove('active');
+          });
+      }, 300);
+    });
+    
+    locationSuggestions.addEventListener('click', function(e) {
+      const item = e.target.closest('.autosuggest-item');
+      if (item) {
+        locationInput.value = item.dataset.value;
+        locationSuggestions.classList.remove('active');
+        filterForm.submit();
+      }
+    });
+    
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!locationInput.contains(e.target) && !locationSuggestions.contains(e.target)) {
+        locationSuggestions.classList.remove('active');
+      }
+    });
+  }
+</script>
+{% endblock %}

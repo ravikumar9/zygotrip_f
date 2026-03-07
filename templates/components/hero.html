@@ -1,0 +1,26 @@
+{# REUSABLE HERO COMPONENT - OTA-STYLE DEPTH #}
+
+
+<div class="hero-gradient">
+  <div class="hero-content">
+    <h1 class="hero-title">{{ title|default:"Find Your Perfect Hotel" }}</h1>
+    <p class="hero-subtitle">{{ subtitle|default:"Explore thousands of properties and book your next adventure" }}</p>
+  </div>
+  
+  {% if show_search %}
+  <div class="search-container">
+    {% include "components/search/hotel_search.html" %}
+  </div>
+  {% endif %}
+</div>
+
+
+
+
+
+
+
+
+
+
+

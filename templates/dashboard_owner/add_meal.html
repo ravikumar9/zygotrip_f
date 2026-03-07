@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Add Meal Plan — {{ property.name }} | Zygotrip{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="owner-form-page">
+
+      <!-- Breadcrumb -->
+      <nav style="font-size:13px;color:#9ca3af;margin-bottom:20px;">
+        <a href="/owner/dashboard/" style="color:#ff6b35;text-decoration:none;">Dashboard</a>
+        <span style="margin:0 8px;">›</span>
+        <span style="color:#111827;">Add Meal Plan</span>
+      </nav>
+
+      <!-- Page Header -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🍽️</div>
+        <div>
+          <h1 style="margin:0;font-size:26px;font-weight:800;color:#111827;">Add Meal Plan</h1>
+          <p style="margin:2px 0 0;color:#6b7280;font-size:14px;">Create a meal option for <strong style="color:#f59e0b;">{{ property.name }}</strong></p>
+        </div>
+      </div>
+
+      <div class="card" style="border-radius:16px;padding:36px 40px;box-shadow:0 4px 24px rgba(0,0,0,0.08);margin-top:24px;">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="form-section-title">Meal Plan Details</div>
+
+          <div class="form-group">
+            <label>Meal Plan Name <span style="color:#ef4444;">*</span></label>
+            {{ form.name }}
+            <p class="form-hint">💡 E.g., Breakfast Included, Half Board, All-Inclusive</p>
+          </div>
+
+          <div class="form-group">
+            <label>Price Per Person Per Night (₹)</label>
+            {{ form.price }}
+            <p class="form-hint">This amount is added to the room rate when guests select this meal plan</p>
+          </div>
+
+          <div style="margin-top:32px;padding-top:24px;border-top:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <a href="/owner/dashboard/" style="color:#6b7280;font-size:14px;text-decoration:none;">← Back to Dashboard</a>
+            <button type="submit" class="button button-accent button-lg" style="min-width:220px;">
+              🍽️ Create Meal Plan
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+

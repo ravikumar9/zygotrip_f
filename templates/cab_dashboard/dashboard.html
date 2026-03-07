@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="d-flex justify-between align-center mb-6">
+      <div>
+        <h1>Cab Fleet Dashboard</h1>
+        <p class="text-sm">{{ request.user.email|cut:"@test.com" }}</p>
+      </div>
+      <a href="/vendor/cab/create/" class="btn btn-primary" role="button">Add Cab</a>
+    </div>
+
+    {% if cabs %}
+      <div class="card">
+        <h2 class="mb-4">Your Cabs</h2>
+        <div class="grid grid-cols-1 gap-4">
+          {% for cab in cabs %}
+            <div class="card">
+              <h3 class="card-title">{{ cab.vehicle_type }} - {{ cab.cab_type }}</h3>
+              <p class="">{{ cab.from_location }} to {{ cab.to_location }}</p>
+              <p class="">Base Fare: ₹{{ cab.base_fare }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class="card text-center p-6">
+        <p class="">No cabs created yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,37 @@
+<div class="search-card">
+  <form method="get" action="/buses/" class="search-form" data-search-form>
+    <div class="search-form-group">
+      <div class="search-form-field relative">
+        <label for="bus-from">From</label>
+        <input
+          type="text"
+          id="bus-from"
+          name="from_city"
+          placeholder="From city"
+          value="{{ request.GET.from_city|default:'' }}"
+          data-autocomplete="search"
+          autocomplete="off"
+        />
+      </div>
+      <div class="search-form-field relative">
+        <label for="bus-to">To</label>
+        <input
+          type="text"
+          id="bus-to"
+          name="to_city"
+          placeholder="To city"
+          value="{{ request.GET.to_city|default:'' }}"
+          data-autocomplete="search"
+          autocomplete="off"
+        />
+      </div>
+      <div class="search-form-field">
+        <label for="bus-date">Journey date</label>
+        <input type="date" id="bus-date" name="journey_date" value="{{ request.GET.journey_date|default:'' }}" />
+      </div>
+      <div class="search-form-field">
+        <button type="submit" class="btn btn-primary primary-button">Search Buses</button>
+      </div>
+    </div>
+  </form>
+</div>

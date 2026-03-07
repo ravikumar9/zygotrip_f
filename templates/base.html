@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="{% block meta_description %}Zygotrip - Your premium travel booking platform for hotels, buses, cabs, and holiday packages{% endblock %}" />
+    <meta name="keywords" content="{% block meta_keywords %}hotels, travel, booking, bus tickets, cab booking, holiday packages{% endblock %}" />
+    <meta name="theme-color" content="#2563eb" />
+    
+    <title>{% block title %}Zygotrip - Premium Travel Booking Platform{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="{% static 'img/globe.svg' %}" type="image/svg+xml" />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Design System CSS - Load in Order -->
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=professional20260227v2" />
+    <link rel="stylesheet" href="{% static 'css/layout.css' %}?v=professional20260227v2" />
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=professional20260227v2" />
+    <link rel="stylesheet" href="{% static 'css/system.css' %}?v=professional20260227v2" />
+    
+    <!-- Legacy CSS (for backward compatibility during transition) -->
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=professional20260227v2" />
+    
+    <!-- Page-specific CSS -->
+    {% block extra_css %}{% endblock %}
+  </head>
+  
+  <body class="page-wrapper">
+    <!-- Navigation -->
+    {% include "components/navbar.html" %}
+    
+    <!-- Hero Section (optional) -->
+    {% block hero %}{% endblock %}
+    
+    <!-- Main Content -->
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    {% include "components/footer_new.html" %}
+    
+    <!-- Design System JavaScript -->
+    <script defer src="{% static 'js/components.js' %}"></script>
+    
+    <!-- Legacy JavaScript (for backward compatibility) -->
+    <script defer src="{% static 'js/components/autocomplete.js' %}"></script>
+    <script defer src="{% static 'js/components/ui.js' %}"></script>
+    
+    <!-- Page-specific JavaScript -->
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

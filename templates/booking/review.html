@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="booking-header">
+      <h1 class="mb-12">Review Your Booking</h1>
+      <span class="booking-status-badge" data-status="{{ booking.status }}">{{ booking.get_status_display }}</span>
+    </div>
+
+    <!-- Booking Timer -->
+    {% if booking.timer_expires_at %}
+      <span id="timer" data-time="{{ booking.timer_seconds }}"></span>
+    {% endif %}
+
+    <div class="grid md:grid-cols-3 gap-8">
+      <!-- Booking Summary (Left) -->
+      <div class="md:col-span-2">
+        <div class="card">
+          <h3 class="card-title">Booking Details</h3>
+          
+          <!-- Property Info -->
+          <div class="p-6 rounded-lg mb-8" >
+            <h4 class="m-2">{{ booking.property.name }}</h4>
+            <p class="m-4" >{{ booking.property.city }}, {{ booking.property.country }}</p>
+            
+            <div class="d-grid gap-4 mt-4" >
+              <div>
+                <p class="m-2 text-xs" >Check In</p>
+                <p class="font-semibold m-0">{{ booking.check_in }}</p>
+              </div>
+              <div>
+                <p class="m-2 text-xs" >Check Out</p>
+                <p class="font-semibold m-0">{{ booking.check_out }}</p>
+              </div>
+              <div>
+                <p class="m-2 text-xs" >Duration</p>
+                <p class="font-semibold m-0">{{ nights }} night{{ nights|pluralize }}</p>
+              </div>
+              <div>
+                <p class="m-2 text-xs" >Rooms</p>
+                <p class="font-semibold m-0">{{ booking.quantity }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Guest Info -->
+          <h4 class="m-6">Guest Information</h4>
+          <div class="d-grid gap-4 mb-8" >
+            <div class="p-4 rounded" >
+              <p class="m-2 text-xs" >Name</p>
+              <p class="font-semibold m-0">{{ booking.guest_name }}</p>
+            </div>
+            <div class="p-4 rounded" >
+              <p class="m-2 text-xs" >Email</p>
+              <p class="font-semibold text-sm m-0">{{ booking.guest_email }}</p>
+            </div>
+            <div class="p-4 rounded" >
+              <p class="m-2 text-xs" >Phone</p>
+              <p class="font-semibold text-sm m-0">{{ booking.guest_phone|default:"N/A" }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price Summary (Right) -->
+      <div>
+        <div class="card">
+          <h3 class="card-title">Price Summary</h3>
+
+          <div class="price-total-row">
+            <div>
+              <p class="price-total-label">Total (Taxes & Fees Included)</p>
+              <p class="price-total-amount">₹{{ booking.total_amount }}</p>
+            </div>
+            <button type="button" class="icon-button" data-toggle="price-breakdown" aria-expanded="false" aria-controls="price-breakdown-panel">ℹ</button>
+          </div>
+
+          <div id="price-breakdown-panel" class="price-breakdown-panel" aria-hidden="true">
+            <table class="price-table">
+              <tbody>
+                <tr>
+                  <td class="price-row-label">Base Rate</td>
+                  <td class="text-right">₹{{ booking.price_breakdown.base_amount }}</td>
+                </tr>
+                {% if booking.price_breakdown.meal_amount %}
+                <tr>
+                  <td class="price-row-label">Meals</td>
+                  <td class="text-right">₹{{ booking.price_breakdown.meal_amount }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td class="price-row-label">Service Fee</td>
+                  <td class="text-right">₹{{ booking.price_breakdown.service_fee }}</td>
+                </tr>
+                <tr>
+                  <td class="price-row-label">Tax (GST)</td>
+                  <td class="text-right">₹{{ booking.price_breakdown.gst }}</td>
+                </tr>
+                {% if booking.price_breakdown.promo_discount %}
+                <tr class="price-row-highlight">
+                  <td class="price-row-label">Promo Discount</td>
+                  <td class="text-right">-₹{{ booking.price_breakdown.promo_discount }}</td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="button button-accent button-block button-lg" style="font-size:16px;font-weight:700;letter-spacing:0.02em;">
+              ✅ Proceed to Payment →
+            </button>
+          </form>
+
+          <p class="text-center mt-4 text-sm" >
+            ✓ You won't be charged until you confirm payment
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script src="{% static 'js/booking-review.js' %}"></script>
+<script src="{% static 'js/timer.js' %}"></script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

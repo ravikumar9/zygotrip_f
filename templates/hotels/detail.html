@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ property.name }} | Zygotrip{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/pages/details.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="hotel-detail" data-page="hotel-detail" data-property-rating="{{ property.rating|default:0 }}" data-property-type="{{ property.property_type|lower|cut:' ' }}">
+  {% include "hotels/components/gallery_component.html" %}
+
+  <section class="hotel-detail__header container" id="overview">
+    <div class="hotel-detail__title">
+      <div class="hotel-detail__title-row">
+        <h1 class="heading-xl">{{ property.name }}</h1>
+        {% include "ui/components/rating_badge.html" with rating=property.rating reviews=property.review_count %}
+      </div>
+      {% if property.star_category %}
+        <div style="color: #f59e0b; font-size: 1rem; margin-bottom: 0.5rem;">
+          {% for i in "x"|ljust:property.star_category %}⭐{% endfor %} {{ property.star_category }}-Star {{ property.property_type }}
+        </div>
+      {% endif %}
+      <div class="hotel-detail__meta">
+        <span class="hotel-detail__location">
+          <span class="hotel-detail__location-icon" aria-hidden="true">📍</span>
+          <span>{{ property.address }}, {{ property.city }}, {{ property.country }}</span>
+        </span>
+        <span class="hotel-detail__reviews">{{ property.review_count }} reviews</span>
+      </div>
+      <div class="hotel-detail__trust trust-badges" role="list">
+        {% if property.is_trending %}
+          <span class="trust-badge trust-badge-scarcity" role="listitem"><span class="badge-icon">🔥</span><span class="badge-text">Trending</span></span>
+        {% endif %}
+        {% if property.has_free_cancellation %}
+          <span class="trust-badge trust-badge-flexibility" role="listitem"><span class="badge-icon">✓</span><span class="badge-text">Free cancellation</span></span>
+        {% endif %}
+        <span class="trust-badge trust-badge-quality" role="listitem"><span class="badge-icon">✔</span><span class="badge-text">Verified stay</span></span>
+        <span class="trust-badge trust-badge-location" role="listitem"><span class="badge-icon">📌</span><span class="badge-text">Prime location</span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="hotel-detail__layout container" aria-label="Hotel detail">
+    <div class="hotel-detail__main">
+      {% include "hotels/components/tabs_component.html" %}
+
+      <section class="hotel-section reveal-on-scroll" id="overview" data-tab-content>
+        <div class="hotel-section__header">
+          <h2 class="heading-lg">Overview</h2>
+          <p class="body">{{ property.description }}</p>
+        </div>
+        <div class="hotel-highlights">
+          {% for offer in property.offers.all|slice:":4" %}
+            <div class="hotel-highlight">
+              <div class="hotel-highlight__title">{{ offer.title }}</div>
+              <div class="hotel-highlight__meta">Valid until {{ offer.valid_until }}</div>
+            </div>
+          {% empty %}
+            <div class="hotel-highlight">
+              <div class="hotel-highlight__title">Flexible stays</div>
+              <div class="hotel-highlight__meta">Free cancellation up to {{ property.cancellation_hours }} hours</div>
+            </div>
+            <div class="hotel-highlight">
+              <div class="hotel-highlight__title">Great location</div>
+              <div class="hotel-highlight__meta">Close to {{ property.landmark|default:property.city }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="hotel-section reveal-on-scroll" id="rooms" data-tab-content>
+        <div class="hotel-section__header hotel-section__header--split">
+          <div>
+            <h2 class="heading-lg">Rooms</h2>
+            <p class="body">Select a room that matches your stay and preferences.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" type="button" data-filter-toggle>
+            Filters
+          </button>
+        </div>
+
+        {% include "hotels/components/filters_panel.html" %}
+
+        <div class="room-grid" data-room-grid>
+          {% for room_type in property.room_types.all|dictsort:"name" %}
+            {% include "hotels/components/room_card.html" with room=room_type %}
+          {% empty %}
+            <div class="hotel-empty-state">No rooms available for the selected dates.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="hotel-section reveal-on-scroll" id="amenities" data-tab-content>
+        <div class="hotel-section__header">
+          <h2 class="heading-lg">Amenities</h2>
+          <p class="body">Everything you need for a comfortable stay.</p>
+        </div>
+        <div class="amenities-grid">
+          {% for amenity in property.amenities.all %}
+            <div class="amenity-item">
+              <span class="amenity-item__icon" aria-hidden="true">{{ amenity.icon|default:"•" }}</span>
+              <span class="amenity-item__label">{{ amenity.name }}</span>
+            </div>
+          {% empty %}
+            <div class="hotel-empty-state">Amenities information will appear here.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="hotel-section reveal-on-scroll" id="policies" data-tab-content>
+        <div class="hotel-section__header">
+          <h2 class="heading-lg">Policies</h2>
+          <p class="body">Know before you book.</p>
+        </div>
+        {% include "hotels/components/accordion_component.html" %}
+      </section>
+
+      <section class="hotel-section reveal-on-scroll" id="reviews" data-tab-content>
+        <div class="hotel-section__header">
+          <h2 class="heading-lg">Reviews</h2>
+          <p class="body">Verified guest feedback.</p>
+        </div>
+        <div class="review-summary">
+          <div class="review-summary__score">
+            <div class="review-score">{{ property.rating|floatformat:1 }}</div>
+            <div class="review-count">{{ property.review_count }} reviews</div>
+          </div>
+          <div class="review-summary__details">
+            <div class="review-detail">Cleanliness: {{ property.rating_breakdown.first.cleanliness|default:property.rating }}</div>
+            <div class="review-detail">Service: {{ property.rating_breakdown.first.service|default:property.rating }}</div>
+            <div class="review-detail">Location: {{ property.rating_breakdown.first.location|default:property.rating }}</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="hotel-detail__sidebar" aria-label="Booking summary">
+      <div class="booking-card" data-booking-card>
+        <div class="booking-card__header">
+          <div class="booking-card__price">
+            <span class="booking-card__amount">₹{{ property.base_price|default:0 }}</span>
+            <span class="booking-card__unit">/ night</span>
+          </div>
+          <div class="booking-card__tax">Includes taxes and fees</div>
+        </div>
+
+        <div class="booking-card__scarcity">
+          {% include "ui/components/scarcity_badge.html" with text="Limited rooms at this price" type="warning" %}
+        </div>
+
+        <form method="get" action="{% url 'hotels:booking' %}" class="booking-form" data-booking-form>
+          <input type="hidden" name="property" value="{{ property.slug }}" />
+          <div class="booking-form__group">
+            <label class="booking-form__label" for="id_room_type">Room type</label>
+            <select name="room_type" id="id_room_type" class="booking-form__select" required>
+              <option value="">Select a room</option>
+              {% for room in property.room_types.all %}
+                <option value="{{ room.id }}">{{ room.name }} - ₹{{ room.base_price }}/night</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="booking-form__row">
+            <div class="booking-form__group">
+              <label class="booking-form__label" for="id_check_in">Check in</label>
+              <input type="date" name="checkin" id="id_check_in" class="booking-form__input" value="{{ detail_params.checkin }}" required />
+            </div>
+            <div class="booking-form__group">
+              <label class="booking-form__label" for="id_check_out">Check out</label>
+              <input type="date" name="checkout" id="id_check_out" class="booking-form__input" value="{{ detail_params.checkout }}" required />
+            </div>
+          </div>
+          <div class="booking-form__row">
+            <div class="booking-form__group">
+              <label class="booking-form__label" for="id_rooms">Rooms</label>
+              <input type="number" name="rooms" id="id_rooms" class="booking-form__input" value="{{ detail_params.rooms|default:1 }}" min="1" max="10" required />
+            </div>
+            <div class="booking-form__group">
+              <label class="booking-form__label" for="id_adults">Adults</label>
+              <input type="number" name="adults" id="id_adults" class="booking-form__input" value="{{ detail_params.adults|default:1 }}" min="1" max="10" required />
+            </div>
+          </div>
+          <button class="btn btn-primary btn-lg primary-button" type="submit">
+            Continue to Book
+          </button>
+        </form>
+      </div>
+    </aside>
+  </section>
+
+  {% include "hotels/components/mobile_bar.html" %}
+</div>
+
+<script defer src="{% static 'js/details.js' %}"></script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

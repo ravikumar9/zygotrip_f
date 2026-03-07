@@ -1,0 +1,82 @@
+{% load static %}
+
+{# Reusable modal component #}
+<div class="modal-backdrop" id="{{ modal_id|default:'modal' }}" style="display: none;">
+  <div class="modal" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">{{ modal_title|default:"Modal Title" }}</h3>
+      <button type="button" class="modal-close" aria-label="Close modal" data-modal-close>
+        ×
+      </button>
+    </div>
+    
+    <!-- Modal Body -->
+    <div class="modal-body">
+      {% if modal_content %}
+        {{ modal_content|safe }}
+      {% else %}
+        {% block modal_body %}
+          <!-- Content goes here -->
+        {% endblock %}
+      {% endif %}
+    </div>
+    
+    <!-- Modal Footer (optional) -->
+    {% if show_footer %}
+      <div class="modal-footer">
+        {% block modal_footer %}
+          <button type="button" class="btn btn-ghost" data-modal-close>Cancel</button>
+          <button type="button" class="btn btn-primary" data-modal-confirm>Confirm</button>
+        {% endblock %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  (function() {
+    const modalId = '{{ modal_id|default:"modal" }}';
+    const modal = document.getElementById(modalId);
+    
+    if (!modal) return;
+    
+    // Show modal function
+    window.showModal = function(id) {
+      const targetModal = document.getElementById(id || modalId);
+      if (targetModal) {
+        targetModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+    };
+    
+    // Hide modal function
+    window.hideModal = function(id) {
+      const targetModal = document.getElementById(id || modalId);
+      if (targetModal) {
+        targetModal.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    };
+    
+    // Close on backdrop click
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        hideModal(modalId);
+      }
+    });
+    
+    // Close on close button click
+    const closeButtons = modal.querySelectorAll('[data-modal-close]');
+    closeButtons.forEach(btn => {
+      btn.addEventListener('click', () => hideModal(modalId));
+    });
+    
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && modal.style.display === 'flex') {
+        hideModal(modalId);
+      }
+    });
+  })();
+</script>

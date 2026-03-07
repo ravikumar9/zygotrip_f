@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div >
+      <h1 class="mb-2">Register New Package</h1>
+      <p class="mb-8" >Add your package to our platform</p>
+
+      <form method="post" class="card p-6">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="p-3 rounded mb-4" >
+            {{ form.non_field_errors.0 }}
+          </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label>Package Name</label>
+          {{ form.name }}
+          {% if form.name.errors %}
+            <p class="text-sm" >{{ form.name.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Destination</label>
+          {{ form.destination }}
+          {% if form.destination.errors %}
+            <p class="text-sm" >{{ form.destination.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Duration (Days)</label>
+          {{ form.duration_days }}
+          {% if form.duration_days.errors %}
+            <p class="text-sm" >{{ form.duration_days.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Price (₹)</label>
+          {{ form.base_price }}
+          {% if form.base_price.errors %}
+            <p class="text-sm" >{{ form.base_price.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          {{ form.description }}
+          {% if form.description.errors %}
+            <p class="text-sm" >{{ form.description.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Category</label>
+          {{ form.category }}
+          {% if form.category.errors %}
+            <p class="text-sm" >{{ form.category.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Inclusions (comma-separated)</label>
+          {{ form.inclusions }}
+          {% if form.inclusions.errors %}
+            <p class="text-sm" >{{ form.inclusions.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Exclusions (comma-separated)</label>
+          {{ form.exclusions }}
+          {% if form.exclusions.errors %}
+            <p class="text-sm" >{{ form.exclusions.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Max Group Size</label>
+          {{ form.max_group_size }}
+          {% if form.max_group_size.errors %}
+            <p class="text-sm" >{{ form.max_group_size.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Difficulty Level</label>
+          {{ form.difficulty_level }}
+          {% if form.difficulty_level.errors %}
+            <p class="text-sm" >{{ form.difficulty_level.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Image URL</label>
+          {{ form.image_url }}
+          {% if form.image_url.errors %}
+            <p class="text-sm" >{{ form.image_url.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="mt-6">
+          <button type="submit" class="btn btn-primary w-full">Register Package</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+

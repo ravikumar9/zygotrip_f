@@ -1,0 +1,560 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Google Fonts ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap');
+
+/* ─── CSS Custom Properties (Goibibo-grade) ────────────────────── */
+:root {
+  --primary:       #EB2026;
+  --primary-dark:  #c71a1f;
+  --primary-light: #ff4a4f;
+  --accent:        #FF6B35;
+  --orange:        #f5a623;
+  --bg-dark:       #1a1a2e;
+  --bg-mid:        #16213e;
+  --bg-blue:       #0f3460;
+  --text-dark:     #1a1a2e;
+  --text-muted:    #6b7280;
+  --border:        #e5e7eb;
+  --surface:       #f8f9fa;
+  --green:         #00a652;
+  --white:         #ffffff;
+}
+
+/* ─── Base resets ──────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Nunito', 'Inter', system-ui, sans-serif;
+    @apply text-neutral-900;
+    /* OTA-grade soft gradient background — warm white with subtle cool undertone */
+    background: linear-gradient(160deg, #fff8f8 0%, #f8fafc 50%, #f0f4ff 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  ::selection {
+    background: rgba(235, 32, 38, 0.15);
+    color: var(--text-dark);
+  }
+}
+
+/* ─── Design System Components ─────────────────────────────────── */
+@layer components {
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           px-5 py-2.5 rounded-xl
+           font-bold text-sm text-white
+           transition-all duration-150 cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus-visible:outline focus-visible:outline-2
+           focus-visible:outline-offset-2 focus-visible:outline-primary-500;
+    background: var(--primary);
+  }
+  .btn-primary:hover  { background: var(--primary-dark); }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           px-5 py-2.5 rounded-xl
+           bg-white font-bold text-sm text-neutral-700
+           border border-neutral-200
+           hover:bg-neutral-50 hover:border-neutral-300
+           active:bg-neutral-100
+           transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2
+           px-5 py-2.5 rounded-xl
+           font-bold text-sm text-white
+           transition-colors duration-150;
+    background: var(--primary);
+  }
+  .btn-danger:hover { background: var(--primary-dark); }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2 rounded-xl
+           text-neutral-600 font-semibold text-sm
+           hover:bg-neutral-100
+           transition-colors duration-150;
+  }
+
+  /* Search CTA button (Goibibo-style red fill) */
+  .btn-search {
+    @apply inline-flex items-center justify-center gap-2
+           font-black text-sm text-white uppercase tracking-wide
+           rounded-xl cursor-pointer transition-all duration-150;
+    background: var(--primary);
+    letter-spacing: 0.3px;
+  }
+  .btn-search:hover  { background: var(--primary-dark); transform: scale(1.02); }
+  .btn-search:active { transform: scale(0.98); }
+
+  /* ── Form Inputs ─────────────────────────────────────────── */
+  .input-field {
+    @apply w-full px-3.5 py-2.5 rounded-xl
+           border-2 bg-neutral-50
+           text-sm text-neutral-900
+           placeholder:text-neutral-400
+           focus:outline-none focus:bg-white
+           transition-colors duration-150
+           disabled:bg-neutral-50 disabled:cursor-not-allowed;
+    border-color: var(--border);
+  }
+  .input-field:focus  { border-color: var(--primary); background: #fff5f5; }
+  .input-field:hover  { border-color: #94a3b8; }
+
+  .select-field { @apply input-field cursor-pointer; }
+
+  .label { @apply block text-sm font-semibold text-neutral-700 mb-1.5; }
+
+  /* ── Field group (Goibibo search box style) ──────────────── */
+  .field-group {
+    @apply rounded-xl px-4 py-2.5 cursor-pointer
+           transition-all duration-150 relative;
+    background: var(--surface);
+    border: 2px solid var(--border);
+  }
+  .field-group:hover,
+  .field-group:focus-within {
+    border-color: var(--primary);
+    background: #fff5f5;
+  }
+
+  .field-label {
+    @apply block text-xs font-black uppercase tracking-widest;
+    color: var(--text-muted);
+    letter-spacing: 0.8px;
+    margin-bottom: 3px;
+  }
+
+  .field-main {
+    @apply font-black text-neutral-900;
+    font-size: 22px;
+    line-height: 1;
+    letter-spacing: -0.5px;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .field-sub {
+    @apply text-xs font-semibold mt-0.5;
+    color: var(--text-muted);
+  }
+
+  /* ── Cards ───────────────────────────────────────────────── */
+  .card {
+    @apply bg-white rounded-2xl border border-neutral-200;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .card-hover {
+    @apply card transition-all duration-200;
+  }
+  .card-hover:hover {
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.07);
+    @apply border-neutral-300 -translate-y-0.5;
+  }
+
+  /* .property-card — REMOVED: replaced by HotelCard.tsx Tailwind classes */
+
+  /* ── Badges ──────────────────────────────────────────────── */
+  .rating-badge {
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded-lg text-white text-xs font-black;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  }
+
+  .discount-badge {
+    @apply inline-flex items-center px-2 py-1 rounded-lg text-white text-xs font-black;
+    background: linear-gradient(135deg, var(--green), #15803d);
+  }
+
+  .scarcity-badge {
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded-lg
+           text-orange-700 bg-orange-50 text-xs font-bold;
+  }
+
+  .free-cancel-badge {
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded-lg
+           text-green-700 bg-green-50 text-xs font-semibold;
+  }
+
+  .offer-tag {
+    @apply inline-block text-xs font-black uppercase tracking-wide
+           px-2 py-0.5 rounded;
+    background: #fff0f0;
+    color: var(--primary);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Price display ───────────────────────────────────────── */
+  .price-original { @apply text-neutral-400 text-xs line-through; }
+  .price-current  {
+    @apply text-neutral-900 font-black;
+    font-size: 22px;
+    font-family: 'Poppins', sans-serif;
+    letter-spacing: -0.5px;
+  }
+
+  /* ── Hero Search Bar (Goibibo-style glass card) ─────────── */
+  .hero-search-bar {
+    @apply bg-white/95 backdrop-blur-md rounded-2xl;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+
+  /* ── Fare alert banner ────────────────────────────────────── */
+  .fare-banner {
+    @apply flex items-center justify-between px-6 py-3.5;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  }
+
+  /* ── Search tab (Goibibo tab row) ────────────────────────── */
+  .search-tab {
+    @apply flex items-center gap-1.5 px-4 py-2 rounded-lg
+           font-bold text-sm text-neutral-500
+           cursor-pointer transition-all duration-150 whitespace-nowrap;
+    border: none;
+    background: none;
+  }
+  .search-tab:hover:not(.active) { background: #f3f4f6; color: var(--text-dark); }
+  .search-tab.active {
+    background: var(--primary);
+    @apply text-white rounded-lg;
+  }
+
+  /* ── Booking panel ────────────────────────────────────────── */
+  .booking-panel {
+    @apply bg-white rounded-2xl border border-neutral-200 sticky top-24;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.14), 0 2px 10px rgba(0,0,0,0.07);
+  }
+
+  /* ── Tab navigation (page-level tabs) ───────────────────── */
+  .tab-nav {
+    @apply px-5 py-3.5 text-sm font-bold text-neutral-500
+           border-b-2 border-transparent
+           hover:text-neutral-800 hover:border-neutral-200
+           transition-all duration-150 whitespace-nowrap;
+  }
+  .tab-nav.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── Skeleton ─────────────────────────────────────────────── */
+  .skeleton {
+    @apply bg-neutral-200 rounded-xl;
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
+  /* ── Page container ──────────────────────────────────────── */
+  .page-container { @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
+
+  /* ── Filter chip ─────────────────────────────────────────── */
+  .filter-chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5
+           rounded-full text-xs font-bold
+           border-2 bg-white text-neutral-600
+           hover:text-primary-600
+           transition-all duration-150 cursor-pointer;
+    border-color: var(--border);
+  }
+  .filter-chip:hover   { border-color: var(--primary); }
+  .filter-chip.active  {
+    border-color: var(--primary);
+    background: #fff0f0;
+    color: var(--primary);
+  }
+
+  /* ── Amenity tag ─────────────────────────────────────────── */
+  .amenity-tag {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1
+           rounded-lg text-xs text-neutral-600
+           bg-neutral-50 border border-neutral-200;
+  }
+
+  /* ── Status badge ────────────────────────────────────────── */
+  .status-badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold; }
+
+  /* ── Gallery Grid ────────────────────────────────────────── */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: 210px 210px;
+    gap: 4px;
+    height: 424px;
+  }
+  .gallery-main { grid-column: 1; grid-row: 1 / span 2; }
+
+  @media (max-width: 640px) {
+    .gallery-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: 260px;
+      height: 260px;
+    }
+    .gallery-grid > *:not(.gallery-main) { display: none; }
+  }
+
+  /* ── Room card ────────────────────────────────────────────── */
+  .room-card {
+    @apply rounded-2xl border-2 bg-white p-4
+           cursor-pointer transition-all duration-200
+           hover:shadow-card;
+    border-color: var(--border);
+  }
+  .room-card:hover    { border-color: var(--primary); }
+  .room-card.selected { background: #fff0f0; border-color: var(--primary); box-shadow: 0 2px 8px rgba(235,32,38,0.15); }
+
+  /* ── Section heading ─────────────────────────────────────── */
+  .section-heading {
+    @apply text-xl font-black text-neutral-900 flex items-center gap-2;
+    font-family: 'Poppins', sans-serif;
+  }
+  .section-heading::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(to right, var(--border), transparent);
+  }
+
+  /* ── Hero section ─────────────────────────────────────────── */
+  .hero-section {
+    @apply relative overflow-hidden;
+    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-mid) 40%, var(--bg-blue) 100%);
+    min-height: 420px;
+  }
+
+  .hero-section::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(235,32,38,0.15) 0%, transparent 70%);
+    top: -200px;
+    right: -100px;
+    pointer-events: none;
+  }
+
+  /* ── Hero text ────────────────────────────────────────────── */
+  .hero-tagline {
+    @apply text-center font-black uppercase tracking-widest;
+    color: rgba(255,255,255,0.55);
+    font-size: 13px;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .hero-title {
+    @apply text-center text-white font-black leading-tight;
+    font-size: 36px;
+    font-family: 'Poppins', sans-serif;
+    margin-bottom: 6px;
+  }
+  .hero-title span { color: var(--primary-light); }
+
+  .hero-sub {
+    @apply text-center text-sm;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 32px;
+    font-weight: 600;
+  }
+
+  /* ── Destination card (Goibibo gradient style) ───────────── */
+  .dest-card {
+    @apply rounded-xl overflow-hidden relative cursor-pointer;
+    transition: transform 0.2s;
+    aspect-ratio: 3/4;
+  }
+  .dest-card:first-child { aspect-ratio: auto; }
+  .dest-card:hover       { transform: scale(1.02); }
+
+  .dest-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+  }
+
+  /* ── Offer card (Goibibo) ────────────────────────────────── */
+  .offer-card {
+    @apply bg-white rounded-xl overflow-hidden border cursor-pointer
+           transition-all duration-200;
+    border-color: var(--border);
+  }
+  .offer-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); transform: translateY(-2px); }
+
+  /* ── Offer code box ──────────────────────────────────────── */
+  .offer-code-box {
+    @apply flex items-center gap-2 mt-2 rounded-lg px-2.5 py-1.5;
+    background: var(--surface);
+    border: 1px dashed #ccc;
+  }
+
+  /* ── Modal overlay ───────────────────────────────────────── */
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+    background: rgba(26,26,46,0.7);
+    backdrop-filter: blur(2px);
+  }
+  .modal-panel { @apply bg-white rounded-2xl shadow-modal w-full max-w-lg mx-4 overflow-hidden; }
+
+  /* ── Wallet card ─────────────────────────────────────────── */
+  .wallet-card {
+    @apply rounded-2xl text-white p-6 relative overflow-hidden;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    box-shadow: 0 8px 32px rgba(235, 32, 38, 0.35);
+  }
+  .wallet-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    pointer-events: none;
+  }
+
+  /* ── Step indicator ──────────────────────────────────────── */
+  .step-dot { @apply w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all duration-200; }
+  .step-dot.completed { background: var(--green); @apply text-white; }
+  .step-dot.active    { background: var(--primary); @apply text-white; box-shadow: 0 0 0 4px rgba(235,32,38,0.2); }
+  .step-dot.pending   { @apply bg-neutral-200 text-neutral-400; }
+
+  .step-connector      { @apply flex-1 h-0.5 transition-colors duration-200; }
+  .step-connector.done { background: var(--green); }
+  .step-connector.next { @apply bg-neutral-200; }
+
+  /* ── Price row ───────────────────────────────────────────── */
+  .price-row       { @apply flex items-center justify-between text-sm py-1.5; }
+  .price-row-label { @apply text-neutral-500; }
+  .price-row-value { @apply text-neutral-800 font-semibold; }
+  .price-row-total { @apply flex items-center justify-between text-base font-black pt-3 mt-1 border-t border-neutral-200; }
+
+  /* ── Nav link ────────────────────────────────────────────── */
+  .nav-link { @apply px-3 py-2 rounded-lg text-sm font-bold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors; }
+  .nav-link.active { color: var(--primary); background: #fff0f0; }
+
+  /* ── Badge ───────────────────────────────────────────────── */
+  .badge         { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black; }
+  .badge-red     { @apply badge; background: #fff0f0; color: var(--primary); }
+  .badge-green   { @apply badge bg-green-100 text-green-700; }
+  .badge-blue    { @apply badge bg-blue-100 text-blue-700; }
+  .badge-orange  { @apply badge bg-orange-100 text-orange-700; }
+  .badge-purple  { @apply badge bg-purple-100 text-purple-700; }
+  .badge-gray    { @apply badge bg-neutral-100 text-neutral-600; }
+
+  /* ── Divider ─────────────────────────────────────────────── */
+  .divider          { @apply w-full h-px bg-neutral-200 my-4; }
+  .divider-vertical { @apply w-px h-full bg-neutral-200 mx-3; }
+
+  /* ── Empty state ─────────────────────────────────────────── */
+  .empty-state      { @apply flex flex-col items-center justify-center py-16 px-4 text-center; }
+  .empty-state-icon { @apply w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center mb-4; }
+
+  /* ── Stat card ───────────────────────────────────────────── */
+  .stat-card {
+    @apply bg-white rounded-2xl border border-neutral-200 p-5;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .stat-number  { @apply text-3xl font-black text-neutral-900; font-family: 'Poppins', sans-serif; }
+  .stat-label   { @apply text-sm text-neutral-500 font-semibold mt-0.5; }
+  .stat-change-up   { @apply text-xs font-bold flex items-center gap-1; color: var(--green); }
+  .stat-change-down { @apply text-xs font-bold flex items-center gap-1 text-red-600; }
+
+  /* ── Results header ──────────────────────────────────────── */
+  .results-header { @apply flex items-center justify-between py-3 border-b border-neutral-200 mb-4; }
+  .results-count  { @apply text-sm font-black text-neutral-700; }
+
+  /* ── Animate helpers ─────────────────────────────────────── */
+  .animate-fade-up {
+    opacity: 0;
+    animation: fadeUp 0.4s ease forwards;
+  }
+
+  /* ── Focus ring ──────────────────────────────────────────── */
+  .focus-ring {
+    @apply focus-visible:outline focus-visible:outline-2
+           focus-visible:outline-offset-2;
+    outline-color: var(--primary);
+  }
+
+  /* ── Page section backgrounds (vibrant OTA gradients) ─────── */
+  .page-listing-bg {
+    background: linear-gradient(160deg, #e8eef9 0%, #f0f4fb 30%, #fef6f0 70%, #eef2fa 100%);
+    min-height: 100vh;
+  }
+  .page-detail-bg {
+    background: linear-gradient(160deg, #eaeff9 0%, #f5f0fa 35%, #fff5ed 65%, #edf1f8 100%);
+    min-height: 100vh;
+  }
+  .page-booking-bg {
+    background: linear-gradient(160deg, #eef2fa 0%, #f0f0fb 35%, #fef8f2 65%, #edf4f8 100%);
+    min-height: 100vh;
+  }
+
+  /* ── Search hero band — vibrant navy top strip (Goibibo-parity) ─── */
+  .search-hero-band {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    padding: 18px 0 20px;
+  }
+
+  /* ── Price intelligence badge ─────────────────────────────── */
+  .price-intel-badge {
+    @apply flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl border;
+  }
+  .price-intel-badge.cheapest {
+    @apply bg-green-50 text-green-700 border-green-200;
+  }
+  .price-intel-badge.competitive {
+    @apply bg-blue-50 text-blue-700 border-blue-200;
+  }
+
+  /* ── Promo code input ──────────────────────────────────────── */
+  .promo-input-row {
+    @apply flex gap-2;
+  }
+  .promo-applied {
+    @apply flex items-center gap-2 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-xl;
+  }
+  .promo-error {
+    @apply text-xs text-red-500 mt-1;
+  }
+
+  /* ── Meal plan option (Goibibo-style selectable row) ─────── */
+  .meal-option {
+    @apply flex items-center justify-between gap-3 rounded-xl border px-3 py-2 cursor-pointer transition-all duration-150;
+  }
+  .meal-option.active {
+    @apply border-primary-400 bg-primary-50;
+    box-shadow: 0 0 0 1px rgba(235,32,38,0.2);
+  }
+  .meal-option:not(.active):hover { @apply border-primary-300; }
+
+}
+
+/* ─── Keyframes ────────────────────────────────────────────────── */
+@keyframes fadeUp    { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shimmer   { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* ─── Custom scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* ─── Toast notifications ──────────────────────────────────────── */
+.toast-success { background: var(--green) !important; }
+.toast-error   { background: var(--primary) !important; }

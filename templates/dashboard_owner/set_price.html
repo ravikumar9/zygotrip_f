@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Set Pricing — {{ room.name }} | Zygotrip{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="ota-container">
+    <div class="owner-form-page">
+
+      <!-- Breadcrumb -->
+      <nav style="font-size:13px;color:#9ca3af;margin-bottom:20px;">
+        <a href="/owner/dashboard/" style="color:#ff6b35;text-decoration:none;">Dashboard</a>
+        <span style="margin:0 8px;">›</span>
+        <span style="color:#111827;">Set Pricing</span>
+      </nav>
+
+      <!-- Page Header -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">💰</div>
+        <div>
+          <h1 style="margin:0;font-size:26px;font-weight:800;color:#111827;">Set Room Pricing</h1>
+          <p style="margin:2px 0 0;color:#6b7280;font-size:14px;">Configuring pricing for <strong style="color:#10b981;">{{ room.name }}</strong></p>
+        </div>
+      </div>
+
+      <div class="card" style="border-radius:16px;padding:36px 40px;box-shadow:0 4px 24px rgba(0,0,0,0.08);margin-top:24px;">
+        <form method="post" id="priceForm">
+          {% csrf_token %}
+
+          <div class="form-section-title">Room Rate</div>
+
+          <div class="form-group">
+            <label>Base Price Per Night (₹) <span style="color:#ef4444;">*</span></label>
+            {{ form.base_price }}
+            <p class="form-hint">Core room rate before meals and service fees</p>
+          </div>
+
+          <!-- Live Price Calculator -->
+          <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+            <p style="font-size:13px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 16px;">💡 Live Price Breakdown</p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;justify-content:space-between;font-size:14px;color:#374151;">
+                <span>Base Rate</span>
+                <span id="base-display" style="font-weight:600;">₹0</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:14px;color:#374151;">
+                <span>Service Fee (8%)</span>
+                <span id="fee-display" style="font-weight:600;">₹0</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;color:#15803d;border-top:1px solid #86efac;padding-top:10px;">
+                <span>Guest Pays Per Night</span>
+                <span id="total-display">₹0</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:32px;padding-top:24px;border-top:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <a href="/owner/dashboard/" style="color:#6b7280;font-size:14px;text-decoration:none;">← Back to Dashboard</a>
+            <button type="submit" class="button button-accent button-lg" style="min-width:200px;">
+              💾 Save Pricing
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+(function(){
+  var inp = document.querySelector('[name="base_price"]');
+  function update(){
+    var v = parseFloat(inp ? inp.value : 0) || 0;
+    document.getElementById('base-display').textContent = '₹' + v.toLocaleString('en-IN');
+    var fee = Math.round(v * 0.08);
+    document.getElementById('fee-display').textContent = '₹' + fee.toLocaleString('en-IN');
+    document.getElementById('total-display').textContent = '₹' + (v + fee).toLocaleString('en-IN');
+  }
+  if(inp){ inp.addEventListener('input', update); update(); }
+})();
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+

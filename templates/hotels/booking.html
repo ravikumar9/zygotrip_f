@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Complete Your Booking | Zygotrip{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/pages/booking.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="booking-container">
+  <section class="booking-header">
+    <div class="container">
+      <h1 class="heading-xl">Complete Your Booking</h1>
+      <p class="body-sm text-secondary">{{ property.name }}, {{ property.city }}</p>
+    </div>
+  </section>
+
+  <section class="booking-main container">
+    <div class="booking-layout">
+      <!-- LEFT: Room & Summary -->
+      <div class="booking-summary">
+        <div class="summary-card">
+          <h3 class="heading-sm">Room Details</h3>
+          <div class="summary-item">
+            <span class="label">Room Type:</span>
+            <span class="value">{{ room_type.name }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Max Occupancy:</span>
+            <span class="value">{{ room_type.max_occupancy }} guests</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Bedding:</span>
+            <span class="value">{{ room_type.bed_type }}</span>
+          </div>
+          {% if room_type.description %}
+            <div class="summary-item">
+              <span class="label">Description:</span>
+              <span class="value text-sm">{{ room_type.description }}</span>
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="summary-card">
+          <h3 class="heading-sm">Stay Details</h3>
+          <div class="summary-item">
+            <span class="label">Check-in:</span>
+            <span class="value">{{ checkin }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Check-out:</span>
+            <span class="value">{{ checkout }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Guests:</span>
+            <span class="value">{{ adults }} Adult{{ adults|pluralize }}, {{ children }} Child{{ children|pluralize }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Rooms:</span>
+            <span class="value">{{ rooms }} Room{{ rooms|pluralize }}</span>
+          </div>
+        </div>
+
+        <div class="summary-card price-summary">
+          <h3 class="heading-sm">Price Summary</h3>
+          
+          <!-- Base Price -->
+          <div class="price-item">
+            <span class="label">Room Price ({{ price_breakdown.breakdown.nights }} night{{ price_breakdown.breakdown.nights|pluralize }} × {{ price_breakdown.breakdown.rooms }} room{{ price_breakdown.breakdown.rooms|pluralize }})</span>
+            <span class="value">₹{{ price_breakdown.base_price|floatformat:0 }}</span>
+          </div>
+          
+          <!-- Property Discount -->
+          {% if price_breakdown.property_discount > 0 %}
+          <div class="price-item" style="color: #10b981;">
+            <span class="label">Property Discount ({{ price_breakdown.breakdown.property_discount_percent }}%)</span>
+            <span class="value">-₹{{ price_breakdown.property_discount|floatformat:0 }}</span>
+          </div>
+          {% endif %}
+          
+          <!-- Platform Discount -->
+          {% if price_breakdown.platform_discount > 0 %}
+          <div class="price-item" style="color: #10b981;">
+            <span class="label">Platform Discount ({{ price_breakdown.breakdown.platform_discount_percent }}%)</span>
+            <span class="value">-₹{{ price_breakdown.platform_discount|floatformat:0 }}</span>
+          </div>
+          {% endif %}
+          
+          <!-- Coupon Discount -->
+          {% if price_breakdown.coupon_discount > 0 %}
+          <div class="price-item" style="color: #10b981;">
+            <span class="label">Coupon Discount ({{ price_breakdown.breakdown.coupon_discount_percent }}%)</span>
+            <span class="value">-₹{{ price_breakdown.coupon_discount|floatformat:0 }}</span>
+          </div>
+          {% endif %}
+          
+          <div class="price-divider" style="border-top: 1px dashed #e5e7eb; margin: 12px 0;"></div>
+          
+          <!-- Subtotal After Discounts -->
+          <div class="price-item" style="font-weight: 500;">
+            <span class="label">Price after discount</span>
+            <span class="value">₹{{ price_breakdown.base_price|add:price_breakdown.property_discount|add:price_breakdown.platform_discount|add:price_breakdown.coupon_discount|floatformat:0 }}</span>
+          </div>
+          
+          <!-- Service Fee -->
+          <div class="price-item" style="color: #6b7280; font-size: 0.9rem;">
+            <span class="label">Service Fee</span>
+            <span class="value">₹{{ price_breakdown.service_fee|floatformat:0 }}</span>
+          </div>
+          
+          <!-- GST/Tax -->
+          <div class="price-item" style="color: #6b7280; font-size: 0.9rem;">
+            <span class="label">GST</span>
+            <span class="value">₹{{ price_breakdown.gst|floatformat:0 }}</span>
+          </div>
+          
+          <div class="price-divider" style="border-top: 2px solid #111827; margin: 12px 0;"></div>
+          
+          <!-- Total -->
+          <div class="price-item" style="font-weight: 700; font-size: 1.1rem; color: #111827;">
+            <span class="label">Total Amount to be paid</span>
+            <span class="value">₹{{ price_breakdown.final_price|floatformat:0 }}</span>
+          </div>
+          
+          <p class="text-xs text-secondary" style="margin-top: 12px; padding: 8px; background: #f9fafb; border-radius: 6px;">
+            <strong>Note:</strong> Prices include all taxes and fees. No hidden charges.
+          </p>
+        </div>
+
+        {% if coupons %}
+        <div class="summary-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+          <h3 class="heading-sm" style="color: white; margin-bottom: 1rem;">🎉 Available Offers</h3>
+          {% for coupon in coupons %}
+            <div class="coupon-offer" style="background: rgba(255, 255, 255, 0.15); padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem;">
+              <div class="coupon-info">
+                <div class="coupon-code" style="font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem;">{{ coupon.code }}</div>
+                <div class="coupon-title" style="font-size: 0.95rem; margin-bottom: 0.25rem;">{{ coupon.title }}</div>
+                <div class="coupon-discount" style="font-size: 0.85rem; opacity: 0.9;">Save {{ coupon.discount_percent }}% {% if coupon.max_discount %}(up to ₹{{ coupon.max_discount|floatformat:0 }}){% endif %}</div>
+              </div>
+              <button type="button" class="btn btn-sm apply-coupon-btn" style="background: white; color: #667eea; margin-top: 0.75rem; width: 100%; font-weight: 600;" data-coupon-code="{{ coupon.code }}" data-discount-percent="{{ coupon.discount_percent }}">
+                Apply Now
+              </button>
+            </div>
+          {% endfor %}
+          <p style="font-size: 0.8rem; opacity: 0.8; margin-top: 1rem; text-align: center;">
+            Best offer automatically applied at checkout
+          </p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- RIGHT: Guest Form -->
+      <div class="booking-form-container">
+        <div class="form-card">
+          <h2 class="heading-md">Guest Information</h2>
+          
+          <form method="post" action="/checkout/create-booking/" class="booking-form">
+            {% csrf_token %}
+            
+            <input type="hidden" name="property_id" value="{{ property.id }}" />
+            <input type="hidden" name="room_type_id" value="{{ room_type.id }}" />
+            <input type="hidden" name="checkin" value="{{ checkin }}" />
+            <input type="hidden" name="checkout" value="{{ checkout }}" />
+            <input type="hidden" name="adults" value="{{ adults }}" />
+            <input type="hidden" name="children" value="{{ children }}" />
+            <input type="hidden" name="rooms" value="{{ rooms }}" />
+
+            <!-- Email -->
+            <div class="form-group">
+              <label for="email" class="form-label">Email Address</label>
+              <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                class="form-input" 
+                placeholder="your@email.com"
+                required
+              />
+            </div>
+
+            <!-- First Guest Name -->
+            <div class="form-group">
+              <label for="guest_name" class="form-label">Guest Name</label>
+              <input 
+                type="text" 
+                id="guest_name" 
+                name="guest_name" 
+                class="form-input" 
+                placeholder="First and last name"
+                required
+              />
+            </div>
+
+            <!-- Contact Number -->
+            <div class="form-group">
+              <label for="phone" class="form-label">Contact Number</label>
+              <input 
+                type="tel" 
+                id="phone" 
+                name="phone" 
+                class="form-input" 
+                placeholder="+91 ..."
+                required
+              />
+            </div>
+
+            <!-- Special Requests -->
+            <div class="form-group">
+              <label for="special_requests" class="form-label">Special Requests (Optional)</label>
+              <textarea 
+                id="special_requests" 
+                name="special_requests" 
+                class="form-input" 
+                rows="4"
+                placeholder="Any special requirements or preferences..."
+              ></textarea>
+            </div>
+
+            <!-- Terms & Conditions -->
+            <div class="form-group checkbox-group">
+              <input 
+                type="checkbox" 
+                id="agree_terms" 
+                name="agree_terms" 
+                required
+              />
+              <label for="agree_terms" class="form-label checkbox-label">
+                I agree to the 
+                <a href="/terms/" target="_blank" class="link">terms and conditions</a> 
+                and 
+                <a href="/privacy/" target="_blank" class="link">privacy policy</a>
+              </label>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary btn-block" style="font-size: 16px; padding: 12px; margin-top: 16px;">
+              Proceed to Payment
+            </button>
+          </form>
+
+          <p class="text-xs text-secondary" style="margin-top: 16px; text-align: center;">
+            Secure payment processing. Your information is encrypted.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+.booking-container {
+  background: #f9f9f9;
+  min-height: 100vh;
+}
+
+.booking-header {
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 24px 0;
+  margin-bottom: 24px;
+}
+
+.booking-main {
+  max-width: 1200px;
+}
+
+.booking-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.summary-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.summary-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item .label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.summary-item .value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.price-summary .price-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  font-size: 14px;
+}
+
+.price-summary .price-item.text-discount {
+  color: green;
+  font-weight: 500;
+}
+
+.form-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.form-card h2 {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.checkbox-group {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.checkbox-label {
+  margin: 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.checkbox-label a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.checkbox-label a:hover {
+  text-decoration: underline;
+}
+
+.text-primary {
+  color: #007bff;
+}
+
+.text-secondary {
+  color: #666;
+}
+
+.text-xs {
+  font-size: 12px;
+}
+
+.text-sm {
+  font-size: 13px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .booking-layout {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const basePrice = parseFloat("{{ room_type.base_price|default:0 }}") || 0;
+  const checkinDate = new Date("{{ checkin }}");
+  const checkoutDate = new Date("{{ checkout }}");
+  const nights = Math.max(1, Math.ceil((checkoutDate - checkinDate) / (1000 * 60 * 60 * 24)));
+  const rooms = parseInt("{{ rooms }}", 10) || 1;
+  
+  const subtotal = basePrice * nights * rooms;
+  const total = subtotal; // Can add taxes/fees here
+  
+  document.getElementById('nights').textContent = nights;
+  document.getElementById('subtotal').textContent = '₹' + subtotal.toLocaleString('en-IN', {maximumFractionDigits: 0});
+  document.getElementById('total-price').textContent = '₹' + total.toLocaleString('en-IN', {maximumFractionDigits: 0});
+});
+</script>
+{% endblock %}

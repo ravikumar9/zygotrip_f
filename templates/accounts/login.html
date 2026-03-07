@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section">
+  <div class="container auth-container">
+    <div class="card auth-card">
+      <h1 class="text-center mb-2">Welcome Back</h1>
+      <p class="text-center mb-6">Sign in to access your bookings and account</p>
+
+      <form method="post">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+          <div class="alert alert-error mb-4">
+            <strong>Login Failed:</strong>
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        <div class="mb-4">
+          <label class="auth-label">Email Address</label>
+          {{ form.username }}
+          {% if form.username.errors %}
+            <p class="form-error">{{ form.username.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label class="auth-label">Password</label>
+          {{ form.password }}
+          {% if form.password.errors %}
+            <p class="form-error">{{ form.password.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full btn-lg mb-4">
+          Sign In
+        </button>
+
+        <p class="text-center mb-2">
+          New to Zygotrip?
+        </p>
+        <a href="/register/" class="btn btn-secondary w-full">
+          Create Your Account
+        </a>
+      </form>
+
+      <!-- Security Note -->
+      <div class="mt-6 pt-4 auth-note">
+        <p class="auth-note-text">
+          Your login is secure and encrypted
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

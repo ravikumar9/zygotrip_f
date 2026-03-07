@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="ota-container">
+  <section class="section">
+    <div class="section-header">
+      <h1 class="page-title">Property Owner Dashboard</h1>
+      <a href="{% url 'dashboard_owner:add_property' %}" class="btn btn-primary primary-button">+ Add New Property</a>
+    </div>
+
+    {% if messages %}
+      <div class="messages mb-4">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} mb-2">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if properties %}
+      <div class="listing-grid">
+        {% for property in properties %}
+          <div class="card property-card">
+            <div class="property-image">
+              {% if property.featured_image %}
+                <img src="{{ property.featured_image.url }}" alt="{{ property.name }}" />
+              {% else %}
+                <div class="placeholder">No Image</div>
+              {% endif %}
+            </div>
+
+            <div class="p-4">
+              <h3 class="text-lg font-semibold mb-2">{{ property.name }}</h3>
+              <p class="text-sm mb-3">{{ property.city }}, {{ property.country }}</p>
+
+              <div class="property-actions mb-4">
+                <a href="{% url 'dashboard_owner:add_property_image' property.id %}" class="btn btn-ghost btn-sm">Gallery</a>
+                <a href="{% url 'dashboard_owner:add_room' property.id %}" class="btn btn-ghost btn-sm">Rooms</a>
+                <a href="{% url 'dashboard_owner:add_meal' property.id %}" class="btn btn-ghost btn-sm">Meals</a>
+                <a href="{% url 'dashboard_owner:add_offer' property.id %}" class="btn btn-ghost btn-sm">Offers</a>
+              </div>
+
+              <p class="text-xs">
+              0 rooms • 0 meal plans
+              </p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card text-center py-12">
+        <h3 class="text-lg font-semibold mb-2">No Properties Yet</h3>
+        <p class="mb-4">Start by adding your first property to get started.</p>
+        <a href="{% url 'dashboard_owner:add_property' %}" class="btn btn-primary primary-button">Add Property</a>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

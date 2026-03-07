@@ -1,0 +1,28 @@
+<!-- REUSABLE COMPONENT: Amenities List -->
+<!-- Usage: {% include 'partials/amenities_list.html' with amenities=card.amenities %} -->
+
+{% if amenities %}
+<div class="card-amenities">
+  {% for amenity in amenities %}
+    <span class="card-amenity-badge">
+      {{ amenity }}
+    </span>
+  {% endfor %}
+</div>
+{% endif %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1086 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Hotel Search Results - Zygotrip{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Sticky Search Bar */
+  .sticky-search-container {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1rem 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .search-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .search-row {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .search-row-1 {
+    grid-template-columns: 40% 15% 15% 15% 15%;
+  }
+
+  .search-row-2 {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.875rem;
+  }
+
+  .search-input, .search-select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+  }
+
+  .search-input:focus, .search-select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+
+  .autosuggest {
+    position: relative;
+  }
+
+  .autosuggest-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-top: 0.25rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    z-index: 20;
+    max-height: 240px;
+    overflow-y: auto;
+    display: none;
+  }
+
+  .autosuggest-item {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #111827;
+  }
+
+  .autosuggest-item:hover {
+    background: #f3f4f6;
+  }
+
+  .search-btn {
+    padding: 0.5rem 1rem;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .search-btn:hover {
+    background: #1d4ed8;
+  }
+
+  .clear-filters {
+    color: #2563eb;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.875rem;
+  }
+
+  .clear-filters:hover {
+    color: #1d4ed8;
+  }
+
+  @media (max-width: 1024px) {
+    .search-row-1 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Main Container */
+  .hotels-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  .hotels-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+    margin-top: 0;
+  }
+
+  @media (max-width: 768px) {
+    .hotels-layout {
+      grid-template-columns: 1fr;
+    }
+    .filters-sidebar {
+      display: none;
+    }
+  }
+
+  /* Mobile filter toggle button */
+  .mobile-filter-btn {
+    display: none;
+  }
+  @media (max-width: 768px) {
+    .mobile-filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+  }
+
+  /* Mobile filter drawer overlay + sheet */
+  .mobile-filter-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+  }
+  .mobile-filter-overlay.open {
+    display: block;
+  }
+  .mobile-filter-drawer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    z-index: 201;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    padding: 1.25rem 1rem 2rem;
+  }
+  .mobile-filter-drawer.open {
+    transform: translateY(0);
+  }
+  .mobile-filter-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .mobile-filter-drawer-title {
+    font-weight: 700;
+    font-size: 1.0625rem;
+    color: #111827;
+  }
+  .mobile-filter-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: #6b7280;
+    line-height: 1;
+    padding: 0.25rem;
+  }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+  }
+  .page-link {
+    padding: 0.5rem 0.875rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    text-decoration: none;
+    color: #374151;
+    background: #fff;
+    display: inline-block;
+    min-width: 2.25rem;
+    text-align: center;
+  }
+  .page-link:hover { background: #f3f4f6; }
+  .page-link.active { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
+  .page-link.disabled { color: #d1d5db; pointer-events: none; cursor: default; }
+
+  .filters-sidebar {
+    position: sticky;
+    top: 120px;
+    height: fit-content;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .filter-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e5e7eb;
+  }
+
+  .filter-title {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #111827;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+  }
+
+  .filter-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.4rem;
+  }
+
+  .filter-item input[type="checkbox"] {
+    margin-right: 0.5rem;
+    cursor: pointer;
+  }
+
+  .filter-item label {
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #374151;
+    flex: 1;
+  }
+
+  .filter-count {
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .price-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .price-inputs input {
+    padding: 0.4rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+
+  .show-all-toggle {
+    color: #2563eb;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  .results-section {
+    min-height: 400px;
+  }
+
+  .sort-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+  }
+
+  .sort-label {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .sort-pill {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+  }
+
+  .sort-pill:hover, .sort-pill.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+  }
+
+  .search-within {
+    margin-left: auto;
+  }
+
+  .search-within input {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+  }
+
+  .sort-btn:hover, .sort-btn.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+  }
+
+  /* Hotel Cards: 1 per row, full width */
+  .hotel-cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .hotel-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 240px 1fr 200px;
+    gap: 1.5rem;
+    padding: 1rem;
+    transition: all 0.2s ease;
+  }
+
+  .hotel-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #2563eb;
+  }
+
+  @media (max-width: 1024px) {
+    .hotel-card {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .hotel-card-image {
+    width: 100%;
+    height: 240px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .hotel-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hotel-card-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .hotel-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.25rem;
+  }
+
+  .hotel-location {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+  }
+
+  .hotel-amenities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .amenity-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #f3f4f6;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: #374151;
+  }
+
+  .rating-badge {
+    display: inline-block;
+    padding: 0.5rem 0.75rem;
+    background: #ecfdf5;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #059669;
+    font-size: 0.875rem;
+  }
+
+  .hotel-card-pricing {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .offer-badge {
+    padding: 0.5rem 0.75rem;
+    background: #fef3c7;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #92400e;
+    font-size: 0.875rem;
+  }
+
+  .price-striked {
+    text-decoration: line-through;
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .price-final {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .price-taxes {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+  }
+
+  .book-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .book-btn:hover {
+    background: #1d4ed8;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+
+  .empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state-btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: #2563eb;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+
+  .results-count {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 1rem;
+  }
+</style>
+{% endblock %}
+
+{% block hero %}
+<!-- No hero on search results page -->
+{% endblock %}
+
+{% block content %}
+
+<!-- ====== STICKY TOP SEARCH BAR (Goibibo-style orange bar) ====== -->
+<div style="background: #E8680A; padding: 0.875rem 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.18);">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 0 1rem;">
+    <form method="get" action="" style="display: flex; gap: 0.5rem; align-items: stretch; flex-wrap: wrap;">
+      <!-- Location -->
+      <div style="position: relative; flex: 2; min-width: 180px;">
+        <div style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px;">Area, Landmark or Property Name</div>
+        <input type="text" name="location" id="top-bar-location" value="{{ search_location|default:'' }}"
+          autocomplete="off"
+          style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 4px; border: none; font-size: 0.9rem; font-weight: 600; color: #111827; background: #fff;"
+          placeholder="City, area, landmark" />
+        <div id="top-bar-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e5e7eb; border-radius: 6px; margin-top: 2px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 200; max-height: 220px; overflow-y: auto; display: none;"></div>
+      </div>
+      <!-- Check-in -->
+      <div style="flex: 1; min-width: 130px;">
+        <div style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px;">Checkin</div>
+        <input type="date" name="checkin" value="{{ checkin }}" style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 4px; border: none; font-size: 0.9rem; font-weight: 600; color: #111827; background: #fff;" />
+      </div>
+      <!-- Check-out -->
+      <div style="flex: 1; min-width: 130px;">
+        <div style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px;">Checkout</div>
+        <input type="date" name="checkout" value="{{ checkout }}" style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 4px; border: none; font-size: 0.9rem; font-weight: 600; color: #111827; background: #fff;" />
+      </div>
+      <!-- Guests & Rooms -->
+      <div style="flex: 1; min-width: 120px;">
+        <div style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px;">Guest & Rooms</div>
+        <select name="adults" style="padding: 0.25rem 0.4rem; border-radius: 4px; border: none; font-size: 0.8rem; color: #111827; background: #fff; display: block; margin-bottom: 2px; width: 100%;">
+          {% for n in "1234"%}<option value="{{ forloop.counter }}" {% if adults|stringformat:'s' == forloop.counter|stringformat:'s' %}selected{% endif %}>{{ forloop.counter }} Adult{% if forloop.counter != 1 %}s{% endif %}</option>{% endfor %}
+        </select>
+        <select name="rooms" style="padding: 0.25rem 0.4rem; border-radius: 4px; border: none; font-size: 0.8rem; color: #111827; background: #fff; display: block; width: 100%;">
+          {% for n in "1234"%}<option value="{{ forloop.counter }}" {% if rooms|stringformat:'s' == forloop.counter|stringformat:'s' %}selected{% endif %}>{{ forloop.counter }} Room{% if forloop.counter != 1 %}s{% endif %}</option>{% endfor %}
+        </select>
+        <input type="hidden" name="children" value="{{ children|default:0 }}" />
+      </div>
+      <!-- Update Search Button -->
+      <div style="display: flex; align-items: flex-end;">
+        <button type="submit" style="padding: 0.6rem 1.5rem; background: #fff; color: #E8680A; font-weight: 700; font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">Update Search</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- ====== END TOP SEARCH BAR ====== -->
+
+<!-- Main content -->
+<div class="hotels-container">
+  <div class="hotels-layout">
+    
+    <!-- LEFT: STICKY FILTER SIDEBAR (280px) -->
+    <aside class="filters-sidebar">
+      <form id="filter-form" method="get" action="">
+        
+        <!-- 1. Location (GET param: location) -->
+        <div class="filter-section">
+          <div class="filter-title">Location</div>
+          <div class="autosuggest">
+            <input type="text" id="location-filter" name="location" placeholder="City, area, landmark" value="{{ selected_filters.location|default:'' }}" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem;" autocomplete="off" />
+            <div class="autosuggest-results" id="location-suggestions"></div>
+          </div>
+        </div>
+
+        <!-- 2. Popular Filters -->
+        <div class="filter-section">
+          <div class="filter-title">Popular Filters</div>
+          <div class="filter-item">
+            <input type="checkbox" name="free_cancellation" id="free_cancellation" {% if selected_filters.free_cancellation %}checked{% endif %} value="on" />
+            <label for="free_cancellation">Free Cancellation ({{ filter_options.free_cancellation|default:0 }})</label>
+          </div>
+          <div class="filter-item">
+            <input type="checkbox" name="deals" id="deals" {% if selected_filters.deals %}checked{% endif %} value="on" />
+            <label for="deals">Deals & Offers ({{ filter_options.deals|default:0 }})</label>
+          </div>
+        </div>
+
+        <!-- 3. Price per Night -->
+        <div class="filter-section">
+          <div class="filter-title">Price per Night</div>
+          <div class="price-inputs">
+            <input type="number" name="min_price" placeholder="Min" value="{{ selected_filters.min_price|default:'' }}" />
+            <input type="number" name="max_price" placeholder="Max" value="{{ selected_filters.max_price|default:'' }}" />
+          </div>
+        </div>
+
+        <!-- 4. Star Rating -->
+        <div class="filter-section">
+          <div class="filter-title">Star Rating</div>
+          <div class="filter-item">
+            <input type="checkbox" name="star_5" id="star_5" {% if 'star_5' in selected_filters.star_ratings %}checked{% endif %} value="on" />
+            <label for="star_5">⭐⭐⭐⭐⭐ 5 Star ({{ filter_options.ratings.rating_5|default:0 }})</label>
+          </div>
+          <div class="filter-item">
+            <input type="checkbox" name="star_4" id="star_4" {% if 'star_4' in selected_filters.star_ratings %}checked{% endif %} value="on" />
+            <label for="star_4">⭐⭐⭐⭐ 4 Star+ ({{ filter_options.ratings.rating_4plus|default:0 }})</label>
+          </div>
+          <div class="filter-item">
+            <input type="checkbox" name="star_3" id="star_3" {% if 'star_3' in selected_filters.star_ratings %}checked{% endif %} value="on" />
+            <label for="star_3">⭐⭐⭐ 3 Star+ ({{ filter_options.ratings.rating_3plus|default:0 }})</label>
+          </div>
+        </div>
+
+        <!-- 5. User Rating (Database-backed counts) -->
+        <div class="filter-section">
+          <div class="filter-title">User Rating</div>
+          <div class="filter-item">
+            <input type="checkbox" name="rating_4_5" id="rating_4_5" {% if 'rating_4_5' in selected_filters.user_ratings %}checked{% endif %} value="on" />
+            <label for="rating_4_5">4.5+ ⭐ ({{ filter_options.user_ratings.rating_4_5plus|default:0 }})</label>
+          </div>
+          <div class="filter-item">
+            <input type="checkbox" name="rating_4" id="rating_4" {% if 'rating_4' in selected_filters.user_ratings %}checked{% endif %} value="on" />
+            <label for="rating_4">4.0+ ⭐ ({{ filter_options.user_ratings.rating_4_0plus|default:0 }})</label>
+          </div>
+          <div class="filter-item">
+            <input type="checkbox" name="rating_3_5" id="rating_3_5" {% if 'rating_3_5' in selected_filters.user_ratings %}checked{% endif %} value="on" />
+            <label for="rating_3_5">3.5+ ⭐ ({{ filter_options.user_ratings.rating_3_5plus|default:0 }})</label>
+          </div>
+        </div>
+
+        <!-- 6. Property Type (Database-backed counts) -->
+        <div class="filter-section">
+          <div class="filter-title">Property Type</div>
+          {% for property_type, count in filter_options.property_types.items %}
+          <div class="filter-item">
+            <input type="checkbox" name="property_type" value="{{ property_type }}" id="type-{{ property_type|lower }}" {% if property_type in selected_filters.property_types %}checked{% endif %} />
+            <label for="type-{{ property_type|lower }}">{{ property_type }} ({{ count }})</label>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- 7. Rooms Amenities (Database-backed counts) -->
+        <div class="filter-section">
+          <div class="filter-title">Room Amenities</div>
+          {% for amenity, count in filter_options.amenities.items %}
+          <div class="filter-item">
+            <input type="checkbox" name="amenity" value="{{ amenity }}" id="amen-{{ amenity|slugify }}" {% if amenity in selected_filters.amenities %}checked{% endif %} />
+            <label for="amen-{{ amenity|slugify }}">{{ amenity }} ({{ count }})</label>
+          </div>
+          {% empty %}
+          <p style="font-size: 0.875rem; color: #6b7280;">No amenities available</p>
+          {% endfor %}
+        </div>
+
+        <!-- 8. Cities (Database-backed counts) -->
+        <div class="filter-section">
+          <div class="filter-title">Cities</div>
+          {% for city, count in filter_options.cities.items %}
+          <div class="filter-item">
+            <input type="checkbox" name="city" value="{{ city }}" id="city-{{ city|slugify }}" {% if city in selected_filters.cities %}checked{% endif %} />
+            <label for="city-{{ city|slugify }}">{{ city }} ({{ count }})</label>
+          </div>
+          {% empty %}
+          <p style="font-size: 0.875rem; color: #6b7280;">No cities available</p>
+          {% endfor %}
+        </div>
+
+        <!-- 9. Meal Plan (OTA-grade filter) -->
+        <div class="filter-section">
+          <div class="filter-title">Meal Plan</div>
+          <div class="filter-item">
+            <input type="checkbox" name="meal_plan" value="breakfast" id="meal-breakfast" {% if 'breakfast' in selected_filters.meal_plans|default:'' %}checked{% endif %} />
+            <label for="meal-breakfast">🍳 Breakfast Included</label>
+          </div>
+          <div class="filter-item">
+            <input type="checkbox" name="meal_plan" value="half_board" id="meal-half" {% if 'half_board' in selected_filters.meal_plans|default:'' %}checked{% endif %} />
+            <label for="meal-half">🍽️ Half Board (B+D)</label>
+          </div>
+          <div class="filter-item">
+            <input type="checkbox" name="meal_plan" value="full_board" id="meal-full" {% if 'full_board' in selected_filters.meal_plans|default:'' %}checked{% endif %} />
+            <label for="meal-full">🍴 Full Board (B+L+D)</label>
+          </div>
+          <div class="filter-item">
+            <input type="checkbox" name="meal_plan" value="all_inclusive" id="meal-all" {% if 'all_inclusive' in selected_filters.meal_plans|default:'' %}checked{% endif %} />
+            <label for="meal-all">✨ All Inclusive</label>
+          </div>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div class="filter-section">
+          <button type="submit" class="book-btn" style="margin-bottom: 0.5rem;">Apply Filters</button>
+          <a href="{% url 'hotels:listing' %}" class="book-btn" style="display: block; text-align: center; background: #f3f4f6; color: #374151; text-decoration: none;">Reset</a>
+        </div>
+      </form>
+    </aside>
+
+    <!-- RIGHT: RESULTS SECTION -->
+    <div class="results-section">
+
+      <!-- Mobile: Filters toggle button (hidden on desktop) -->
+      <button type="button" class="mobile-filter-btn" id="mobile-filter-open-btn" aria-label="Open filters">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+        Filters
+        {% if selected_filters %}<span style="background:#2563eb;color:#fff;border-radius:10px;padding:0.1rem 0.45rem;font-size:0.75rem;margin-left:4px;">{{ selected_filters|length }}</span>{% endif %}
+      </button>
+
+      {% if hotels %}
+        <!-- Popular Areas Chips (Goibibo-style) -->
+        {% if popular_areas %}
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem 1rem; margin-bottom: 1rem;">
+          <div style="font-size: 0.85rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem;">Popular Locations{% if search_location %} in {{ search_location }}{% endif %} <span style="font-weight: 400; color: #6b7280; font-size: 0.8rem;">— Filter properties by area of your choice</span></div>
+          <div style="display: flex; gap: 0.625rem; flex-wrap: wrap; margin-top: 0.25rem;">
+            {% for area_item in popular_areas %}
+            <a href="?{% for k, v in current_query.items %}{% if k != 'location' %}{{ k }}={{ v }}&{% endif %}{% endfor %}location={{ area_item.area|urlencode }}"
+               style="display: inline-block; padding: 0.4rem 0.875rem; border: 1.5px solid #2563eb; border-radius: 6px; text-decoration: none; color: #2563eb; font-size: 0.82rem; font-weight: 600; background: {% if search_location == area_item.area %}#2563eb{% else %}#fff{% endif %}; {% if search_location == area_item.area %}color: #fff;{% endif %} transition: all 0.15s;">
+              {{ area_item.area }}
+              <span style="font-weight: 400; font-size: 0.75rem; opacity: 0.8;">| {{ area_item.count }} Stays</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Results header + Sort Pills -->
+        <div style="margin-bottom: 0.75rem;">
+          <div style="font-size: 1.05rem; font-weight: 700; color: #111827; margin-bottom: 0.4rem;">
+            Showing Properties{% if search_location %} around <span style="color: #E8680A;">{{ search_location }}</span>{% endif %}
+          </div>
+          <div style="font-size: 0.82rem; color: #6b7280;">{{ total_count }} propert{{ total_count|pluralize:'y,ies' }} found{% if checkin_display %} &bull; {{ checkin_display }}{% if nights_count %} &bull; {{ nights_count }} Night{{ nights_count|pluralize }}{% endif %}{% endif %}{% if guest_summary %} &bull; {{ guest_summary }}{% endif %}</div>
+        </div>
+
+        <!-- Sort Pills (Rule 3: modify queryset) -->
+        <div style="display: flex; gap: 0.375rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: 0.875rem; border-bottom: 1px solid #e5e7eb; align-items: center;">
+          <span style="font-size: 0.78rem; font-weight: 700; color: #374151; margin-right: 0.25rem;">Sort By:</span>
+          {% with base_params=current_query %}
+          <a href="?{% for k, v in current_query.items %}{% if k != 'sort' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}sort=popular" 
+             style="padding: 0.35rem 0.875rem; border: 1.5px solid {% if current_sort == 'popular' %}#E8680A{% else %}#d1d5db{% endif %}; background: {% if current_sort == 'popular' %}#E8680A{% else %}#fff{% endif %}; color: {% if current_sort == 'popular' %}#fff{% else %}#374151{% endif %}; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-decoration: none;">Most Popular</a>
+          <a href="?{% for k, v in current_query.items %}{% if k != 'sort' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}sort=price_asc"
+             style="padding: 0.35rem 0.875rem; border: 1.5px solid {% if current_sort == 'price_asc' %}#E8680A{% else %}#d1d5db{% endif %}; background: {% if current_sort == 'price_asc' %}#E8680A{% else %}#fff{% endif %}; color: {% if current_sort == 'price_asc' %}#fff{% else %}#374151{% endif %}; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-decoration: none;">Price &#8211; Low to High</a>
+          <a href="?{% for k, v in current_query.items %}{% if k != 'sort' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}sort=price_desc"
+             style="padding: 0.35rem 0.875rem; border: 1.5px solid {% if current_sort == 'price_desc' %}#E8680A{% else %}#d1d5db{% endif %}; background: {% if current_sort == 'price_desc' %}#E8680A{% else %}#fff{% endif %}; color: {% if current_sort == 'price_desc' %}#fff{% else %}#374151{% endif %}; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-decoration: none;">Price &#8211; High to Low</a>
+          <a href="?{% for k, v in current_query.items %}{% if k != 'sort' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}sort=rating"
+             style="padding: 0.35rem 0.875rem; border: 1.5px solid {% if current_sort == 'rating' %}#E8680A{% else %}#d1d5db{% endif %}; background: {% if current_sort == 'rating' %}#E8680A{% else %}#fff{% endif %}; color: {% if current_sort == 'rating' %}#fff{% else %}#374151{% endif %}; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-decoration: none;">Ratings &#8211; Highest First</a>
+          {% endwith %}
+        </div>
+        
+        <!-- Hotel Cards Grid (1 per row) -->
+        <div class="hotel-cards-grid">
+          {% for hotel in hotels %}
+            <div class="hotel-card" data-hotel-card data-hotel-id="{{ hotel.id }}">
+              <!-- Image LEFT -->
+              <div class="hotel-card-image">
+                {% if hotel.image_url %}
+                  <img src="{{ hotel.image_url }}" alt="{{ hotel.name }}" loading="lazy" />
+                {% else %}
+                  <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f3f4f6; font-size: 3rem;">🏨</div>
+                {% endif %}
+              </div>
+
+              <!-- Info CENTER -->
+              <div class="hotel-card-info">
+                <div>
+                  <h3 class="hotel-name">{{ hotel.name }}</h3>
+                  {% if hotel.star_category %}
+                    <div style="color: #f59e0b; font-size: 0.825rem; margin-bottom: 0.2rem;">
+                      {% for i in "x"|ljust:hotel.star_category %}&#9733;{% endfor %} {{ hotel.star_category }}-Star {{ hotel.property_type|capfirst }}
+                    </div>
+                  {% endif %}
+                  <p class="hotel-location">
+                    &#128205;
+                    {% if hotel.area %}{{ hotel.area }}, {% endif %}{{ hotel.city }}, India
+                    {% if hotel.landmark %}
+                      &nbsp;&bull;&nbsp;<span style="font-size:0.8rem;color:#9ca3af;">{{ hotel.landmark }}</span>
+                    {% endif %}
+                  </p>
+                  {% if hotel.amenities %}
+                    <div class="hotel-amenities">
+                      {% for amenity in hotel.amenities|slice:":4" %}
+                        <span class="amenity-badge">{{ amenity }}</span>
+                      {% endfor %}
+                      {% if hotel.amenities|length > 4 %}
+                        <span class="amenity-badge">+{{ hotel.amenities|length|add:"-4" }} more</span>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                </div>
+                {% if hotel.rating %}
+                  <span class="rating-badge">{{ hotel.rating|floatformat:1 }} ⭐ ({{ hotel.review_count }} reviews)</span>
+                {% else %}
+                  <span class="rating-badge">No ratings yet</span>
+                {% endif %}
+              </div>
+
+              <!-- Pricing RIGHT -->
+              <div class="hotel-card-pricing">
+                {% if hotel.offers %}
+                  {% with offer=hotel.offers.0 %}
+                    <div class="offer-badge">{{ offer.title }}</div>
+                  {% endwith %}
+                {% elif hotel.is_trending %}
+                  <div class="offer-badge" style="background:#e53e3e;">🔥 Hot Deal</div>
+                {% else %}
+                  <div></div>
+                {% endif %}
+                <div>
+                  {% if hotel.compare_price and hotel.compare_price > hotel.min_price %}
+                    <div style="font-size:0.78rem;color:#9ca3af;text-decoration:line-through;margin-bottom:1px;">₹{{ hotel.compare_price }}</div>
+                    {% with discount=hotel.compare_price|add:"-0" %}
+                    <div style="display:inline-block;background:#dcfce7;color:#166534;font-size:0.72rem;font-weight:700;border-radius:4px;padding:1px 6px;margin-bottom:2px;">
+                      SAVE {{ hotel.discount_percent|default:10 }}%
+                    </div>
+                    {% endwith %}
+                  {% endif %}
+                  <div class="price-final">₹{{ hotel.min_price }}</div>
+                  <div class="price-taxes">per night + taxes</div>
+                  {% if hotel.meal_plan_label %}
+                    <div style="font-size:0.72rem;color:#6366f1;margin-top:2px;">🍳 {{ hotel.meal_plan_label }}</div>
+                  {% endif %}
+                  {% if hotel.has_free_cancellation %}<div style="font-size: 0.75rem; color: #10b981; margin-top: 0.25rem;">✓ Free Cancellation</div>{% endif %}
+                </div>
+                <a href="{% url 'hotels:details' %}?property={{ hotel.slug }}&checkin={{ current_query.checkin }}&checkout={{ current_query.checkout }}&adults={{ current_query.adults }}&rooms={{ current_query.rooms }}" class="book-btn">View Rooms</a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav class="pagination" aria-label="Hotel results pages">
+          {% if page_obj.has_previous %}
+            <a class="page-link" href="?{% for k, v in current_query.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" aria-label="Previous">&laquo;</a>
+          {% else %}
+            <span class="page-link disabled">&laquo;</span>
+          {% endif %}
+
+          {% for page_num in page_obj.paginator.page_range %}
+            {% if page_obj.number == page_num %}
+              <span class="page-link active" aria-current="page">{{ page_num }}</span>
+            {% elif page_num >= page_obj.number|add:"-3" and page_num <= page_obj.number|add:"3" %}
+              <a class="page-link" href="?{% for k, v in current_query.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_num }}">{{ page_num }}</a>
+            {% elif page_num == 1 or page_num == page_obj.paginator.num_pages %}
+              <a class="page-link" href="?{% for k, v in current_query.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_num }}">{{ page_num }}</a>
+            {% elif page_num == page_obj.number|add:"-4" or page_num == page_obj.number|add:"4" %}
+              <span class="page-link disabled">&hellip;</span>
+            {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+            <a class="page-link" href="?{% for k, v in current_query.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" aria-label="Next">&raquo;</a>
+          {% else %}
+            <span class="page-link disabled">&raquo;</span>
+          {% endif %}
+        </nav>
+        {% endif %}
+
+      {% else %}
+        <!-- Empty State (Rule 6: checked against actual count) -->
+        <div class="empty-state">
+          <h2 class="empty-state-title">🏨 No properties found</h2>
+          <p>{{ empty_state_message|default:"Try adjusting your filters or search criteria." }}</p>
+          <a href="{% url 'hotels:listing' %}" class="empty-state-btn">Clear Filters</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Mobile filter overlay + bottom-sheet drawer -->
+<div class="mobile-filter-overlay" id="mobile-filter-overlay" role="presentation"></div>
+<div class="mobile-filter-drawer" id="mobile-filter-drawer" role="dialog" aria-modal="true" aria-label="Filters">
+  <div class="mobile-filter-drawer-header">
+    <span class="mobile-filter-drawer-title">Filters</span>
+    <button type="button" class="mobile-filter-close" id="mobile-filter-close-btn" aria-label="Close filters">&#x2715;</button>
+  </div>
+  <!-- Re-use the same filter form targeting the desktop filter-form submit -->
+  <form method="get" action="" id="mobile-filter-form">
+    <div class="filter-section">
+      <div class="filter-title">Location</div>
+      <input type="text" name="location" placeholder="City, area, landmark" value="{{ selected_filters.location|default:'' }}" style="width:100%;padding:0.5rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.875rem;" autocomplete="off" />
+    </div>
+    <div class="filter-section">
+      <div class="filter-title">Popular Filters</div>
+      <div class="filter-item"><input type="checkbox" name="free_cancellation" id="m-free_cancellation" {% if selected_filters.free_cancellation %}checked{% endif %} value="on" /><label for="m-free_cancellation">Free Cancellation</label></div>
+      <div class="filter-item"><input type="checkbox" name="deals" id="m-deals" {% if selected_filters.deals %}checked{% endif %} value="on" /><label for="m-deals">Deals &amp; Offers</label></div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-title">Price per Night</div>
+      <div class="price-inputs">
+        <input type="number" name="min_price" placeholder="Min" value="{{ selected_filters.min_price|default:'' }}" />
+        <input type="number" name="max_price" placeholder="Max" value="{{ selected_filters.max_price|default:'' }}" />
+      </div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-title">Star Rating</div>
+      <div class="filter-item"><input type="checkbox" name="star_5" id="m-star_5" {% if 'star_5' in selected_filters.star_ratings %}checked{% endif %} value="on" /><label for="m-star_5">&#9733;&#9733;&#9733;&#9733;&#9733; 5 Star</label></div>
+      <div class="filter-item"><input type="checkbox" name="star_4" id="m-star_4" {% if 'star_4' in selected_filters.star_ratings %}checked{% endif %} value="on" /><label for="m-star_4">&#9733;&#9733;&#9733;&#9733; 4 Star+</label></div>
+      <div class="filter-item"><input type="checkbox" name="star_3" id="m-star_3" {% if 'star_3' in selected_filters.star_ratings %}checked{% endif %} value="on" /><label for="m-star_3">&#9733;&#9733;&#9733; 3 Star+</label></div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-title">Property Type</div>
+      {% for property_type, count in filter_options.property_types.items %}
+      <div class="filter-item"><input type="checkbox" name="property_type" value="{{ property_type }}" id="m-type-{{ property_type|lower }}" {% if property_type in selected_filters.property_types %}checked{% endif %} /><label for="m-type-{{ property_type|lower }}">{{ property_type }}</label></div>
+      {% endfor %}
+    </div>
+    <div class="filter-section">
+      <div class="filter-title">Sort By</div>
+      <select name="sort" style="width:100%;padding:0.5rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.875rem;">
+        <option value="popular" {% if current_sort == 'popular' %}selected{% endif %}>Most Popular</option>
+        <option value="price_asc" {% if current_sort == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+        <option value="price_desc" {% if current_sort == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+        <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>Rating</option>
+        <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest</option>
+      </select>
+    </div>
+    <div class="filter-section" style="display:flex;gap:0.75rem;">
+      <button type="submit" class="book-btn" style="flex:1;">Apply Filters</button>
+      <a href="{% url 'hotels:listing' %}" class="book-btn" style="flex:1;display:block;text-align:center;background:#f3f4f6;color:#374151;text-decoration:none;">Reset</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.getElementById('filter-form').addEventListener('change', function() {
+    this.submit();
+  });
+
+  // Sort pills are already links with proper URLs - no need for JavaScript intervention
+  // Just add visual active state on page load based on current_sort
+  document.querySelectorAll('.sort-pill').forEach(pill => {
+    // Active state is already handled by Django template with class
+    // No need to prevent default - let the links work naturally
+  });
+
+  function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
+  function setupAutosuggest(inputId, resultsId) {
+    const input = document.getElementById(inputId);
+    const results = document.getElementById(resultsId);
+    if (!input || !results) return;
+
+    const renderSuggestions = (data) => {
+      const items = [];
+      
+      // Cities with property counts
+      if (data.cities) {
+        data.cities.forEach(city => {
+          items.push({ 
+            label: city.display || `${city.name}, ${city.state} (${city.count} properties)`, 
+            value: city.name 
+          });
+        });
+      }
+      
+      // Areas with property counts
+      if (data.areas) {
+        data.areas.forEach(area => {
+          items.push({ 
+            label: area.display || `${area.name}, ${area.city} (${area.count} properties)`, 
+            value: area.name 
+          });
+        });
+      }
+      
+      // Properties
+      if (data.properties) {
+        data.properties.forEach(prop => {
+          items.push({ 
+            label: prop.display || `${prop.name} - ${prop.city}`, 
+            value: prop.name 
+          });
+        });
+      }
+
+      results.innerHTML = '';
+      if (!items.length) {
+        results.style.display = 'none';
+        return;
+      }
+
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'autosuggest-item';
+        div.textContent = item.label;
+        div.addEventListener('click', () => {
+          input.value = item.value;
+          results.style.display = 'none';
+          input.form.submit();
+        });
+        results.appendChild(div);
+      });
+      results.style.display = 'block';
+    };
+
+    const fetchSuggestions = async () => {
+      const query = input.value.trim();
+      if (query.length < 2) {
+        results.style.display = 'none';
+        return;
+      }
+      try {
+        const response = await fetch(`/api/hotels/suggest/?q=${encodeURIComponent(query)}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        renderSuggestions(data);
+      } catch (err) {
+        results.style.display = 'none';
+      }
+    };
+
+    input.addEventListener('input', debounce(fetchSuggestions, 300));
+    document.addEventListener('click', (event) => {
+      if (!results.contains(event.target) && event.target !== input) {
+        results.style.display = 'none';
+      }
+    });
+  }
+
+  setupAutosuggest('location-filter', 'location-suggestions');
+  setupAutosuggest('top-bar-location', 'top-bar-suggestions');
+
+  // Mobile filter drawer
+  (function () {
+    var openBtn = document.getElementById('mobile-filter-open-btn');
+    var closeBtn = document.getElementById('mobile-filter-close-btn');
+    var overlay = document.getElementById('mobile-filter-overlay');
+    var drawer = document.getElementById('mobile-filter-drawer');
+    if (!openBtn || !drawer) return;
+
+    function openDrawer() {
+      overlay.classList.add('open');
+      drawer.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDrawer() {
+      overlay.classList.remove('open');
+      drawer.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    openBtn.addEventListener('click', openDrawer);
+    closeBtn.addEventListener('click', closeDrawer);
+    overlay.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeDrawer();
+    });
+  })();
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

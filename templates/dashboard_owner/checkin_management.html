@@ -1,0 +1,178 @@
+{% extends "dashboard_owner/base.html" %}
+{% block title %}Check-in Management - Owner Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Check-in Management</h1>
+            <p class="text-muted">Manage guest arrivals and departures</p>
+        </div>
+        <div class="col-md-4 text-right">
+            <span class="badge badge-primary badge-lg">{{ upcoming_checkins }} Upcoming</span>
+            <span class="badge badge-info badge-lg">{{ todays_checkins }} Today</span>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if not filter_status %}active{% endif %}" href="?status=upcoming">
+                Upcoming ({{ upcoming_checkins }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if filter_status == 'today' %}active{% endif %}" href="?status=today">
+                Today ({{ todays_checkins }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if filter_status == 'checked_in' %}active{% endif %}" href="?status=checked_in">
+                Checked In ({{ checked_in_count }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if filter_status == 'completed' %}active{% endif %}" href="?status=completed">
+                Completed ({{ completed_count }})
+            </a>
+        </li>
+    </ul>
+
+    <!-- Upcoming Check-ins -->
+    <div class="card">
+        <div class="card-header">
+            <h5>Check-in Schedule</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Check-in Date</th>
+                        <th>Guest</th>
+                        <th>Property</th>
+                        <th>Room</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Contact</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for checkin in checkins %}
+                    <tr>
+                        <td>
+                            <strong>{{ checkin.booking.check_in|date:"M d, Y" }}</strong><br>
+                            <small class="text-muted">{{ checkin.booking.check_in|date:"l" }}</small>
+                        </td>
+                        <td>
+                            {{ checkin.booking.user.full_name }}<br>
+                            <small class="text-muted">ID: {{ checkin.booking.user.id }}</small>
+                        </td>
+                        <td>{{ checkin.booking.property.name }}</td>
+                        <td>
+                            {% for room in checkin.booking.rooms %}
+                            <badge>{{ room.name }}</badge>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {{ checkin.booking.number_of_nights }} night{{ checkin.booking.number_of_nights|pluralize }}<br>
+                            <small>{{ checkin.nights_remaining }} days left</small>
+                        </td>
+                        <td>
+                            {% if checkin.checked_in %}
+                                <span class="badge badge-success">Checked In</span>
+                            {% elif checkin.is_today %}
+                                <span class="badge badge-warning">Arriving Today</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Upcoming</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="tel:{{ checkin.booking.user.phone_number }}" class="btn btn-sm btn-info">
+                                Call
+                            </a>
+                            <a href="mailto:{{ checkin.booking.user.email }}" class="btn btn-sm btn-info">
+                                Email
+                            </a>
+                        </td>
+                        <td>
+                            {% if not checkin.checked_in %}
+                            <button class="btn btn-sm btn-success" onclick="markCheckedIn({{ checkin.booking.id }})">
+                                Mark Check-in
+                            </button>
+                            {% else %}
+                            <button class="btn btn-sm btn-warning" onclick="markCheckout({{ checkin.booking.id }})">
+                                Mark Check-out
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No check-ins scheduled for this period
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6>This Week</h6>
+                    <p class="display-5">{{ this_week_checkins }}</p>
+                    <small class="text-muted">Check-ins scheduled</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Accommodation Occupancy</h6>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: {{ occupancy_rate }}%">
+                            {{ occupancy_rate }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ occupied_rooms }}/{{ total_rooms }} rooms occupied</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function markCheckedIn(bookingId) {
+    if (confirm('Mark guest as checked in?')) {
+        fetch(`/api/booking/${bookingId}/checkin/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        }).then(r => r.json()).then(d => {
+            if (d.success) {
+                alert('Guest checked in successfully');
+                location.reload();
+            }
+        });
+    }
+}
+
+function markCheckout(bookingId) {
+    if (confirm('Mark guest as checked out?')) {
+        fetch(`/api/booking/${bookingId}/checkout/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        }).then(r => r.json()).then(d => {
+            if (d.success) {
+                alert('Guest checked out successfully');
+                location.reload();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% load query_params %}
+<details class="filter-panel" open>
+  <summary class="filter-panel__summary">
+    <span class="filter-panel__title">🔍 Filters</span>
+    <span class="filter-panel__summary-icon">▾</span>
+  </summary>
+
+  <form id="filter-form" class="filter-panel__body">
+    <!-- Location Section -->
+    <div class="filter-section">
+      <h4 class="filter-section__header">📍 Location</h4>
+      <div class="filter-group">
+        <label class="ui-label" for="city-filter">City</label>
+        <input type="text" name="city" id="city-filter" placeholder="Enter city" class="ui-input" value="{{ request|query_get:'city' }}" />
+      </div>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <!-- Price Section -->
+    <div class="filter-section">
+      <h4 class="filter-section__header">💰 Price Range</h4>
+      <div class="filter-group">
+        <div class="filter-range">
+          <input type="number" name="min_price" id="min-price" placeholder="Min" class="ui-input" value="{{ request|query_get:'min_price' }}" />
+          <span class="filter-range__separator">—</span>
+          <input type="number" name="max_price" id="max-price" placeholder="Max" class="ui-input" value="{{ request|query_get:'max_price' }}" />
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <!-- Rating Section -->
+    <div class="filter-section">
+      <h4 class="filter-section__header">⭐ Rating</h4>
+      <div class="filter-group">
+        <select name="rating" id="rating-filter" class="ui-input">
+          <option value="">All Ratings</option>
+          <option value="3" {% if request|query_get:'rating' == '3' %}selected{% endif %}>3+ Stars</option>
+          <option value="4" {% if request|query_get:'rating' == '4' %}selected{% endif %}>4+ Stars</option>
+          <option value="4.5" {% if request|query_get:'rating' == '4.5' %}selected{% endif %}>4.5+ Stars</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <!-- Amenities Section -->
+    <div class="filter-section">
+      <h4 class="filter-section__header">✨ Amenities</h4>
+      <div class="filter-checkboxes">
+        <label class="filter-checkbox">
+          <input type="checkbox" name="wifi" value="1" {% if request|query_get:'wifi' %}checked{% endif %} />
+          <span class="filter-checkbox__label">WiFi</span>
+          <span class="filter-checkbox__count">({{ wifi_count|default:0 }})</span>
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" name="parking" value="1" {% if request|query_get:'parking' %}checked{% endif %} />
+          <span class="filter-checkbox__label">Parking</span>
+          <span class="filter-checkbox__count">({{ parking_count|default:0 }})</span>
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" name="pool" value="1" {% if request|query_get:'pool' %}checked{% endif %} />
+          <span class="filter-checkbox__label">Pool</span>
+          <span class="filter-checkbox__count">({{ pool_count|default:0 }})</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <button type="button" id="apply-filters" class="ui-button ui-button--primary ui-button--md">Apply Filters</button>
+      <button type="button" id="reset-filters" class="ui-button ui-button--text ui-button--md">Clear All</button>
+    </div>
+  </form>
+</details>
+
+
+
+
+
+
+
+
+
+
+
