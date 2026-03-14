@@ -81,6 +81,18 @@
           <p style="color:#6b7280;font-size:14px;margin:0 0 20px;line-height:1.6;">{{ property.description|truncatewords:35 }}</p>
           {% endif %}
 
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 20px;">
+            <a href="/owner/dashboard/properties/{{ property.id }}/edit/" class="action-btn action-btn-primary">Edit</a>
+            <a href="/owner/dashboard/properties/{{ property.id }}/images/add/" class="action-btn action-btn-secondary">Gallery</a>
+            <a href="/owner/dashboard/properties/{{ property.id }}/rooms/add/" class="action-btn action-btn-secondary">Rooms</a>
+            <a href="/owner/dashboard/properties/{{ property.id }}/inventory/" class="action-btn action-btn-secondary">Inventory</a>
+            <a href="/owner/dashboard/properties/{{ property.id }}/meals/add/" class="action-btn action-btn-secondary">Meals</a>
+            <a href="/owner/dashboard/properties/{{ property.id }}/offers/add/" class="action-btn action-btn-secondary">Offers</a>
+            <a href="/owner/dashboard/properties/{{ property.id }}/cancellation-policy/" class="action-btn action-btn-secondary">Policy</a>
+          </div>
+
+          <p style="color:#6b7280;font-size:13px;margin:0 0 20px;font-weight:600;">{{ property.room_types.count }} rooms • {{ property.images.count }} photos</p>
+
           <!-- Room Types -->
           {% if property.room_types.all %}
             <div style="margin-bottom:4px;">

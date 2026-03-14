@@ -1,0 +1,198 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# ZygoTrip CD Pipeline
+# Triggered on: merge to main (staging deploy) or version tag (production)
+# Flow: build → push to GHCR → deploy staging → smoke test → deploy prod
+# ──────────────────────────────────────────────────────────────────────────────
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository }}/backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend
+
+jobs:
+  # ── 1. Build & push Docker images ──────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=sha-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ── Backend ──
+      - name: Extract metadata (backend)
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: BUILD_VERSION=${{ steps.version.outputs.version }}
+
+      # ── Frontend ──
+      - name: Extract metadata (frontend)
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: frontend
+          file: frontend/Dockerfile.frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_CDN_URL=${{ secrets.NEXT_PUBLIC_CDN_URL }}
+            BUILD_VERSION=${{ steps.version.outputs.version }}
+
+  # ── 2. Deploy to staging ────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy → Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment:
+      name: staging
+      url: https://staging.zygotrip.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to staging via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /opt/zygotrip
+            echo "Deploying version ${{ needs.build-and-push.outputs.version }} to staging"
+            docker pull ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            docker pull ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            sed -i "s|BACKEND_IMAGE=.*|BACKEND_IMAGE=${{ env.BACKEND_IMAGE }}:${{ github.sha }}|" .env
+            sed -i "s|FRONTEND_IMAGE=.*|FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE }}:${{ github.sha }}|" .env
+            docker compose up -d --no-deps web
+            docker compose up -d --no-deps frontend
+            docker compose exec -T web python manage.py migrate --no-input
+            echo "Staging deployment complete"
+
+  # ── 3. Smoke tests ──────────────────────────────────────────────────────────
+  smoke-test:
+    name: Smoke Tests (Staging)
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+
+    steps:
+      - name: Health check — API
+        run: |
+          for i in {1..12}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://staging.zygotrip.com/api/v1/health/ || echo "000")
+            if [ "$STATUS" = "200" ]; then echo "API health check passed"; exit 0; fi
+            echo "Waiting... attempt $i (status=$STATUS)"
+            sleep 10
+          done
+          echo "API health check failed" && exit 1
+
+      - name: Smoke test — Search
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://staging.zygotrip.com/api/v1/hotels/search/?city=goa&check_in=2026-06-01&check_out=2026-06-05&guests=2")
+          [ "$STATUS" = "200" ] && echo "Search OK" || (echo "Search returned $STATUS" && exit 1)
+
+      - name: Smoke test — Frontend
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://staging.zygotrip.com/)
+          [ "$STATUS" = "200" ] && echo "Frontend OK" || (echo "Frontend returned $STATUS" && exit 1)
+
+  # ── 4. Deploy to production (version tags only) ─────────────────────────────
+  deploy-production:
+    name: Deploy → Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push, smoke-test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment:
+      name: production
+      url: https://zygotrip.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/zygotrip
+            echo "Deploying ${{ github.ref_name }} to PRODUCTION"
+            docker pull ${{ env.BACKEND_IMAGE }}:${{ github.ref_name }}
+            docker pull ${{ env.FRONTEND_IMAGE }}:${{ github.ref_name }}
+            docker compose up -d --no-deps --scale web=3 web
+            sleep 30
+            docker compose up -d --no-deps --scale web=2 web
+            docker compose exec -T web python manage.py migrate --no-input
+            echo "Production deployment complete — ${{ github.ref_name }}"
+
+      - name: Notify Slack on deployment
+        uses: slackapi/slack-github-action@v1.25.0
+        if: always()
+        with:
+          payload: |
+            {"text": "${{ job.status == 'success' && '✅' || '❌' }} ZygoTrip *${{ github.ref_name }}* deployed to production by @${{ github.actor }}"}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

@@ -128,9 +128,9 @@
             <div class="review-count">{{ property.review_count }} reviews</div>
           </div>
           <div class="review-summary__details">
-            <div class="review-detail">Cleanliness: {{ property.rating_breakdown.first.cleanliness|default:property.rating }}</div>
-            <div class="review-detail">Service: {{ property.rating_breakdown.first.service|default:property.rating }}</div>
-            <div class="review-detail">Location: {{ property.rating_breakdown.first.location|default:property.rating }}</div>
+              <div class="review-detail">Cleanliness: {{ rating_breakdown.cleanliness|default:property.rating }}</div>
+              <div class="review-detail">Service: {{ rating_breakdown.service|default:property.rating }}</div>
+              <div class="review-detail">Location: {{ rating_breakdown.location|default:property.rating }}</div>
           </div>
         </div>
       </section>

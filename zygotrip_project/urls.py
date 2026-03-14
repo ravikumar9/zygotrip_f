@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.contrib.staticfiles.views import serve as static_serve
 from django.urls import include, path, re_path
 from django.views.generic import TemplateView
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from apps.accounts.views import (
     LoginView, register_view, logout_view,
     register_traveler, register_property_owner, register_cab_owner,
@@ -15,9 +16,12 @@ from apps.dashboard_owner.views import add_property
 from apps.cabs.dashboards import cab_create
 from apps.buses.dashboards import bus_create
 from apps.promos.api_views import apply_promo
+from apps.offers.api_views import featured_offers
 from apps.core.notification_views import notification_list, mark_notifications_read, unread_count
 from apps.core.health import health_check, health_check_detailed
 from apps.core.health_checks import HealthCheckView, DetailedHealthCheckView, MetricsView
+from apps.inventory.supplier_sync_api import supplier_webhook, trigger_supplier_sync, supplier_sync_status
+from apps.hotels.rate_plan_api import rate_plans_api
 
 urlpatterns = [
     # ── Health checks (no auth, no middleware overhead) ─────────────────
@@ -28,18 +32,41 @@ urlpatterns = [
     path('api/health/detailed/', DetailedHealthCheckView.as_view(), name='health_detailed'),
     path('api/metrics/', MetricsView.as_view(), name='prometheus_metrics'),
 
+    # ── API Documentation (OpenAPI / Swagger / ReDoc) ──────────────────
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
     # ── REST API v1 (highest priority) ─────────────────────────────────
     path('api/v1/', include('apps.hotels.api.v1.urls')),
     path('api/v1/', include('apps.accounts.api.v1.urls')),
     path('api/v1/booking/', include('apps.booking.api.v1.urls')),
     path('api/v1/wallet/', include('apps.wallet.api.v1.urls')),
     path('api/v1/payment/', include('apps.payments.api.v1.urls')),
+    path('api/v1/checkout/', include('apps.checkout.api.v1.urls')),
+    path('api/v1/buses/', include('apps.buses.api_urls')),
+    path('api/v1/cabs/', include('apps.cabs.api_urls')),
+    path('api/v1/packages/', include('apps.packages.api_urls')),
+    path('api/v1/flights/', include('apps.flights.api_urls')),
+    path('api/v1/activities/', include('apps.activities.api_urls')),
+    path('api/v1/seo/', include('apps.search.seo_urls')),
+    path('api/v1/dashboard/owner/', include('apps.dashboard_owner.api_urls')),
+    path('api/v1/', include('apps.core.api_v1_urls')),
     path('api/v1/promo/apply/', apply_promo, name='api_promo_apply'),
+    path('api/v1/offers/featured/', featured_offers, name='api_offers_featured'),
 
     # Notifications API
     path('api/v1/notifications/', notification_list, name='api_notifications'),
     path('api/v1/notifications/mark-read/', mark_notifications_read, name='api_notifications_mark_read'),
     path('api/v1/notifications/unread-count/', unread_count, name='api_notifications_unread'),
+
+    # ── Rate Plans API (System 3) ─────────────────────────────────────────
+    path('api/v1/rate-plans/', rate_plans_api, name='api_rate_plans'),
+
+    # ── Supplier Sync API (System 16) ─────────────────────────────────────
+    path('api/v1/supplier/webhook/<str:provider>/', supplier_webhook, name='supplier_webhook'),
+    path('api/v1/supplier/sync/<uuid:property_uuid>/', trigger_supplier_sync, name='supplier_sync_trigger'),
+    path('api/v1/supplier/sync-status/', supplier_sync_status, name='supplier_sync_status'),
 
     # Legacy API endpoints
     path('api/hotels/suggest/', suggest_hotels, name='api_hotels_suggest'),

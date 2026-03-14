@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booking Cancelled — ZygoTrip</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f8; }
+.container { max-width: 600px; margin: 0 auto; background: #fff; }
+.header { background: linear-gradient(135deg, #dc2626, #ef4444); padding: 32px 24px; text-align: center; }
+.header h1 { color: #fff; font-size: 24px; margin: 0; font-weight: 600; }
+.header p { color: rgba(255,255,255,.85); margin: 8px 0 0; font-size: 14px; }
+.body { padding: 32px 24px; }
+.greeting { font-size: 18px; color: #1a1a2e; margin: 0 0 16px; }
+.card { background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin: 20px 0; }
+.card-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fecaca; }
+.card-row:last-child { border-bottom: none; }
+.card-label { color: #64748b; font-size: 13px; font-weight: 500; }
+.card-value { color: #1a1a2e; font-size: 14px; font-weight: 600; text-align: right; }
+.refund-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 16px 0; text-align: center; }
+.refund-amount { font-size: 20px; font-weight: 700; color: #166534; }
+.badge-cancel { display: inline-block; background: #fee2e2; color: #991b1b; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.footer { text-align: center; padding: 20px 24px; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Booking Cancelled</h1>
+    <p>Reference: {{ booking_ref }}</p>
+  </div>
+  <div class="body">
+    <p class="greeting">Hi {{ guest_name }},</p>
+    <p style="color:#475569; line-height:1.6;">Your booking at <strong>{{ hotel_name }}</strong> has been cancelled.</p>
+
+    <div class="card">
+      <div class="card-row">
+        <span class="card-label">Booking ID</span>
+        <span class="card-value">{{ booking_ref }}</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">Hotel</span>
+        <span class="card-value">{{ hotel_name }}</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">Status</span>
+        <span class="card-value"><span class="badge-cancel">Cancelled</span></span>
+      </div>
+    </div>
+
+    {% if refund_amount %}
+    <div class="refund-card">
+      <p style="color:#64748b; margin:0 0 8px; font-size:13px;">Refund Amount</p>
+      <p class="refund-amount">{{ refund_amount }}</p>
+      <p style="color:#64748b; margin:8px 0 0; font-size:12px;">Will be processed within 5-7 business days</p>
+    </div>
+    {% endif %}
+
+    <p style="color:#64748b; font-size:13px; line-height:1.6;">
+      Questions? Contact us at <a href="mailto:support@zygotrip.com" style="color:#2563eb;">support@zygotrip.com</a>
+    </p>
+
+    <!-- Plan your next trip CTA -->
+    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:16px; margin:20px 0; text-align:center;">
+      <p style="color:#0369a1; font-size:14px; font-weight:600; margin:0 0 10px;">Ready to plan your next trip? ✈️</p>
+      <a href="https://zygotrip.com/" style="display:inline-block; background:#2563eb; color:#fff; font-size:14px; font-weight:600; padding:10px 24px; border-radius:8px; text-decoration:none;">Explore Hotels &amp; Packages</a>
+    </div>
+  </div>
+
+  <!-- Social Follow Footer -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc; border-top:1px solid #e2e8f0;">
+    <tr>
+      <td style="padding:20px 24px; text-align:center;">
+        <p style="color:#64748b; font-size:12px; font-weight:600; margin:0 0 12px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+          Follow us for travel inspiration &amp; exclusive deals
+        </p>
+        <table align="center" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding:0 3px;">
+              <a href="https://www.instagram.com/zygotrip/" target="_blank" style="display:inline-block; background:#E1306C; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">📷 Instagram</a>
+            </td>
+            <td style="padding:0 3px;">
+              <a href="https://www.facebook.com/profile.php?id=61583679493958" target="_blank" style="display:inline-block; background:#1877F2; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">👥 Facebook</a>
+            </td>
+            <td style="padding:0 3px;">
+              <a href="https://youtube.com/@zygotrip" target="_blank" style="display:inline-block; background:#FF0000; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">▶ YouTube</a>
+            </td>
+            <td style="padding:0 3px;">
+              <a href="https://x.com/ZygoTrip" target="_blank" style="display:inline-block; background:#000; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">𝕏 Twitter</a>
+            </td>
+            <td style="padding:0 3px;">
+              <a href="https://www.linkedin.com/in/zygo-trip-1968a63b6/" target="_blank" style="display:inline-block; background:#0077B5; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">in LinkedIn</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <div class="footer">
+    <p>&copy; ZygoTrip — Your journey, our commitment.</p>
+  </div>
+</div>
+</body>
+</html>

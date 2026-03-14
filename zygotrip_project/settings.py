@@ -10,12 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # CORE - PRODUCTION SECURITY
 # ======================================================
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "unsafe-dev-key")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "unsafe-dev-key-change-me-please-32chars")
 
 # DEBUG MODE - default to safe local development unless explicitly disabled
 DEBUG = os.getenv("DEBUG", "true").lower() in {"1", "true", "yes"}
 
-if SECRET_KEY == "unsafe-dev-key" and not DEBUG:
+if SECRET_KEY == "unsafe-dev-key-change-me-please-32chars" and not DEBUG:
     import sys
     print(
         "\n[CRITICAL] DJANGO_SECRET_KEY is not set! "
@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "django_extensions",
+    "drf_spectacular",
 
     # project apps
     "apps.accounts",
@@ -103,10 +104,15 @@ INSTALLED_APPS = [
     "apps.packages",
     "apps.cabs",
     "apps.inventory",
+    "apps.checkout",
     "apps.offers",
     "apps.dashboard_owner",
     "apps.dashboard_admin",
     "apps.dashboard_finance",
+
+    # new verticals
+    "apps.flights",
+    "apps.activities",
 
     # celery
     "django_celery_beat",
@@ -132,11 +138,13 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
     "apps.core.middleware.GlobalExceptionMiddleware",
+    "apps.core.bot_protection.BotProtectionMiddleware",  # System 13: Bot/scraping defense
     "apps.core.middleware.RateLimitMiddleware",
     "apps.core.gateway_middleware.APIGatewayMiddleware",  # Section 18: API Gateway Protection
     "apps.core.middleware.StructuredLoggingMiddleware",
     "apps.core.production.SlowRequestMiddleware",  # Performance monitoring
     "apps.core.metrics.MetricsMiddleware",  # S15: Prometheus request instrumentation
+    "apps.core.telemetry.OtelLoggingMiddleware",  # OpenTelemetry trace-id injection
     "apps.core.feature_flags.FeatureFlagMiddleware",  # S14: Feature flags per request
 ]
 
@@ -235,8 +243,63 @@ USE_I18N = True
 USE_TZ = True
 
 CURRENCY_CODE = "INR"
-CURRENCY_SYMBOL = "â‚¹"
+CURRENCY_SYMBOL = "₹"
 REGION_DEFAULT = "IN"
+
+
+# ======================================================
+# GOOGLE MAPS / PLACES API
+# ======================================================
+
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
+GOOGLE_MAPS_ENABLED = bool(GOOGLE_MAPS_API_KEY)
+
+# ======================================================
+# CURRENCY EXCHANGE API
+# ======================================================
+
+EXCHANGE_RATE_API_KEY = os.getenv("EXCHANGE_RATE_API_KEY", "")
+EXCHANGE_RATE_API_URL = os.getenv(
+    "EXCHANGE_RATE_API_URL",
+    "https://v6.exchangerate-api.com/v6",
+)
+# Default currency for internal pricing
+BASE_CURRENCY = "INR"
+# Supported display currencies
+SUPPORTED_CURRENCIES = [
+    "INR", "USD", "EUR", "GBP", "AED", "SGD", "THB", "MYR",
+    "AUD", "CAD", "JPY", "KRW", "SAR", "QAR", "BDT", "LKR", "NPR",
+]
+# Cache exchange rates for 1 hour
+EXCHANGE_RATE_CACHE_TTL = 3600
+
+# ======================================================
+# EMAIL SERVICE
+# ======================================================
+
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",   # dev: print to console
+)
+# SMTP settings (for production: smtp.gmail.com, Amazon SES, SendGrid, etc.)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() in {"1", "true", "yes"}
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@zygotrip.com")
+
+# SendGrid (alternative email provider)
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
+
+# ======================================================
+# GEO SEARCH CONFIGURATION
+# ======================================================
+
+# Default search radius in km
+GEO_SEARCH_DEFAULT_RADIUS_KM = int(os.getenv("GEO_SEARCH_DEFAULT_RADIUS_KM", "10"))
+# Max allowed radius
+GEO_SEARCH_MAX_RADIUS_KM = int(os.getenv("GEO_SEARCH_MAX_RADIUS_KM", "50"))
 
 
 # ======================================================
@@ -249,8 +312,50 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_MANIFEST_STRICT = False
 
-MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# ── CDN / S3 Media Storage ────────────────────────────────────────────────────
+# In production: set USE_S3=true + AWS credentials to store uploaded media on
+# S3 and serve via CloudFront CDN.
+# In dev/staging: falls back to local disk storage (WhiteNoise not used for media).
+#
+# Required env vars for S3 mode:
+#   USE_S3=true
+#   AWS_STORAGE_BUCKET_NAME=zygotrip-media
+#   AWS_S3_REGION_NAME=ap-south-1
+#   AWS_ACCESS_KEY_ID=...
+#   AWS_SECRET_ACCESS_KEY=...
+#   AWS_S3_CUSTOM_DOMAIN=cdn.zygotrip.com   (CloudFront domain)
+
+_USE_S3 = os.environ.get('USE_S3', 'false').lower() == 'true'
+
+if _USE_S3:
+    # ── S3 + CloudFront media storage ─────────────────────────────────────
+    # Requires: pip install django-storages[s3] boto3
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'zygotrip-media')
+    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'ap-south-1')
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+
+    # CloudFront CDN domain (e.g. cdn.zygotrip.com or d1234.cloudfront.net)
+    _CDN_DOMAIN = os.environ.get('AWS_S3_CUSTOM_DOMAIN', f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com')
+    AWS_S3_CUSTOM_DOMAIN = _CDN_DOMAIN
+
+    MEDIA_URL = f'https://{_CDN_DOMAIN}/media/'
+
+    # S3 storage options
+    AWS_DEFAULT_ACL = None          # Use bucket policy (not per-object ACL)
+    AWS_S3_FILE_OVERWRITE = False   # Keep original filename on conflict
+    AWS_QUERYSTRING_AUTH = False    # No signed URLs (public bucket + CloudFront)
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'public, max-age=31536000, immutable',  # 1-year CDN cache
+    }
+    AWS_LOCATION = 'media'          # All uploads go under /media/ prefix in S3
+else:
+    # ── Local disk storage (dev / staging without S3) ──────────────────────
+    MEDIA_URL = "/media/"
 
 
 # ======================================================
@@ -284,7 +389,47 @@ GST_RATE = GST_RATE_LOW
 
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = os.getenv("REDIS_PORT", "6379")
-USE_REDIS_CACHE = os.getenv("USE_REDIS_CACHE", "false").lower() in {"1", "true", "yes"}
+USE_REDIS_CACHE = os.getenv("USE_REDIS_CACHE", "true").lower() in {"1", "true", "yes"}
+
+# ElasticSearch
+ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", f"http://{os.getenv('ELASTICSEARCH_HOST', 'localhost')}:9200")
+ELASTICSEARCH_HOSTS = [ELASTICSEARCH_URL]
+ELASTICSEARCH_INDEX_PREFIX = os.getenv("ELASTICSEARCH_INDEX_PREFIX", "zygotrip")
+ELASTICSEARCH_TIMEOUT = int(os.getenv("ELASTICSEARCH_TIMEOUT", "10"))
+
+# ── Firebase Cloud Messaging (Push Notifications) ──────────────────────────
+FCM_PROJECT_ID = os.getenv("FCM_PROJECT_ID", "")
+FCM_SERVER_KEY = os.getenv("FCM_SERVER_KEY", "")  # Legacy API key fallback
+
+# ── WhatsApp Business API (Meta Cloud API) ──────────────────────────────────
+WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
+WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "zygotrip_webhook_verify")
+
+# ── SMS Providers ────────────────────────────────────────────────────────────
+SMS_PROVIDER = os.getenv("SMS_PROVIDER", "msg91")  # msg91 | twilio
+MSG91_AUTH_KEY = os.getenv("MSG91_AUTH_KEY", "")
+MSG91_TEMPLATE_ID = os.getenv("MSG91_TEMPLATE_ID", "")
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
+
+# ── Admin Monitoring ─────────────────────────────────────────────────────────
+ADMIN_ALERT_EMAIL = os.getenv("ADMIN_ALERT_EMAIL", "admin@zygotrip.com")
+
+# ── Bot Protection (System 13) ───────────────────────────────────────────────
+BOT_PROTECTION_ENABLED = os.getenv("BOT_PROTECTION_ENABLED", "true").lower() == "true"
+# Comma-separated list of IPs that bypass bot protection (monitoring, health checks)
+BOT_PROTECTION_IP_WHITELIST = [
+    ip.strip()
+    for ip in os.getenv("BOT_PROTECTION_IP_WHITELIST", "127.0.0.1,::1").split(",")
+    if ip.strip()
+]
+
+# ── Analytics Data Warehouse (System 9) ──────────────────────────────────────
+ANALYTICS_ENABLED         = True
+ANALYTICS_ASYNC_PERSIST   = True   # Use Celery for async event persistence
+ANALYTICS_BATCH_MAX_SIZE  = 50     # Max events per batch POST
 
 def _redis_available(host, port):
     try:
@@ -296,12 +441,61 @@ def _redis_available(host, port):
         return False
 
 if USE_REDIS_CACHE and _redis_available(REDIS_HOST, REDIS_PORT):
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1",
-        }
+    _REDIS_CONN_OPTIONS = {
+        "socket_connect_timeout": 3,
+        "socket_timeout": 3,
+        "retry_on_timeout": True,
+        "health_check_interval": 30,
     }
+    try:
+        import django_redis  # noqa: F401
+        _USE_DJANGO_REDIS = True
+    except ImportError:
+        _USE_DJANGO_REDIS = False
+
+    if _USE_DJANGO_REDIS:
+        # Production-grade: django-redis with connection pooling
+        CACHES = {
+            "default": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1",
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    "CONNECTION_POOL_KWARGS": {
+                        "max_connections": int(os.getenv("REDIS_MAX_CONNECTIONS", "50")),
+                        "retry_on_timeout": True,
+                    },
+                    "SOCKET_CONNECT_TIMEOUT": 3,
+                    "SOCKET_TIMEOUT": 3,
+                    "IGNORE_EXCEPTIONS": False,
+                    "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+                },
+                "KEY_PREFIX": "zygo",
+                "TIMEOUT": 600,  # 10 min default TTL
+            },
+            "sessions": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/3",
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                    "CONNECTION_POOL_KWARGS": {
+                        "max_connections": int(os.getenv("REDIS_SESSION_MAX_CONNECTIONS", "20")),
+                    },
+                },
+                "KEY_PREFIX": "zygo_sess",
+                "TIMEOUT": 86400,  # 24h session TTL
+            },
+        }
+        SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+        SESSION_CACHE_ALIAS = "sessions"
+    else:
+        # Fallback: built-in Redis backend (no connection pooling)
+        CACHES = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.redis.RedisCache",
+                "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1",
+            }
+        }
 else:
     CACHES = {
         "default": {
@@ -326,6 +520,52 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 1800
 CELERY_RESULT_EXPIRES = 3600
+
+# ── Queue definitions ─────────────────────────────────────────────────────────
+# Two worker tiers:
+#   critical worker → bookings, payments, inventory, events
+#   standard worker → notifications, search, default
+# Each queue has a max priority so critical tasks are never starved.
+from kombu import Queue
+CELERY_TASK_QUEUES = (
+    Queue('bookings',      routing_key='bookings',      priority=9),
+    Queue('payments',      routing_key='payments',      priority=9),
+    Queue('inventory',     routing_key='inventory',     priority=8),
+    Queue('events',        routing_key='events',        priority=7),
+    Queue('notifications', routing_key='notifications', priority=5),
+    Queue('search',        routing_key='search',        priority=4),
+    Queue('default',       routing_key='default',       priority=3),
+)
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+
+# ── Task routing — maps task name patterns to queues ─────────────────────────
+CELERY_TASK_ROUTES = {
+    # Bookings & checkout — critical path
+    'apps.booking.*':           {'queue': 'bookings'},
+    'apps.checkout.*':          {'queue': 'bookings'},
+    'apps.core.tasks.release_expired_booking_holds': {'queue': 'bookings'},
+    'apps.core.tasks.release_expired_inventory_holds': {'queue': 'inventory'},
+
+    # Payments — critical path
+    'apps.payments.*':          {'queue': 'payments'},
+    'apps.wallet.*':            {'queue': 'payments'},
+
+    # Inventory — critical path
+    'apps.inventory.*':         {'queue': 'inventory'},
+
+    # Domain events (async handlers)
+    'apps.core.event_bus_tasks.*': {'queue': 'events'},
+
+    # Notifications — standard path
+    'apps.core.whatsapp_notifications.*': {'queue': 'notifications'},
+    'apps.core.push_notification_service.*': {'queue': 'notifications'},
+    'apps.core.fcm_api.*':      {'queue': 'notifications'},
+
+    # Search & reindexing — standard path
+    'apps.search.*':            {'queue': 'search'},
+    'apps.pricing.adaptive_crawl.*': {'queue': 'search'},
+    'apps.pricing.competitor_pipeline.*': {'queue': 'search'},
+}
 
 # PHASE 9: FORCE SAFE DEV MODE - Disable Celery beat in DEBUG, run tasks eagerly
 if DEBUG:
@@ -393,7 +633,7 @@ else:
         },
         "competitor-price-scan": {
             "task": "apps.core.tasks.competitor_price_scan",
-            "schedule": 86400.0,  # Daily at 4 AM
+            "schedule": 10800.0,  # Every 3 hours (was daily — upgraded for price freshness)
         },
         # ── S2: Price Lock TTL enforcement ──
         "expire-stale-price-locks": {
@@ -408,6 +648,10 @@ else:
         "warm-popular-city-caches": {
             "task": "apps.core.tasks.warm_popular_city_caches",
             "schedule": 3600.0,  # Every hour
+        },
+        "warm-popular-search-patterns": {
+            "task": "apps.core.tasks.warm_popular_search_patterns",
+            "schedule": 7200.0,  # Every 2 hours — date-parameterized popular combos
         },
         "refresh-rate-cache-bulk": {
             "task": "apps.core.tasks.refresh_rate_cache_bulk",
@@ -427,6 +671,129 @@ else:
         "scheduled-fraud-scan": {
             "task": "apps.core.tasks.scheduled_fraud_scan",
             "schedule": 1800.0,  # Every 30 minutes
+        },
+        # ── Checkout session management ──
+        "expire-checkout-sessions": {
+            "task": "checkout.expire_sessions",
+            "schedule": 120.0,  # Every 2 minutes
+        },
+        "aggregate-funnel-analytics": {
+            "task": "checkout.aggregate_funnel",
+            "schedule": 3600.0,  # Every hour
+        },
+        "batch-risk-scoring": {
+            "task": "checkout.batch_risk_scoring",
+            "schedule": 300.0,  # Every 5 minutes
+        },
+        "export-analytics-warehouse-backlog": {
+            "task": "core.export_analytics_events_to_warehouse",
+            "schedule": 300.0,  # Every 5 minutes
+        },
+        "cleanup-old-checkout-sessions": {
+            "task": "checkout.cleanup_old_sessions",
+            "schedule": 86400.0,  # Daily
+        },
+        # ── S1: CTR / Engagement pipeline for search ranking ──
+        "aggregate-ctr-scores": {
+            "task": "apps.search.tasks.aggregate_ctr_scores",
+            "schedule": 1800.0,  # Every 30 minutes
+        },
+        "refresh-search-engagement": {
+            "task": "apps.search.tasks.refresh_search_engagement",
+            "schedule": 900.0,  # Every 15 minutes
+        },
+        "sync-reliability-signals": {
+            "task": "apps.search.tasks.sync_reliability_signals",
+            "schedule": 3600.0,  # Every hour
+        },
+        "warm-search-cache": {
+            "task": "apps.search.tasks.warm_search_cache_task",
+            "schedule": 1800.0,  # Every 30 minutes
+        },
+        "warm-search-pattern-cache": {
+            "task": "apps.search.tasks.warm_popular_search_patterns_task",
+            "schedule": 900.0,  # Every 15 minutes
+        },
+        "warm-rate-cache": {
+            "task": "apps.search.tasks.warm_rate_cache_task",
+            "schedule": 3600.0,  # Every hour
+        },
+        # ── Bus seat lock TTL enforcement ──
+        "release-expired-bus-seat-locks": {
+            "task": "apps.buses.tasks.release_expired_seat_locks",
+            "schedule": 60.0,  # Every 1 minute
+        },
+        # ── Dynamic pricing recomputation ──
+        "recompute-dynamic-prices": {
+            "task": "apps.pricing.tasks.recompute_dynamic_prices",
+            "schedule": 21600.0,  # Every 6 hours
+        },
+        # ── Adaptive competitor crawling (replaces fixed 3h scan) ──
+        "adaptive-competitor-dispatch": {
+            "task": "apps.pricing.adaptive_crawl.adaptive_competitor_dispatch",
+            "schedule": 900.0,  # Every 15 minutes (dispatches per-property based on demand tier)
+        },
+        # ── Price trend / deal score refresh ──
+        "update-deal-scores": {
+            "task": "apps.pricing.price_trends.update_deal_scores",
+            "schedule": 7200.0,  # Every 2 hours
+        },
+        # ── Supply health monitoring ──
+        "monitor-supply-health": {
+            "task": "apps.inventory.supply_health.monitor_supply_health",
+            "schedule": 1800.0,  # Every 30 minutes
+        },
+        # ── User search profile refresh ──
+        "refresh-user-search-profiles": {
+            "task": "apps.search.tasks.refresh_user_search_profiles",
+            "schedule": 7200.0,  # Every 2 hours
+        },
+        # ── Supplier booking reconciliation (daily) ──
+        "daily-supplier-reconciliation": {
+            "task": "apps.booking.tasks.daily_supplier_reconciliation",
+            "schedule": 86400.0,  # Daily
+        },
+        # ── Loyalty point expiry (daily) ──
+        "expire-inactive-loyalty-points": {
+            "task": "apps.core.tasks.expire_inactive_loyalty_points",
+            "schedule": 86400.0,  # Daily
+        },
+        # ── Loyalty tier refresh (daily) ──
+        "refresh-loyalty-tiers": {
+            "task": "apps.core.tasks.refresh_loyalty_tiers",
+            "schedule": 86400.0,  # Daily
+        },
+        # ── ElasticSearch re-index (daily) ──
+        "reindex-elasticsearch": {
+            "task": "apps.search.tasks.reindex_elasticsearch",
+            "schedule": 86400.0,  # Daily
+        },
+        # ── Booking orchestrator: recover failed + expire holds ──
+        "recover-failed-bookings": {
+            "task": "apps.booking.orchestrator.recover_failed_bookings",
+            "schedule": 900.0,  # Every 15 minutes
+        },
+        "expire-stale-booking-holds": {
+            "task": "apps.booking.orchestrator.expire_stale_holds",
+            "schedule": 300.0,  # Every 5 minutes
+        },
+        # ── Settlement automation (System 15) ──
+        "weekly-settlements": {
+            "task": "booking.run_weekly_settlements",
+            "schedule": 604800.0,  # Every 7 days (weekly)
+        },
+        "monthly-settlements": {
+            "task": "booking.run_monthly_settlements",
+            "schedule": 2592000.0,  # Every 30 days (monthly)
+        },
+        "daily-refund-adjustments": {
+            "task": "booking.process_refund_adjustments",
+            "schedule": 86400.0,  # Daily
+        },
+        # ── WhatsApp trip reminders ──
+        "send-trip-reminders": {
+            "task": "apps.core.whatsapp_notifications.send_pending_trip_reminders",
+            "schedule": 3600.0,  # Every hour
         },
     }
 
@@ -601,12 +968,42 @@ REST_FRAMEWORK = {
     'DEFAULT_VERSION': 'v1',
     'ALLOWED_VERSIONS': ['v1'],
 
+    # OpenAPI schema generation via drf-spectacular
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
     # Exception handling: return structured error responses
     'EXCEPTION_HANDLER': 'apps.core.api_validators.drf_exception_handler',
 }
 
 
 # ======================================================
+# API DOCUMENTATION (drf-spectacular)
+# ======================================================
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ZygoTrip OTA Platform API',
+    'DESCRIPTION': (
+        'Production API for the ZygoTrip OTA platform. '
+        'Covers hotels, buses, cabs, packages, booking, payments, wallet, '
+        'search, user accounts, and administrative dashboards.'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': 'Hotels', 'description': 'Hotel search, detail, and room availability'},
+        {'name': 'Booking', 'description': 'Booking context, creation, cancellation'},
+        {'name': 'Payments', 'description': 'Payment initiation, verification, reconciliation'},
+        {'name': 'Wallet', 'description': 'Wallet balance, top-up, transactions'},
+        {'name': 'Search', 'description': 'Unified search, autosuggest, filters'},
+        {'name': 'Accounts', 'description': 'Authentication, registration, OTP login'},
+        {'name': 'Buses', 'description': 'Bus search, booking, seat selection'},
+        {'name': 'Cabs', 'description': 'Cab booking and trip management'},
+        {'name': 'Packages', 'description': 'Holiday packages and itineraries'},
+        {'name': 'Health', 'description': 'Liveness, readiness, and observability'},
+    ],
+}# ======================================================
 # JWT AUTHENTICATION (Simple JWT)
 # ======================================================
 
@@ -678,7 +1075,7 @@ MSG91_TEMPLATE_ID = os.getenv('MSG91_TEMPLATE_ID', '')
 
 _raw_cors_origins = os.getenv(
     "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000"
+    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
 )
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _raw_cors_origins.split(",") if o.strip()]
 
@@ -723,3 +1120,17 @@ if SENTRY_DSN and not DEBUG:
         logging.getLogger("zygotrip").warning(
             "SENTRY_DSN is set but sentry-sdk is not installed. pip install sentry-sdk"
         )
+
+# ======================================================
+# OPENTELEMETRY — Distributed Tracing
+# ======================================================
+# Set OTEL_EXPORTER_OTLP_ENDPOINT to enable (e.g. http://otel-collector:4317)
+# All other settings are optional with sensible defaults.
+OTEL_SERVICE_NAME      = os.getenv("OTEL_SERVICE_NAME", "zygotrip-api")
+OTEL_ENVIRONMENT       = os.getenv("OTEL_ENVIRONMENT", "production")
+OTEL_TRACES_SAMPLE_RATE = float(os.getenv("OTEL_TRACES_SAMPLE_RATE", "1.0"))
+# OtelLoggingMiddleware is in MIDDLEWARE above — auto-injects X-Trace-Id header.
+# To enable tracing: pip install opentelemetry-sdk opentelemetry-exporter-otlp
+#                                 opentelemetry-instrumentation-django
+#                                 opentelemetry-instrumentation-redis
+#                                 opentelemetry-instrumentation-celery

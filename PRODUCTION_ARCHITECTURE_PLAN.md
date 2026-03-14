@@ -1,5 +1,23 @@
 # ZygoTrip → Production OTA: Architecture Audit & Implementation Plan
 
+## March 2026 Distributed OTA Blueprint
+
+For the production-grade distributed architecture package targeting 95% readiness with backward compatibility, see:
+
+- `docs/ota95/00-architecture-gap-report.md`
+- `docs/ota95/README.md`
+- `docs/ota95/01-service-architecture-diagram.md`
+- `docs/ota95/02-microservice-folder-structure.md`
+- `docs/ota95/03-api-contracts.md`
+- `docs/ota95/04-event-schemas.md`
+- `docs/ota95/05-database-schemas.md`
+- `docs/ota95/06-deployment-architecture.md`
+- `docs/ota95/07-observability-configuration.md`
+- `docs/ota95/08-scaling-strategy.md`
+- `docs/ota95/09-security-design.md`
+- `docs/ota95/10-migration-plan.md`
+- `docs/ota95/11-service-extraction-roadmap.md`
+
 > Generated: March 6, 2026  
 > Scope: Full codebase audit + production transformation roadmap  
 > Stack: Django 4.x + DRF + Next.js 14.2.5 + React + TypeScript + Tailwind + PostgreSQL + Redis + Celery

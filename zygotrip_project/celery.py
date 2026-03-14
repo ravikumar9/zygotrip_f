@@ -18,14 +18,10 @@ def debug_task(self):
     print(f'Request: {self.request!r}')
 
 # Optimize task execution
-app.conf.update(
-    task_always_eager=False,
-    task_eager_propagates=False,
-    worker_prefetch_multiplier=4,
-    worker_max_tasks_per_child=1000,
-    task_acks_late=True,
-    worker_disable_rate_limits=False,
-)
+app.conf.worker_prefetch_multiplier = 4
+app.conf.worker_max_tasks_per_child = 1000
+app.conf.task_acks_late = True
+app.conf.worker_disable_rate_limits = False
 
 # ── Celery Beat Schedule ─────────────────────────────────────────────────────
 # IMPORTANT: The authoritative beat schedule lives in settings.py

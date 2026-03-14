@@ -69,7 +69,7 @@
                     </td>
                     <td>{{ inventory.room_type.property.name }}</td>
                     <td>
-                        <span class="badge badge-info">{{ inventory.room_type.room_type }}</span>
+                        <span class="badge badge-info">{{ inventory.room_type.name }}</span>
                     </td>
                     <td>
                         <div class="room-count">
@@ -146,6 +146,9 @@
                     <label for="bulk_room_type">Room Type</label>
                     <select id="bulk_room_type" name="room_type" class="form-control" required>
                         <option value="">Select Room Type</option>
+                        {% for room_type in room_types %}
+                            <option value="{{ room_type.id }}">{{ room_type.name }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
@@ -302,6 +305,8 @@
 </style>
 
 <script>
+const propertyRoomTypes = {{ property_room_types|safe }};
+
 // Dynamic room type loading based on property
 document.getElementById('bulk_property').addEventListener('change', function() {
     const propertyId = this.value;
@@ -311,18 +316,11 @@ document.getElementById('bulk_property').addEventListener('change', function() {
         roomTypeSelect.innerHTML = '<option value="">Select Room Type</option>';
         return;
     }
-    
-    // In production, this would be an AJAX call to fetch room types
-    // For now, it's handled server-side
-    fetch(`/api/property/${propertyId}/room-types/`)
-        .then(r => r.json())
-        .then(data => {
-            roomTypeSelect.innerHTML = '<option value="">Select Room Type</option>';
-            data.room_types.forEach(rt => {
-                roomTypeSelect.innerHTML += `<option value="${rt.id}">${rt.room_type}</option>`;
-            });
-        })
-        .catch(err => console.log('Note: Room types will be loaded dynamically in production'));
+
+    roomTypeSelect.innerHTML = '<option value="">Select Room Type</option>';
+    (propertyRoomTypes[propertyId] || []).forEach(roomType => {
+        roomTypeSelect.innerHTML += `<option value="${roomType.id}">${roomType.name}</option>`;
+    });
 });
 
 function editInventory(inventoryId, date) {

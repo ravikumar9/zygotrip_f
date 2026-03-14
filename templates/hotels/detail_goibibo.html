@@ -142,6 +142,28 @@
       </div>
     </div>
   {% endif %}
+
+  <section class="detail-section" style="margin-bottom: 24px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;">
+      <div>
+        <h1 style="font-size: 36px; line-height: 1.1; margin: 0 0 10px; font-weight: 800; color: var(--text-primary);">{{ property.name }}</h1>
+        <p style="margin: 0 0 12px; color: var(--text-secondary); font-size: 16px;">{{ property.area|default:property.city }}{% if property.area and property.city %}, {{ property.city }}{% endif %}{% if property.country %}, {{ property.country }}{% endif %}</p>
+        <div class="trust-badges">
+          <span class="trust-badge verified">Verified Stay</span>
+          <span class="trust-badge">{{ property.property_type|default:"Hotel" }}</span>
+          {% if property.star_category %}
+            <span class="trust-badge">{{ property.star_category }} Star</span>
+          {% endif %}
+        </div>
+      </div>
+      {% if property.rating %}
+        <div style="min-width: 180px; padding: 16px 18px; border-radius: 16px; background: #eff6ff; text-align: center;">
+          <div style="font-size: 30px; font-weight: 800; color: #1d4ed8;">{{ property.rating|floatformat:1 }}</div>
+          <div style="font-size: 13px; color: #475569;">{{ property.review_count }} guest review{{ property.review_count|pluralize }}</div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
   
   <!-- Hotel Gallery -->
   <div class="hotel-gallery">
@@ -176,53 +198,57 @@
     </div>
   </div>
   
-  <!-- Two-Column Layout -->
-  <div class="layout-detail">
-    <!-- LEFT: Hotel Details -->
-    <div class="content-main">
-      <!-- Hotel Header -->
+      <!-- Reviews Section -->
       <div class="detail-section">
-        <div class="flex justify-between items-start gap-md mb-sm">
-          <div style="flex: 1;">
-            <h1 class="text-4xl font-bold mb-xs">{{ property.name }}</h1>
-            {% if property.star_category %}
-              <div class="text-lg text-secondary mb-sm">
-                {% for i in "x"|ljust:property.star_category %}⭐{% endfor %} 
-                {{ property.star_category }}-Star {{ property.property_type }}
+        <h2 class="section-title">Guest Reviews</h2>
+        {% if property.rating %}
+          <div class="flex items-center gap-lg mb-lg">
+            <div class="text-center">
+              <div style="font-size: 48px; font-weight: var(--font-bold); color: var(--color-primary);">
+                {{ property.rating|floatformat:1 }}
               </div>
-            {% endif %}
+              <div class="text-sm text-secondary">{{ property.review_count }} reviews</div>
+            </div>
+            
+            <div style="flex: 1;">
+              <div class="text-lg font-semibold mb-sm">Excellent</div>
+              <p class="text-sm text-secondary">
+                Guests loved the cleanliness, service, and location of this property.
+              </p>
+            </div>
           </div>
           
-          {% if property.rating %}
-            <div class="flex items-center gap-sm">
-              <div style="padding: 8px 16px; background: var(--color-success); color: white; border-radius: var(--radius-md); font-weight: var(--font-semibold);">
-                {{ property.rating|floatformat:1 }} ⭐
+          <!-- Rating breakdown from RatingAggregate model -->
+          {% if rating_breakdown %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 16px;">
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.cleanliness|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Cleanliness</div>
               </div>
-              <div class="text-sm text-secondary">
-                {{ property.review_count }} reviews
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.service|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Service</div>
+              </div>
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.location|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Location</div>
+              </div>
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.amenities|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Amenities</div>
+              </div>
+              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.value_for_money|floatformat:1 }}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Value</div>
               </div>
             </div>
           {% endif %}
-        </div>
-        
-        <div class="flex items-center gap-sm text-sm text-secondary mb-md">
-          <span>📍</span>
-          <span>{{ property.address }}, {{ property.city }}, {{ property.country }}</span>
-        </div>
-        
-        <!-- Trust Badges -->
-        <div class="trust-badges">
-          {% if property.is_trending %}
-            <span class="trust-badge">🔥 Trending</span>
-          {% endif %}
-          {% if property.has_free_cancellation %}
-            <span class="trust-badge verified">✓ Free Cancellation</span>
-          {% endif %}
-          <span class="trust-badge verified">✔ Verified Property</span>
-          {% if property.offers.count > 0 %}
-            <span class="trust-badge">🎁 {{ property.offers.count }} Offer{% if property.offers.count != 1 %}s{% endif %}</span>
-          {% endif %}
-        </div>
+        {% else %}
+          <div style="padding: 18px; border-radius: 12px; background: #f8fafc; color: #475569;">
+            <div style="font-weight: 700; margin-bottom: 6px;">Newly listed property</div>
+            <div style="font-size: 14px;">Guest reviews will appear here once the first verified stays are completed.</div>
+          </div>
+        {% endif %}
       </div>
       
       <!-- Overview Section -->
@@ -326,58 +352,6 @@
         </div>
       </div>
       
-      <!-- Reviews Section -->
-      {% if property.rating %}
-        <div class="detail-section">
-          <h2 class="section-title">Guest Reviews</h2>
-          
-          <div class="flex items-center gap-lg mb-lg">
-            <div class="text-center">
-              <div style="font-size: 48px; font-weight: var(--font-bold); color: var(--color-primary);">
-                {{ property.rating|floatformat:1 }}
-              </div>
-              <div class="text-sm text-secondary">{{ property.review_count }} reviews</div>
-            </div>
-            
-            <div style="flex: 1;">
-              <div class="text-lg font-semibold mb-sm">Excellent</div>
-              <p class="text-sm text-secondary">
-                Guests loved the cleanliness, service, and location of this property.
-              </p>
-            </div>
-          </div>
-          
-          <!-- Rating breakdown from RatingAggregate model -->
-          {% if rating_breakdown %}
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 16px;">
-              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
-                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.cleanliness|floatformat:1 }}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Cleanliness</div>
-              </div>
-              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
-                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.service|floatformat:1 }}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Service</div>
-              </div>
-              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
-                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.location|floatformat:1 }}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Location</div>
-              </div>
-              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
-                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.amenities|floatformat:1 }}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Amenities</div>
-              </div>
-              <div style="background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center;">
-                <div style="font-size: 22px; font-weight: 700; color: #2563eb;">{{ rating_breakdown.value_for_money|floatformat:1 }}</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Value for Money</div>
-              </div>
-            </div>
-          {% else %}
-            <div class="p-md bg-light rounded-md text-center text-secondary">
-              No guest reviews yet.
-            </div>
-          {% endif %}
-        </div>
-      {% endif %}
     </div>
     
     <!-- RIGHT: Price Card (Sticky) -->

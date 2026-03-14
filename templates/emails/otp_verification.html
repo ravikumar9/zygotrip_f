@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Verification Code — ZygoTrip</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f8; }
+.container { max-width: 600px; margin: 0 auto; background: #fff; }
+.header { background: linear-gradient(135deg, #2563eb, #7c3aed); padding: 32px 24px; text-align: center; }
+.header h1 { color: #fff; font-size: 24px; margin: 0; font-weight: 600; }
+.body { padding: 32px 24px; text-align: center; }
+.otp-box { background: #f0f4ff; border: 2px dashed #2563eb; border-radius: 12px; padding: 24px; margin: 24px 0; }
+.otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #2563eb; font-family: 'Courier New', monospace; }
+.otp-purpose { color: #64748b; font-size: 13px; margin-top: 8px; }
+.warning { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin: 16px 0; color: #92400e; font-size: 13px; text-align: left; }
+.footer { text-align: center; padding: 20px 24px; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🔐 Verification Code</h1>
+  </div>
+  <div class="body">
+    <p style="color:#475569; line-height:1.6;">Use this code to verify your {{ purpose }}:</p>
+
+    <div class="otp-box">
+      <div class="otp-code">{{ otp_code }}</div>
+      <p class="otp-purpose">Expires in 5 minutes</p>
+    </div>
+
+    <div class="warning">
+      ⚠️ Never share this code with anyone. ZygoTrip will never ask for your OTP over phone or email.
+    </div>
+
+    <p style="color:#94a3b8; font-size:12px; margin-top:20px;">
+      If you didn't request this code, you can safely ignore this email.
+    </p>
+  </div>
+
+  <!-- Minimal social footer for OTP email -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc; border-top:1px solid #e2e8f0;">
+    <tr>
+      <td style="padding:16px 24px; text-align:center;">
+        <p style="color:#94a3b8; font-size:11px; margin:0 0 8px;">Follow us</p>
+        <table align="center" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding:0 3px;"><a href="https://www.instagram.com/zygotrip/" target="_blank" style="color:#E1306C; font-size:11px; font-weight:600; text-decoration:none;">Instagram</a></td>
+            <td style="padding:0 3px; color:#e2e8f0;">·</td>
+            <td style="padding:0 3px;"><a href="https://www.facebook.com/profile.php?id=61583679493958" target="_blank" style="color:#1877F2; font-size:11px; font-weight:600; text-decoration:none;">Facebook</a></td>
+            <td style="padding:0 3px; color:#e2e8f0;">·</td>
+            <td style="padding:0 3px;"><a href="https://youtube.com/@zygotrip" target="_blank" style="color:#FF0000; font-size:11px; font-weight:600; text-decoration:none;">YouTube</a></td>
+            <td style="padding:0 3px; color:#e2e8f0;">·</td>
+            <td style="padding:0 3px;"><a href="https://x.com/ZygoTrip" target="_blank" style="color:#000; font-size:11px; font-weight:600; text-decoration:none;">X (Twitter)</a></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <div class="footer">
+    <p>&copy; ZygoTrip — Your journey, our commitment.</p>
+  </div>
+</div>
+</body>
+</html>

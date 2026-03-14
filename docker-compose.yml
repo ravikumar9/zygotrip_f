@@ -73,6 +73,7 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       REDIS_HOST: redis
       USE_REDIS_CACHE: "true"
+      ELASTICSEARCH_HOST: elasticsearch
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
       interval: 30s
@@ -92,11 +93,19 @@ services:
       - zygotrip_network
 
 
-  celery_worker:
+  # ── Critical worker: bookings, payments, inventory ─────────────────
+  # High concurrency — handles time-sensitive transactional tasks.
+  # These queues must NEVER be starved by low-priority notification bursts.
+  celery_worker_critical:
     build: .
-    container_name: zygotrip_celery_worker
+    container_name: zygotrip_celery_critical
     restart: unless-stopped
-    command: celery -A zygotrip_project worker -l info --concurrency=4 -Q default,bookings,payments
+    command: >
+      celery -A zygotrip_project worker
+      -l info
+      --concurrency=8
+      -Q bookings,payments,inventory,events
+      -n critical@%h
     volumes:
       - .:/app
     env_file:
@@ -110,7 +119,52 @@ services:
       REDIS_HOST: redis
       USE_REDIS_CACHE: "true"
     healthcheck:
-      test: ["CMD-SHELL", "celery -A zygotrip_project inspect ping --timeout 5 || exit 1"]
+      test: ["CMD-SHELL", "celery -A zygotrip_project inspect ping -d critical@$(hostname) --timeout 5 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - zygotrip_network
+
+
+  # ── Standard worker: notifications, search, analytics, default ─────
+  # Lower concurrency — handles background/non-urgent tasks.
+  # Isolated so a notification storm cannot delay booking confirmations.
+  celery_worker:
+    build: .
+    container_name: zygotrip_celery_worker
+    restart: unless-stopped
+    command: >
+      celery -A zygotrip_project worker
+      -l info
+      --concurrency=4
+      -Q notifications,search,default
+      -n standard@%h
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: zygotrip_project.settings
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      REDIS_HOST: redis
+      USE_REDIS_CACHE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A zygotrip_project inspect ping -d standard@$(hostname) --timeout 5 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -186,11 +240,84 @@ services:
       - zygotrip_network
 
 
+  # ── ElasticSearch (search engine) ──────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: zygotrip_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - zygotrip_network
+
+
+  # ── Prometheus (metrics collection) ────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: zygotrip_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./deployment/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - zygotrip_network
+
+
+  # ── Grafana (dashboards & alerting) ────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: zygotrip_grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - zygotrip_network
+
+
 volumes:
   postgres_data:
   redis_data:
   static_files:
   media_files:
+  es_data:
+  prometheus_data:
+  grafana_data:
 
 
 networks:
