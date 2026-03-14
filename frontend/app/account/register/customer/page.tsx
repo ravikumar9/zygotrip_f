@@ -13,7 +13,7 @@ const BENEFITS = [
 
 export default function CustomerRegisterPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen page-booking-bg flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-6">
@@ -50,7 +50,7 @@ export default function CustomerRegisterPage() {
 
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-card p-8">
-          <RegisterForm role="customer" roleLabel="Traveller" redirectTo="/" />
+          <RegisterForm role="traveler" roleLabel="Traveller" redirectTo="/" />
         </div>
 
         <Link

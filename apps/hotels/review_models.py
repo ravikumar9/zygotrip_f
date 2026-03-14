@@ -17,6 +17,9 @@ from django.db.models import Avg, Count
 
 from apps.core.models import TimeStampedModel
 
+# Save reference — the Review model has a field named 'property' that shadows the builtin
+_property = property
+
 
 class Review(TimeStampedModel):
     """
@@ -78,6 +81,15 @@ class Review(TimeStampedModel):
     # Text review
     title = models.CharField(max_length=200, blank=True)
     comment = models.TextField(max_length=2000)
+
+    @_property
+    def staff(self):
+        """Alias: 'staff' maps to 'service' rating for API compatibility."""
+        return self.service
+
+    @staff.setter
+    def staff(self, value):
+        self.service = value
 
     # Traveller type
     traveller_type = models.CharField(
@@ -172,3 +184,53 @@ class Review(TimeStampedModel):
         rating_agg.value_for_money = Decimal(str(round(agg['avg_value'] or 0, 1)))
         rating_agg.total_reviews = agg['count'] or 0
         rating_agg.save()
+
+
+class ReviewPhoto(TimeStampedModel):
+    """User-uploaded photo attached to a review (max 5 per review)."""
+    review = models.ForeignKey(
+        Review, on_delete=models.CASCADE,
+        related_name='photos',
+    )
+    image = models.ImageField(upload_to='review_photos/%Y/%m/')
+    caption = models.CharField(max_length=200, blank=True)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        app_label = 'hotels'
+        ordering = ['display_order']
+
+    def __str__(self):
+        return f"Photo for review #{self.review_id}"
+
+    def clean(self):
+        if self.review_id:
+            existing = ReviewPhoto.objects.filter(review=self.review).exclude(pk=self.pk).count()
+            if existing >= 5:
+                from django.core.exceptions import ValidationError
+                raise ValidationError('Maximum 5 photos per review.')
+
+
+class ReviewHelpfulness(TimeStampedModel):
+    """Tracks helpful / not-helpful votes on reviews."""
+    review = models.ForeignKey(
+        Review, on_delete=models.CASCADE,
+        related_name='helpfulness_votes',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+    )
+    is_helpful = models.BooleanField(
+        help_text="True = helpful, False = not helpful",
+    )
+
+    class Meta:
+        app_label = 'hotels'
+        unique_together = ('review', 'user')
+        indexes = [
+            models.Index(fields=['review', 'is_helpful'], name='review_helpful_idx'),
+        ]
+
+    def __str__(self):
+        vote = 'helpful' if self.is_helpful else 'not helpful'
+        return f"User {self.user_id} marked review #{self.review_id} as {vote}"

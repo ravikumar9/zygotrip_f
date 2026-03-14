@@ -398,3 +398,144 @@ class GuestBookingContext(TimeStampedModel):
 from .distributed_locks import BookingRetryQueue
 from .settlement_models import Settlement, SettlementLineItem
 from .cancellation_models import CancellationPolicy, CancellationException
+from .voucher_service import BookingVoucher
+from .supplier_reconciliation import SupplierReconciliation, SupplierReconciliationItem  # noqa: F401
+
+# ============================================================================
+# BOOKING INVOICE — GST-Compliant Invoice System (System 14)
+# ============================================================================
+
+class BookingInvoice(TimeStampedModel):
+    """
+    GST-compliant booking invoice for Indian OTA regulations.
+
+    Invoice number format: ZT-YYYYMMDD-XXXXXX (sequential per day)
+    Separate customer and supplier invoice numbers for B2B support.
+
+    RULES:
+    - Auto-generated on booking confirmation (CONFIRMED status)
+    - commission_amount = hotel_amount * commission_pct / 100
+    - owner_payout_amount = hotel_amount - commission_amount
+    - GST on OTA commission (18% standard B2B rate)
+    - Customer pays: final_customer_price (inclusive of all taxes)
+    - Owner receives: owner_payout_amount
+    """
+    INVOICE_DRAFT = 'draft'
+    INVOICE_ISSUED = 'issued'
+    INVOICE_CANCELLED = 'cancelled'
+    INVOICE_AMENDED = 'amended'
+
+    STATUS_CHOICES = [
+        (INVOICE_DRAFT, 'Draft'),
+        (INVOICE_ISSUED, 'Issued'),
+        (INVOICE_CANCELLED, 'Cancelled'),
+        (INVOICE_AMENDED, 'Amended'),
+    ]
+
+    booking = models.OneToOneField(
+        Booking, on_delete=models.PROTECT, related_name='invoice',
+    )
+
+    # Invoice identifiers
+    invoice_number = models.CharField(
+        max_length=50, unique=True,
+        help_text='e.g. ZT-20260311-000042'
+    )
+    supplier_invoice_number = models.CharField(
+        max_length=50, blank=True,
+        help_text='Supplier/hotel invoice number for B2B settlement'
+    )
+
+    # Customer details for GST
+    customer_name = models.CharField(max_length=200)
+    customer_email = models.EmailField(blank=True)
+    customer_phone = models.CharField(max_length=20, blank=True)
+    customer_gstin = models.CharField(
+        max_length=15, blank=True,
+        help_text='Customer GSTIN for business travel (optional)'
+    )
+    customer_address = models.TextField(blank=True)
+
+    # Property / Supplier details
+    supplier_name = models.CharField(max_length=200, blank=True)
+    supplier_gstin = models.CharField(max_length=15, blank=True)
+    supplier_address = models.TextField(blank=True)
+
+    # Financial breakdown (all amounts in INR)
+    hotel_amount = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        help_text='Base room + meal charge before any discounts'
+    )
+    discount_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text='Total discount (promo + property + platform)'
+    )
+    commission_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        help_text='OTA commission percentage (e.g. 15.00)'
+    )
+    commission_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text='OTA commission = hotel_amount * commission_pct / 100'
+    )
+    commission_gst = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text='18% GST on OTA commission (B2B rate)'
+    )
+    gst_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text='GST on accommodation (5% or 18% per slab)'
+    )
+    gst_rate = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        help_text='GST rate applied (0, 5, or 18)'
+    )
+    service_fee = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text='Platform service fee (5%, capped Rs.500)'
+    )
+    final_customer_price = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        help_text='Total amount charged to customer'
+    )
+    owner_payout_amount = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        help_text='Amount to be paid to property owner after commission'
+    )
+
+    # Invoice metadata
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=INVOICE_DRAFT, db_index=True)
+    issued_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancellation_reason = models.CharField(max_length=200, blank=True)
+
+    # Booking dates snapshot (denormalized for invoice archival)
+    booking_date = models.DateField(null=True, blank=True)
+    check_in_date = models.DateField(null=True, blank=True)
+    check_out_date = models.DateField(null=True, blank=True)
+    nights = models.PositiveIntegerField(default=1)
+    rooms = models.PositiveIntegerField(default=1)
+    property_name = models.CharField(max_length=200, blank=True)
+    room_type_name = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        app_label = 'booking'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at'], name='inv_status_created_idx'),
+            models.Index(fields=['booking'], name='inv_booking_idx'),
+            models.Index(fields=['issued_at'], name='inv_issued_idx'),
+        ]
+        verbose_name = 'Booking Invoice'
+        verbose_name_plural = 'Booking Invoices'
+
+    def __str__(self):
+        return f"Invoice {self.invoice_number} — {self.booking.public_booking_id}"
+
+    def issue(self):
+        """Mark invoice as issued (call after booking confirmed)."""
+        from django.utils import timezone
+        self.status = self.INVOICE_ISSUED
+        self.issued_at = timezone.now()
+        self.save(update_fields=['status', 'issued_at', 'updated_at'])
+        return self

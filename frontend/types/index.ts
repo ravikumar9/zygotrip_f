@@ -65,8 +65,10 @@ export interface PropertyImage {
 }
 
 export interface PropertyAmenity {
+  id?: number;
   name: string;
-  icon: string;
+  icon?: string;
+  category?: string;
 }
 
 export interface RoomAmenity {
@@ -168,6 +170,14 @@ export interface Property {
   pay_at_hotel: boolean;         // Phase 4
   is_trending: boolean;
   bookings_today: number;
+  recent_bookings?: number;      // Search-index social proof from last 24h
+  available_rooms?: number;      // Live inventory count (shown when low)
+  cashback_amount?: number;      // Wallet cashback available on this property
+  has_breakfast?: boolean;       // True if any room type includes breakfast
+  distance_km?: number;          // Distance from search center in km
+  discount_badge?: string | null;
+  landmark_distance?: string | null;
+  trust_badges?: string[];
 }
 
 export interface PropertyPolicy {
@@ -191,6 +201,9 @@ export interface PropertyDetail extends Property {
   images: PropertyImage[];
   amenities: PropertyAmenity[];
   room_types: RoomType[];
+  check_in_time?: string | null;
+  check_out_time?: string | null;
+  house_rules?: string | null;
   policies?: PropertyPolicy[];
   rating_breakdown?: RatingBreakdown;
 }
@@ -239,6 +252,7 @@ export interface BookingContext {
   property_id: number;
   property_name: string;
   property_slug: string;
+  room_type_id?: number;
   room_type_name: string;
   checkin: string;
   checkout: string;

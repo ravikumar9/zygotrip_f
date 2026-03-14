@@ -110,6 +110,9 @@ class WalletTransaction(TimeStampedModel):
     TYPE_LOCK = 'lock'
     TYPE_UNLOCK = 'unlock'
     TYPE_PROMO = 'promo'
+    TYPE_LOYALTY_REDEEM = 'loyalty_redeem'
+    TYPE_REFERRAL_BONUS = 'referral_bonus'
+    TYPE_TRAVEL_CREDIT = 'travel_credit'
 
     TYPE_CHOICES = [
         (TYPE_CREDIT, 'Credit'),
@@ -121,6 +124,9 @@ class WalletTransaction(TimeStampedModel):
         (TYPE_LOCK, 'Lock'),
         (TYPE_UNLOCK, 'Unlock'),
         (TYPE_PROMO, 'Promo Credit'),
+        (TYPE_LOYALTY_REDEEM, 'Loyalty Redemption'),
+        (TYPE_REFERRAL_BONUS, 'Referral Bonus'),
+        (TYPE_TRAVEL_CREDIT, 'Travel Credit'),
     ]
 
     uid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)

@@ -24,6 +24,8 @@ class Payment(TimeStampedModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='payments',
+        null=True, blank=True,
+        help_text='Null for guest bookings',
     )
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     payment_method = models.CharField(max_length=50)
@@ -94,6 +96,8 @@ class PaymentTransaction(TimeStampedModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='payment_transactions',
+        null=True, blank=True,
+        help_text='Null for guest bookings',
     )
     booking = models.ForeignKey(
         'booking.Booking', on_delete=models.PROTECT,

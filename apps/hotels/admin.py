@@ -25,6 +25,7 @@ from .models import (
     # PriceRangeFilter, AmenityFilter, PropertyAmenityFilter,
     # DistanceRangeFilter
 )
+from apps.hotels.wishlist_api import SavedProperty
 
 
 # ============================================================================
@@ -164,7 +165,6 @@ class PropertyAdmin(admin.ModelAdmin):
     )
     list_editable = ('is_active',)
     search_fields = ('name', 'city', 'owner__email', 'owner__full_name')
-    prepopulated_fields = {'slug': ('name',)}
     
     fieldsets = (
         ('Basic Info', {
@@ -174,7 +174,7 @@ class PropertyAdmin(admin.ModelAdmin):
             'fields': ('city', 'locality', 'area', 'landmark', 'country', 'address', 'latitude', 'longitude')
         }),
         ('Classification', {
-            'fields': ('star_rating',),
+            'fields': ('star_category',),
             'description': 'Star rating category for filter grouping'
         }),
         ('Guest Intelligence', {
@@ -443,3 +443,17 @@ class CategoryAdmin(admin.ModelAdmin):
 #             return f"₹{obj.discount_amount}"
 #         return "-"
 #     discount_display.short_description = 'Discount'
+
+# ============================================================================
+# WISHLIST ADMIN
+# ============================================================================
+
+@admin.register(SavedProperty)
+class SavedPropertyAdmin(admin.ModelAdmin):
+    """Admin for user-wishlisted properties."""
+    list_display = ('user', 'property', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__email', 'property__name')
+    raw_id_fields = ('user', 'property')
+    readonly_fields = ('created_at',)
+    ordering = ('-created_at',)

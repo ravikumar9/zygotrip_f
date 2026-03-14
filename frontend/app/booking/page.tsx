@@ -1,13 +1,9 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { Suspense } from 'react';
-import BookingFlow from './BookingFlow';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
-
+/**
+ * Legacy /booking route — redirects to hotels page.
+ * The active booking flow uses /booking/[context_uuid] instead.
+ */
 export default function BookingPage() {
-  return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <BookingFlow />
-    </Suspense>
-  );
+  redirect('/hotels');
 }

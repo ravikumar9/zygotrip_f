@@ -1,0 +1,227 @@
+# ============================================================
+# ZygoTrip — NGINX Ingress
+# ============================================================
+# Prerequisites:
+#   1. NGINX Ingress Controller installed:
+#      helm upgrade --install ingress-nginx ingress-nginx \
+#        --repo https://kubernetes.github.io/ingress-nginx \
+#        --namespace ingress-nginx --create-namespace
+#
+#   2. cert-manager installed for automatic TLS:
+#      helm upgrade --install cert-manager cert-manager \
+#        --repo https://charts.jetstack.io \
+#        --namespace cert-manager --create-namespace \
+#        --set installCRDs=true
+#
+#   3. ClusterIssuer "letsencrypt-prod" created (see comment below)
+#
+# Routing rules:
+#   api.zygotrip.com  → web-service:80  (Django DRF API)
+#   zygotrip.com      → frontend-service:80  (Next.js)
+#   www.zygotrip.com  → redirect to zygotrip.com
+#
+# TLS:
+#   cert-manager provisions Let's Encrypt certificates automatically.
+#   Certificates are stored in Secrets:
+#     zygotrip-api-tls  (for api.zygotrip.com)
+#     zygotrip-tls      (for zygotrip.com)
+#
+# Rate limiting:
+#   Applied at the API subdomain level to prevent abuse.
+#   Limits are conservative — adjust for expected peak traffic.
+#   Frontend (zygotrip.com) relies on CDN rate limiting (Cloudflare).
+# ============================================================
+
+# ============================================================
+# ClusterIssuer for Let's Encrypt (apply separately or include here)
+# ============================================================
+# apiVersion: cert-manager.io/v1
+# kind: ClusterIssuer
+# metadata:
+#   name: letsencrypt-prod
+# spec:
+#   acme:
+#     server: https://acme-v02.api.letsencrypt.org/directory
+#     email: platform-team@zygotrip.com
+#     privateKeySecretRef:
+#       name: letsencrypt-prod-key
+#     solvers:
+#       - http01:
+#           ingress:
+#             class: nginx
+
+---
+# ============================================================
+# Ingress — API (api.zygotrip.com → Django)
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zygotrip-api-ingress
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: zygotrip-api-ingress
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    # ── Ingress class ─────────────────────────────────────────
+    kubernetes.io/ingress.class: "nginx"
+
+    # ── TLS: cert-manager provisions the certificate ──────────
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Force HTTPS — redirect any HTTP request to HTTPS
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # ── Rate limiting ─────────────────────────────────────────
+    # Limit connections per source IP to prevent abuse / DDoS.
+    # 100 requests/second per IP with a burst allowance of 200.
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+    # Limit simultaneous connections per IP
+    nginx.ingress.kubernetes.io/limit-connections: "50"
+    # Shared memory zone for rate limit state (10MB ≈ 160k IPs)
+    nginx.ingress.kubernetes.io/limit-req-zone-variable: "$binary_remote_addr"
+
+    # ── Body size ─────────────────────────────────────────────
+    # 10MB max for property photo uploads via API
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # ── Timeouts ──────────────────────────────────────────────
+    # Connection timeout to backend
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    # Time to wait for backend response (Django view max execution)
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+
+    # ── Security headers ──────────────────────────────────────
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Permissions-Policy: geolocation=(), microphone=(), camera=()";
+      more_set_headers "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload";
+
+    # ── CORS ─────────────────────────────────────────────────
+    # Allow frontend and mobile apps to call the API
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://zygotrip.com,https://www.zygotrip.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, X-Requested-With, Accept, Origin"
+    nginx.ingress.kubernetes.io/cors-expose-headers: "X-RateLimit-Limit, X-RateLimit-Remaining"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-max-age: "3600"
+
+    # ── Upstream keepalive ────────────────────────────────────
+    nginx.ingress.kubernetes.io/upstream-keepalive-connections: "32"
+
+    # ── Real IP forwarding ────────────────────────────────────
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+    nginx.ingress.kubernetes.io/compute-full-forwarded-for: "true"
+
+spec:
+  ingressClassName: nginx
+
+  tls:
+    - hosts:
+        - api.zygotrip.com
+      # cert-manager creates this Secret automatically
+      secretName: zygotrip-api-tls
+
+  rules:
+    - host: api.zygotrip.com
+      http:
+        paths:
+          # Route ALL paths on api.zygotrip.com to Django
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-service
+                port:
+                  name: http
+
+---
+# ============================================================
+# Ingress — Frontend (zygotrip.com → Next.js)
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zygotrip-frontend-ingress
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: zygotrip-frontend-ingress
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # ── Caching for Next.js static assets ────────────────────
+    # Instruct NGINX to cache /_next/static/ for 1 year
+    # (Next.js uses content-hashed filenames, so cache busting is safe)
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      location ~* ^/_next/static/ {
+        expires 365d;
+        add_header Cache-Control "public, immutable";
+      }
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload";
+
+    # ── Body size ─────────────────────────────────────────────
+    nginx.ingress.kubernetes.io/proxy-body-size: "5m"
+
+    # ── Timeouts ─────────────────────────────────────────────
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+
+    # ── Rate limiting for frontend (relaxed — CDN usually absorbs) ──
+    nginx.ingress.kubernetes.io/limit-rps: "500"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+
+    # ── Compression ──────────────────────────────────────────
+    nginx.ingress.kubernetes.io/enable-brotli: "true"
+
+spec:
+  ingressClassName: nginx
+
+  tls:
+    - hosts:
+        - zygotrip.com
+        - www.zygotrip.com
+      secretName: zygotrip-tls
+
+  rules:
+    - host: zygotrip.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  name: http
+
+    # www.zygotrip.com — redirect to apex domain
+    # Note: For a clean 301 redirect, consider using an nginx
+    # server-snippet annotation or a dedicated redirect Ingress.
+    - host: www.zygotrip.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  name: http

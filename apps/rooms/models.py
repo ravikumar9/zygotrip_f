@@ -35,6 +35,14 @@ class RoomType(models.Model):
 
     class Meta:
         app_label = 'rooms'
+        indexes = [
+            # Property FK join — critical for search "rooms for property X"
+            dj_models.Index(fields=['property'], name='roomtype_property_idx'),
+            # Price-based sort/filter
+            dj_models.Index(fields=['base_price'], name='roomtype_baseprice_idx'),
+            # Composite: cheapest room per property (search ranking)
+            dj_models.Index(fields=['property', 'base_price'], name='roomtype_prop_price_idx'),
+        ]
 
     def __str__(self):
         return self.name

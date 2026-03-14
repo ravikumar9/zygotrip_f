@@ -1,4 +1,5 @@
 import logging
+from django.conf import settings
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils.text import slugify
@@ -62,6 +63,32 @@ def index_property(sender, instance, **kwargs):
     )
 
 
+@receiver(post_save, sender=Property)
+def invalidate_cache_on_property_status_change(sender, instance, update_fields=None, **kwargs):
+    """
+    Invalidate search/cache when a property's status or is_active changes.
+    Covers: approved→suspended, active→inactive, and any status field toggle.
+    """
+    # Only act if status-related fields were updated (or if we can't tell which fields changed)
+    status_fields = {'status', 'is_active', 'is_verified'}
+    if update_fields and not status_fields.intersection(set(update_fields)):
+        return
+    try:
+        _schedule_property_index_rebuild(instance)
+    except Exception:
+        logger.debug("Could not schedule index rebuild on property status change")
+    # Invalidate city-level search cache
+    try:
+        city_name = getattr(instance, 'city_name', '') or ''
+        if not city_name and hasattr(instance, 'city') and instance.city:
+            city_name = getattr(instance.city, 'name', '')
+        if city_name:
+            from apps.search.engine.cache_manager import price_cache
+            price_cache.invalidate_city_cache(city_name)
+    except Exception:
+        pass
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # SEARCH INDEX REFRESH SIGNALS (Step 6 — inventory, price, review changes)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -69,9 +96,15 @@ def index_property(sender, instance, **kwargs):
 def _schedule_property_index_rebuild(property_obj):
     """Enqueue a targeted PropertySearchIndex rebuild for one property."""
     try:
-        from apps.core.tasks import rebuild_property_search_index
-        rebuild_property_search_index.delay(property_id=property_obj.id)
+        from apps.core.tasks import _run_property_search_index_rebuild, rebuild_property_search_index
+        if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+            _run_property_search_index_rebuild(property_id=property_obj.id)
+        else:
+            rebuild_property_search_index.delay(property_id=property_obj.id)
     except Exception:
+        if getattr(settings, 'DEBUG', False):
+            logger.debug("Failed to rebuild search index for property %s in local mode", property_obj.id, exc_info=True)
+            return
         logger.warning("Failed to enqueue search index rebuild for property %s", property_obj.id)
 
 

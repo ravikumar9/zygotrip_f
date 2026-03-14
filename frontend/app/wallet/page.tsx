@@ -7,10 +7,12 @@ import { useWalletBalance, useWalletTransactions, useTopUp } from '@/hooks/useWa
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFormatPrice } from '@/hooks/useFormatPrice';
 
 const TOP_UP_PRESETS = [500, 1000, 2000, 5000];
 
 export default function WalletPage() {
+  const { formatPrice } = useFormatPrice();
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
@@ -34,6 +36,7 @@ export default function WalletPage() {
 
   const [amount, setAmount] = useState('');
   const [showTopUp, setShowTopUp] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card'>('upi');
 
   const transactions = txData?.pages.flatMap(p => p.results) ?? [];
 
@@ -41,12 +44,12 @@ export default function WalletPage() {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (!amt || amt < 100) {
-      toast.error('Minimum top-up amount is ₹100');
+      toast.error(`Minimum top-up amount is ${formatPrice(100)}`);
       return;
     }
     try {
       await topUp.mutateAsync({ amount: amt });
-      toast.success(`₹${amt.toLocaleString('en-IN')} added to your wallet!`);
+      toast.success(`${formatPrice(amt)} added to your wallet!`);
       setAmount('');
       setShowTopUp(false);
     } catch {
@@ -72,7 +75,7 @@ export default function WalletPage() {
               <div>
                 <p className="text-primary-200 text-sm mb-1">Available Balance</p>
                 <p className="text-4xl font-bold">
-                  ₹{parseFloat(wallet?.balance || '0').toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  {formatPrice(parseFloat(wallet?.balance || '0'))}
                 </p>
               </div>
               <div className="bg-white/20 p-3 rounded-xl">
@@ -82,7 +85,7 @@ export default function WalletPage() {
             {wallet?.locked_balance && parseFloat(wallet.locked_balance) > 0 && (
               <div className="bg-white/10 rounded-xl px-3 py-2 text-sm">
                 <span className="text-primary-200">Locked for booking: </span>
-                <span className="font-semibold">₹{parseFloat(wallet.locked_balance).toLocaleString('en-IN')}</span>
+                <span className="font-semibold">{formatPrice(parseFloat(wallet.locked_balance))}</span>
               </div>
             )}
             <button
@@ -102,7 +105,7 @@ export default function WalletPage() {
                 <span className="text-xs font-medium uppercase tracking-wide">Total Added</span>
               </div>
               <p className="text-xl font-bold text-neutral-800">
-                ₹{parseFloat(wallet?.total_balance || '0').toLocaleString('en-IN')}
+                {formatPrice(parseFloat(wallet?.total_balance || '0'))}
               </p>
             </div>
             <div className="bg-white rounded-xl p-4 shadow-card">
@@ -146,10 +149,48 @@ export default function WalletPage() {
                           : 'border-neutral-200 text-neutral-700 hover:border-primary-400'
                       }`}
                     >
-                      +₹{preset.toLocaleString('en-IN')}
+                      +{formatPrice(preset)}
                     </button>
                   ))}
                 </div>
+
+                {/* Payment Method */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Payment Method</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('upi')}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                        paymentMethod === 'upi'
+                          ? 'border-primary-500 bg-primary-50 text-primary-700'
+                          : 'border-neutral-200 text-neutral-600 hover:border-primary-300'
+                      }`}
+                    >
+                      <span className="text-lg">📱</span>
+                      <div className="text-left">
+                        <span className="block font-semibold">UPI</span>
+                        <span className="text-2xs text-neutral-400">Paytm, GPay, PhonePe</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('card')}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                        paymentMethod === 'card'
+                          ? 'border-primary-500 bg-primary-50 text-primary-700'
+                          : 'border-neutral-200 text-neutral-600 hover:border-primary-300'
+                      }`}
+                    >
+                      <span className="text-lg">💳</span>
+                      <div className="text-left">
+                        <span className="block font-semibold">Card</span>
+                        <span className="text-2xs text-neutral-400">Debit / Credit</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"

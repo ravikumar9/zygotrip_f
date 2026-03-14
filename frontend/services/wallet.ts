@@ -23,7 +23,12 @@ export async function topUpWallet(amount: number, note?: string): Promise<{
   currency: string;
 }> {
   const { data } = await api.post('/wallet/topup/', { amount, note });
-  if (!data.success) throw new Error('Top-up failed');
+  // Handle both direct credit (201) and pending_payment (202) responses
+  if (!data.success) throw new Error(data?.error?.message || 'Top-up failed');
+  // If status is pending_payment (production gateway flow), treat as error for now
+  if (data.data?.status === 'pending_payment') {
+    throw new Error('Payment gateway integration pending. Please try again later.');
+  }
   return data.data;
 }
 

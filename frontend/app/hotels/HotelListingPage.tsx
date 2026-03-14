@@ -2,15 +2,20 @@
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import GlobalSearchBar from '@/components/search/GlobalSearchBar';
 import HotelCard from '@/components/hotels/HotelCard';
-import { SlidersHorizontal, X, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
-import { useHotels } from '@/hooks/useHotels';
-import { useState } from 'react';
+import { SlidersHorizontal, X, ChevronLeft, ChevronRight, MapPin, Loader2 } from 'lucide-react';
+import { useHotels, useInfiniteHotels } from '@/hooks/useHotels';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { listHotels } from '@/services/hotels';
 import { clsx } from 'clsx';
 import type { HotelSearchParams } from '@/types';
 import type { FilterCounts, PopularArea } from '@/services/hotels';
+import { analytics } from '@/lib/analytics';
+import ApiErrorState from '@/components/ui/ApiErrorState';
 
 const SORT_OPTIONS = [
-  { value: 'popular',       label: 'Most Popular' },
+  { value: 'popular',       label: 'Recommended' },
   { value: 'price_asc',     label: 'Price: Low → High' },
   { value: 'price_desc',    label: 'Price: High → Low' },
   { value: 'rating',        label: 'Highest Rated' },
@@ -35,16 +40,22 @@ const PRICE_BUCKETS = [
 // ── Skeleton for loading state ──────────────────────────────────────
 function HotelCardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-card border border-neutral-100">
-      <div className="skeleton h-52 w-full" />
-      <div className="p-4 space-y-3">
-        <div className="skeleton h-4 w-2/3 rounded" />
+    <div className="bg-white rounded-2xl overflow-hidden shadow-card border border-neutral-100 flex flex-col sm:flex-row">
+      <div className="skeleton sm:w-[240px] h-52 sm:h-auto sm:min-h-[210px] shrink-0" />
+      <div className="flex-1 p-4 space-y-3">
+        <div className="skeleton h-3 w-20 rounded" />
+        <div className="skeleton h-5 w-3/4 rounded" />
         <div className="skeleton h-3 w-1/2 rounded" />
         <div className="flex gap-1">
           <div className="skeleton h-5 w-12 rounded-full" />
           <div className="skeleton h-5 w-12 rounded-full" />
+          <div className="skeleton h-5 w-16 rounded-full" />
         </div>
-        <div className="skeleton h-6 w-1/3 rounded" />
+      </div>
+      <div className="sm:w-[180px] shrink-0 p-4 space-y-2 flex flex-col items-end justify-center">
+        <div className="skeleton h-4 w-16 rounded" />
+        <div className="skeleton h-6 w-20 rounded" />
+        <div className="skeleton h-9 w-28 rounded-xl" />
       </div>
     </div>
   );
@@ -63,17 +74,19 @@ export default function HotelListingPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
-  const location  = searchParams.get('location') || '';
+  // Support both ?location= and ?city= query params (city used in footer/API, location in search bar)
+  const location  = searchParams.get('location') || searchParams.get('city') || '';
   const checkin   = searchParams.get('checkin') || undefined;
   const checkout  = searchParams.get('checkout') || undefined;
   const adults    = searchParams.get('adults') || undefined;
   const children  = searchParams.get('children') || undefined;
   const rooms     = searchParams.get('rooms') || undefined;
   const currentSort = searchParams.get('sort') || 'popular';
-  const currentPage = searchParams.get('page') ? Number(searchParams.get('page')) : 1;
 
-  const params: HotelSearchParams = {
+  // Params WITHOUT page — infinite scroll handles pagination
+  const params: Omit<HotelSearchParams, 'page'> = {
     location:            location || undefined,
     checkin,
     checkout,
@@ -88,11 +101,47 @@ export default function HotelListingPage() {
     user_rating:         searchParams.get('user_rating') ? Number(searchParams.get('user_rating')) : undefined,
     property_type:       searchParams.get('property_type') || undefined,
     amenity:             searchParams.getAll('amenity').length ? searchParams.getAll('amenity') : undefined,
-    page:                currentPage,
     page_size:           20,
   };
 
-  const { data, isLoading, isError, isFetching } = useHotels(params);
+  const {
+    data,
+    error,
+    isLoading,
+    isError,
+    isFetching,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteHotels(params);
+
+  // Flatten all pages into a single array of hotels
+  const allHotels = useMemo(
+    () => data?.pages.flatMap((page) => page.results) ?? [],
+    [data]
+  );
+
+  // First page metadata for filter counts, popular areas, total count
+  const firstPage = data?.pages[0];
+  const fc = firstPage?.filter_counts as FilterCounts | undefined;
+  const popularAreas = firstPage?.popular_areas as PopularArea[] | undefined;
+  const totalCount = firstPage?.pagination?.count;
+
+  // Infinite scroll sentinel
+  const sentinelRef = useInfiniteScroll({
+    onIntersect: () => fetchNextPage(),
+    enabled: !!hasNextPage && !isFetchingNextPage,
+  });
+
+  // Track filter/sort changes
+  useEffect(() => {
+    if (currentSort !== 'popular') {
+      analytics.track('sort_changed', { sort: currentSort, location });
+    }
+  }, [currentSort, location]);
+
+  const queryClient = useQueryClient();
 
   const updateParam = (key: string, value: string | boolean | null) => {
     const p = new URLSearchParams(searchParams.toString());
@@ -100,14 +149,18 @@ export default function HotelListingPage() {
     else p.set(key, String(value));
     p.delete('page');
     router.push(`${pathname}?${p.toString()}`);
+    analytics.track('filter_applied', { filter: key, value: String(value ?? ''), location });
   };
 
   const toggleAmenity = (amenity: string) => {
     const p = new URLSearchParams(searchParams.toString());
-    const existing = p.getAll('amenity').filter((a) => a !== amenity);
+    const all = p.getAll('amenity');
     p.delete('amenity');
-    if (!existing.includes(amenity)) existing.push(amenity);
-    existing.forEach((a) => p.append('amenity', a));
+    if (all.includes(amenity)) {
+      all.filter((a) => a !== amenity).forEach((a) => p.append('amenity', a));
+    } else {
+      [...all, amenity].forEach((a) => p.append('amenity', a));
+    }
     p.delete('page');
     router.push(`${pathname}?${p.toString()}`);
   };
@@ -148,12 +201,6 @@ export default function HotelListingPage() {
     searchParams.get('stars') ||
     searchParams.get('amenity') ||
     searchParams.get('property_type');
-
-  const totalCount = data?.pagination?.count;
-  const totalPages = data?.pagination?.total_pages ?? 1;
-  // Backend-computed filter counts — never computed in frontend
-  const fc = data?.filter_counts as FilterCounts | undefined;
-  const popularAreas = data?.popular_areas as PopularArea[] | undefined;
 
   return (
     <div className="page-listing-bg">
@@ -443,10 +490,22 @@ export default function HotelListingPage() {
                   </button>
                 ))}
                 {totalCount !== undefined && (
-                  <span className="ml-auto text-sm text-neutral-400 font-medium shrink-0">
+                  <span className="ml-auto text-sm text-neutral-400 font-medium shrink-0 mr-2">
                     {totalCount.toLocaleString()} results
                   </span>
                 )}
+                <button
+                  onClick={() => setShowMap(!showMap)}
+                  className={clsx(
+                    'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap',
+                    showMap
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400 hover:text-primary-600'
+                  )}
+                >
+                  <MapPin size={12} />
+                  {showMap ? 'Hide Map' : 'Map'}
+                </button>
               </div>
 
               {/* Mobile: filter toggle + select dropdown */}
@@ -490,9 +549,35 @@ export default function HotelListingPage() {
               </div>
             </div>
 
-            {/* Mobile filter panel */}
+            {/* Mobile filter bottom sheet */}
             {filtersOpen && (
-              <div className="lg:hidden bg-white rounded-2xl border border-neutral-200 p-4 mb-4 shadow-sm grid sm:grid-cols-2 gap-4">
+              <>
+                {/* Backdrop */}
+                <div
+                  className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
+                  onClick={() => setFiltersOpen(false)}
+                />
+                {/* Bottom sheet panel */}
+                <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
+                  <div className="sticky top-0 bg-white z-10 px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between">
+                    <h3 className="font-bold text-neutral-900 text-base font-heading flex items-center gap-2">
+                      <SlidersHorizontal size={16} /> Filters
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      {hasActiveFilters && (
+                        <button onClick={clearFilters} className="text-xs text-red-500 font-semibold">
+                          Clear All
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setFiltersOpen(false)}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-neutral-200 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-5 space-y-5">
                 <div>
                   <p className="text-xs font-bold text-neutral-500 uppercase mb-2">Price</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -504,7 +589,7 @@ export default function HotelListingPage() {
                             ? (() => { updateParam('min_price', null); updateParam('max_price', null); })()
                             : applyPriceBucket(bucket.min, bucket.max)
                           }
-                          className={clsx('text-xs px-2 py-1 rounded-full border transition-colors',
+                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]',
                             active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
                           {bucket.label}
                         </button>
@@ -519,7 +604,7 @@ export default function HotelListingPage() {
                       const active = searchParams.get('property_type') === type;
                       return (
                         <button key={type} onClick={() => updateParam('property_type', active ? null : type)}
-                          className={clsx('text-xs px-2.5 py-1 rounded-full border transition-colors', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
+                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
                           {type}
                         </button>
                       );
@@ -533,33 +618,33 @@ export default function HotelListingPage() {
                       const active = searchParams.getAll('amenity').includes(amenity);
                       return (
                         <button key={amenity} onClick={() => toggleAmenity(amenity)}
-                          className={clsx('text-xs px-2.5 py-1 rounded-full border transition-colors', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
+                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
                           {amenity}
                         </button>
                       );
                     })}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer min-h-[44px]">
                     <input type="checkbox" checked={searchParams.get('free_cancellation') === 'true'}
                       onChange={(e) => updateParam('free_cancellation', e.target.checked ? 'true' : null)}
-                      className="rounded border-neutral-300 accent-primary-600" />
-                    <span className="text-sm text-neutral-700">Free Cancellation</span>
+                      className="rounded border-neutral-300 accent-primary-600 w-5 h-5" />
+                    <span className="text-sm text-neutral-700 font-medium">Free Cancellation</span>
                     {fc?.free_cancellation != null && <span className="text-xs text-neutral-400 ml-auto">{fc.free_cancellation}</span>}
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-3 cursor-pointer min-h-[44px]">
                     <input type="checkbox" checked={searchParams.get('breakfast_included') === 'true'}
                       onChange={(e) => updateParam('breakfast_included', e.target.checked ? 'true' : null)}
-                      className="rounded border-neutral-300 accent-primary-600" />
-                    <span className="text-sm text-neutral-700">Breakfast Included</span>
+                      className="rounded border-neutral-300 accent-primary-600 w-5 h-5" />
+                    <span className="text-sm text-neutral-700 font-medium">Breakfast Included</span>
                     {fc?.breakfast != null && <span className="text-xs text-neutral-400 ml-auto">{fc.breakfast}</span>}
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-3 cursor-pointer min-h-[44px]">
                     <input type="checkbox" checked={searchParams.get('pay_at_hotel') === 'true'}
                       onChange={(e) => updateParam('pay_at_hotel', e.target.checked ? 'true' : null)}
-                      className="rounded border-neutral-300 accent-primary-600" />
-                    <span className="text-sm text-neutral-700">Pay at Hotel</span>
+                      className="rounded border-neutral-300 accent-primary-600 w-5 h-5" />
+                    <span className="text-sm text-neutral-700 font-medium">Pay at Hotel</span>
                   </label>
                 </div>
                 <div>
@@ -569,41 +654,49 @@ export default function HotelListingPage() {
                       const active = searchParams.get('user_rating') === v;
                       return (
                         <button key={v} onClick={() => updateParam('user_rating', active ? null : v)}
-                          className={clsx('text-xs px-2.5 py-1 rounded-full border transition-colors', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
+                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
                           {l}
                         </button>
                       );
                     })}
                   </div>
                 </div>
-              </div>
+                  </div>
+                  {/* Sticky apply button */}
+                  <div className="sticky bottom-0 bg-white border-t border-neutral-100 px-5 py-3">
+                    <button
+                      onClick={() => setFiltersOpen(false)}
+                      className="btn-primary w-full py-3 text-sm"
+                    >
+                      Show {totalCount?.toLocaleString() ?? ''} Results
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* ── Loading state ──────────────────────────────────── */}
             {isLoading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 gap-4">
                 {Array.from({ length: 6 }).map((_, i) => <HotelCardSkeleton key={i} />)}
               </div>
             )}
 
-            {/* ── Error state ──────────────────────────────────────── */}
+            {/* ── Error state with auto-retry ───────────────────── */}
             {isError && (
-              <div className="text-center py-16 bg-white rounded-2xl shadow-card">
-                <p className="text-4xl mb-4">⚠️</p>
-                <h2 className="text-lg font-semibold text-neutral-900 mb-2">Failed to load hotels</h2>
-                <p className="text-sm text-neutral-400 mb-4">
-                  Something went wrong. Please check your connection and try again.
-                </p>
-                <button onClick={() => window.location.reload()} className="btn-primary">
-                  Try Again
-                </button>
+              <div className="bg-white rounded-2xl shadow-card p-6">
+                <ApiErrorState
+                  error={error instanceof Error ? error : null}
+                  onRetry={() => refetch()}
+                  autoRetrySeconds={15}
+                />
               </div>
             )}
 
-            {/* ── Results grid ─────────────────────────────────────── */}
+            {/* ── Results grid — infinite scroll ───────────────────── */}
             {!isLoading && !isError && data && (
               <>
-                {data.results.length === 0 ? (
+                {allHotels.length === 0 ? (
                   <div className="text-center py-16 bg-white rounded-2xl shadow-card">
                     <p className="text-5xl mb-4">🔍</p>
                     <h2 className="text-xl font-semibold text-neutral-900 mb-2">No hotels found</h2>
@@ -616,69 +709,86 @@ export default function HotelListingPage() {
                   </div>
                 ) : (
                   <>
-                    {isFetching && (
+                    {isFetching && !isFetchingNextPage && (
                       <div className="text-center py-2 text-xs text-neutral-400 mb-2">
                         Updating results...
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                      {data.results.map((hotel) => (
-                        <HotelCard
-                          key={hotel.id}
-                          hotel={hotel}
-                          checkin={checkin}
-                          checkout={checkout}
-                          adults={adults}
-                          rooms={rooms}
-                          location={location}
-                        />
+                    <div className="grid grid-cols-1 gap-4">
+                      {allHotels.map((hotel, index) => (
+                        <div key={hotel.id} style={{ contentVisibility: 'auto', containIntrinsicSize: '0 220px' }}>
+                          <HotelCard
+                            hotel={hotel}
+                            position={index + 1}
+                            checkin={checkin}
+                            checkout={checkout}
+                            adults={adults}
+                            rooms={rooms}
+                            location={location}
+                          />
+                        </div>
                       ))}
                     </div>
 
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                      <div className="mt-8 flex items-center justify-center gap-2">
-                        <button
-                          disabled={currentPage <= 1}
-                          onClick={() => updateParam('page', String(currentPage - 1))}
-                          className="flex items-center gap-1.5 px-4 py-2 text-sm border border-neutral-200 rounded-xl hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <ChevronLeft size={14} /> Previous
-                        </button>
-
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const page = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i));
-                          return (
-                            <button
-                              key={page}
-                              onClick={() => updateParam('page', String(page))}
-                              className={clsx(
-                                'w-9 h-9 text-sm rounded-xl transition-colors',
-                                page === currentPage
-                                  ? 'bg-primary-600 text-white font-bold'
-                                  : 'border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
-                              )}
-                            >
-                              {page}
-                            </button>
-                          );
-                        })}
-
-                        <button
-                          disabled={currentPage >= totalPages}
-                          onClick={() => updateParam('page', String(currentPage + 1))}
-                          className="flex items-center gap-1.5 px-4 py-2 text-sm border border-neutral-200 rounded-xl hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          Next <ChevronRight size={14} />
-                        </button>
+                    {/* Infinite scroll sentinel + loading indicator */}
+                    <div ref={sentinelRef} className="h-4" />
+                    {isFetchingNextPage && (
+                      <div className="flex items-center justify-center gap-2 py-6">
+                        <Loader2 size={18} className="animate-spin text-primary-500" />
+                        <span className="text-sm text-neutral-500">Loading more hotels…</span>
                       </div>
+                    )}
+                    {!hasNextPage && allHotels.length > 0 && (
+                      <p className="text-center text-xs text-neutral-400 py-6">
+                        You&apos;ve seen all {totalCount?.toLocaleString()} hotels
+                      </p>
                     )}
                   </>
                 )}
               </>
             )}
           </div>
+
+          {/* ── Right panel: Map (toggleable 3rd zone) ─────────── */}
+          {showMap && (
+            <aside className="w-80 shrink-0 hidden xl:block">
+              <div className="bg-white rounded-2xl shadow-card sticky top-24 overflow-hidden" style={{ height: 'calc(100vh - 120px)' }}>
+                <div className="p-4 border-b border-neutral-100">
+                  <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                    <MapPin size={14} className="text-primary-500" />
+                    Hotels on Map
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">{allHotels.length} properties</p>
+                </div>
+                <div className="h-full bg-neutral-50 flex flex-col items-center justify-center p-6 text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center mb-3">
+                    <MapPin size={24} className="text-primary-500" />
+                  </div>
+                  <p className="text-sm font-semibold text-neutral-700 mb-1">Map View</p>
+                  <p className="text-xs text-neutral-400 leading-relaxed">
+                    Interactive map with hotel pins coming soon.
+                    {location && <> Currently showing hotels in <strong>{location}</strong>.</>}
+                  </p>
+                  {allHotels.length > 0 && (
+                    <div className="mt-4 w-full space-y-2 max-h-[50vh] overflow-y-auto">
+                      {allHotels.slice(0, 10).map((h) => (
+                        <div key={h.id} className="flex items-center gap-2 text-left bg-white rounded-lg p-2 border border-neutral-100">
+                          <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-bold text-primary-600">📍</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-neutral-800 truncate">{h.name}</p>
+                            <p className="text-[10px] text-neutral-400">{h.area || h.city_name}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </aside>
+          )}
         </div>
       </div>
     </div>

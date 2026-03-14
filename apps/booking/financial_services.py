@@ -62,7 +62,7 @@ def calculate_booking_financials(booking, gross_amount, tariff_per_night=None):
 
 
 @transaction.atomic
-def set_booking_financials(booking, gross_amount, tariff_per_night=None):
+def set_booking_financials(booking, gross_amount, tariff_per_night=None, locked_total=None):
     """
     Atomically update booking financial fields.
     
@@ -70,6 +70,8 @@ def set_booking_financials(booking, gross_amount, tariff_per_night=None):
         booking: Booking instance
         gross_amount: Gross booking amount
         tariff_per_night: Per-night single-room tariff for GST slab
+        locked_total: If set, preserves this as total_amount instead of recalculating.
+                      Used when a BookingContext locked_price (incl. promo) should prevail.
     
     Returns:
         Updated Booking instance
@@ -86,7 +88,11 @@ def set_booking_financials(booking, gross_amount, tariff_per_night=None):
     booking.gst_amount = financials['gst_amount']
     booking.gateway_fee = financials['gateway_fee']
     booking.net_payable_to_hotel = financials['net_payable_to_hotel']
-    booking.total_amount = booking.gross_amount + booking.gst_amount
+    # Preserve locked total from BookingContext when promo discount was applied
+    if locked_total is not None:
+        booking.total_amount = Decimal(str(locked_total))
+    else:
+        booking.total_amount = booking.gross_amount + booking.gst_amount
     
     booking.save(update_fields=[
         'gross_amount',

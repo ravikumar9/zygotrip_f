@@ -1,0 +1,82 @@
+# ============================================================
+# ZygoTrip — HPA for Next.js Frontend Deployment
+# ============================================================
+# Scales the frontend Deployment between 2 and 15 replicas.
+#
+# Frontend pods serve SSR (server-side rendered) pages and static
+# assets. Static assets (/_next/static/) are ideally served by a
+# CDN (Cloudflare, CloudFront) — those requests never reach the pod.
+#
+# Scaling triggers:
+#   CPU    ≥ 70%: SSR is rendering many pages (high traffic)
+#   Memory ≥ 80%: React module cache is large (many unique routes)
+#
+# Tuning notes:
+#   - Next.js SSR is mostly synchronous per-request — CPU is a
+#     good proxy for request load on server components.
+#   - 15 replicas × 1 vCPU = 15 vCPU ceiling — more than enough
+#     for peak OTA traffic if CDN handles static files.
+#   - Scale-down is fast (120s stabilisation) because frontend pods
+#     are completely stateless and cost-effective to cycle.
+# ============================================================
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: frontend-hpa
+    app.kubernetes.io/component: autoscaling
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "HPA for Next.js frontend — CPU 70% / memory 80%, 2–15 replicas"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+
+  minReplicas: 2
+  maxReplicas: 15
+
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+  behavior:
+    scaleUp:
+      # 60s stabilisation: scale up within 1 minute of traffic spike
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 3
+          periodSeconds: 60
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+      selectPolicy: Max
+
+    scaleDown:
+      # 2 minute stabilisation for scale-down (frontend is stateless)
+      stabilizationWindowSeconds: 120
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+      selectPolicy: Min

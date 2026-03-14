@@ -1,0 +1,104 @@
+# ============================================================
+# ZygoTrip — HPA for Django Web Deployment
+# ============================================================
+# Automatically scales the web Deployment between 3 and 20
+# replicas based on CPU and memory utilisation.
+#
+# Scaling triggers:
+#   CPU    ≥ 70% of requests → scale up
+#   Memory ≥ 80% of requests → scale up
+#
+# Behaviour tuning:
+#   scaleUp:
+#     - Can add up to 4 pods per 60s window (fast ramp during
+#       flash-sale bursts, e.g., Diwali flight/hotel demand)
+#     - Stabilisation window: 30s (scale up quickly)
+#   scaleDown:
+#     - Removes at most 2 pods per 60s window (conservative)
+#     - Stabilisation window: 300s (5 min) — avoids flapping
+#       when traffic oscillates around the threshold
+#
+# Prerequisites:
+#   - metrics-server must be installed in the cluster:
+#     kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+#   - For memory-based scaling, use KEDA or custom metrics adapter
+#     (the v2 HPA API supports memory utilization natively with
+#     metrics-server >= 0.5.0)
+# ============================================================
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-hpa
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: web-hpa
+    app.kubernetes.io/component: autoscaling
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "HPA for Django web — CPU 70% / memory 80%, 3–20 replicas"
+spec:
+  # Target the web Deployment
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+
+  # ── Replica bounds ───────────────────────────────────────────
+  # min: matches initial replicas in web.yaml — never go below 3
+  # max: cap at 20 to prevent runaway cost on misconfigured traffic
+  minReplicas: 3
+  maxReplicas: 20
+
+  # ── Scaling metrics ──────────────────────────────────────────
+  metrics:
+    # CPU utilisation relative to the pod's CPU request (500m)
+    # At 70%: each pod is using 350m — scale when sustained
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+    # Memory utilisation relative to the pod's memory request (512Mi)
+    # At 80%: each pod is using ~410Mi — scale before OOMKill risk
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+  # ── Scaling behaviour ─────────────────────────────────────────
+  behavior:
+    scaleUp:
+      # Wait 30s after the last scale event before scaling up again.
+      # Short window allows rapid ramp during flash sales.
+      stabilizationWindowSeconds: 30
+      policies:
+        # Add up to 4 pods per 60-second window
+        - type: Pods
+          value: 4
+          periodSeconds: 60
+        # Or add up to 100% of current replicas per 60s (whichever is larger)
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+      selectPolicy: Max
+
+    scaleDown:
+      # Wait 5 minutes (300s) before scaling down to avoid flapping.
+      # Traffic on booking platforms often comes in short bursts.
+      stabilizationWindowSeconds: 300
+      policies:
+        # Remove at most 2 pods per 60-second window
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+        # Never remove more than 20% of current replicas per minute
+        - type: Percent
+          value: 20
+          periodSeconds: 60
+      selectPolicy: Min

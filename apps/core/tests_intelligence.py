@@ -10,6 +10,7 @@ Tests for new OTA intelligence systems:
 """
 from decimal import Decimal
 from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest.mock import patch, MagicMock, PropertyMock
 
 from django.test import TestCase, RequestFactory, override_settings
@@ -284,6 +285,63 @@ class RankingWeightTests(TestCase):
             WEIGHT_QUALITY + WEIGHT_DEMAND + WEIGHT_FRESHNESS
         )
         self.assertEqual(total, Decimal('1.00'))
+
+
+class SearchRankingV2SignalTests(TestCase):
+    def test_velocity_and_distance_improve_rank_order(self):
+        from apps.search.engine.ranking_v2 import SearchRankingV2
+
+        near_fast = SimpleNamespace(
+            property_id=1,
+            price_min=5000,
+            rating=4.6,
+            review_count=120,
+            review_score=9.1,
+            total_views=100,
+            total_bookings=10,
+            recent_bookings=12,
+            bookings_today=6,
+            commission_percentage=15,
+            latitude=12.9716,
+            longitude=77.5946,
+            distance_km=1,
+            locality_popularity=85,
+            cancellation_rate=Decimal('0.02'),
+            availability_reliability=Decimal('0.98'),
+        )
+        far_slow = SimpleNamespace(
+            property_id=2,
+            price_min=5000,
+            rating=4.6,
+            review_count=120,
+            review_score=9.1,
+            total_views=100,
+            total_bookings=10,
+            recent_bookings=1,
+            bookings_today=0,
+            commission_percentage=15,
+            latitude=13.4510,
+            longitude=78.1000,
+            distance_km=22,
+            locality_popularity=30,
+            cancellation_rate=Decimal('0.02'),
+            availability_reliability=Decimal('0.98'),
+        )
+
+        ranked = SearchRankingV2().rank(
+            [far_slow, near_fast],
+            user_context={'user_lat': 12.9716, 'user_lng': 77.5946},
+        )
+
+        self.assertIs(ranked[0], near_fast)
+        self.assertGreater(
+            near_fast._ranking_breakdown['booking_velocity'],
+            far_slow._ranking_breakdown['booking_velocity'],
+        )
+        self.assertGreater(
+            near_fast._ranking_breakdown['distance_relevance'],
+            far_slow._ranking_breakdown['distance_relevance'],
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════

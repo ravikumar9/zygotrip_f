@@ -13,7 +13,7 @@ export async function register(
   full_name: string,
   email: string,
   password: string,
-  role: string = 'customer',
+  role: string = 'traveler',
   phone?: string,
 ): Promise<AuthData> {
   const payload = { full_name, email, password, role, ...(phone ? { phone } : {}) };

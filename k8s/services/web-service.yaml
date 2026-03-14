@@ -1,0 +1,153 @@
+# ============================================================
+# ZygoTrip — Django Web Service
+# ============================================================
+# ClusterIP service — internal cluster DNS only.
+# External traffic enters via the NGINX Ingress (ingress.yaml)
+# which routes api.zygotrip.com → this Service → web pods.
+#
+# DNS name inside the cluster:
+#   web-service.zygotrip.svc.cluster.local:80
+#   (shortened: web-service.zygotrip:80 or web-service:80)
+#
+# Ports:
+#   80  → container port 8000 (gunicorn HTTP)
+#   8001 → container port 8001 (Prometheus /metrics)
+#
+# Session affinity:
+#   None — Django is stateless (sessions in Redis, not in-process).
+#   The Ingress/load balancer distributes requests freely across pods.
+# ============================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    # Prometheus scrape annotation (also set on pod, but kept here for
+    # operators using service-level discovery configs)
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8001"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+
+  # Selector must match labels on web Deployment pods
+  selector:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/component: backend
+
+  ports:
+    # Main HTTP port — Ingress forwards here
+    - name: http
+      port: 80
+      targetPort: http        # Named port "http" on container (8000)
+      protocol: TCP
+
+    # Prometheus metrics port — ServiceMonitor scrapes here
+    - name: metrics
+      port: 8001
+      targetPort: metrics     # Named port "metrics" on container (8001)
+      protocol: TCP
+
+  # No session affinity — Django sessions are backed by Redis
+  sessionAffinity: None
+
+---
+# ============================================================
+# Internal Service for PostgreSQL
+# ============================================================
+# Points to an in-cluster PostgreSQL pod. If using a managed
+# database (RDS, CloudSQL, Supabase), replace this Service with
+# an ExternalName Service pointing to the managed endpoint:
+#
+#   type: ExternalName
+#   externalName: mydb.us-east-1.rds.amazonaws.com
+#
+# For production, managed databases are strongly recommended.
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: zygotrip-platform
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+
+---
+# ============================================================
+# Internal Service for Elasticsearch
+# ============================================================
+# Points to the Elasticsearch StatefulSet (or managed ES).
+# Elasticsearch is optional — Django falls back to PostgreSQL
+# FTS via es_engine.py if this Service is unreachable.
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-service
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/component: search
+    app.kubernetes.io/part-of: zygotrip-platform
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/component: search
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+      protocol: TCP
+    - name: transport
+      port: 9300
+      targetPort: 9300
+      protocol: TCP
+
+---
+# ============================================================
+# Internal Service for Flower (Celery monitoring dashboard)
+# ============================================================
+# Flower is exposed only inside the cluster. To access it from
+# outside, add a path rule to the Ingress (e.g., /flower/)
+# protected by BasicAuth annotations, or use kubectl port-forward:
+#   kubectl -n zygotrip port-forward svc/flower-service 5555:5555
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: flower-service
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: flower
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: zygotrip-platform
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: flower
+    app.kubernetes.io/component: monitoring
+  ports:
+    - name: http
+      port: 5555
+      targetPort: 5555
+      protocol: TCP

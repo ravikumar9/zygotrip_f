@@ -25,7 +25,7 @@ export default function DateRangePicker({
   minDate,
 }: DateRangePickerProps) {
   const today = new Date();
-  const minDateValue = minDate || format(addDays(today, 1), 'yyyy-MM-dd');
+  const minDateValue = minDate || format(today, 'yyyy-MM-dd');
 
   const handleCheckInChange = (val: string) => {
     onCheckInChange(val);

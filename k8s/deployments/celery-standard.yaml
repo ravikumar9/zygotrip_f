@@ -1,0 +1,265 @@
+# ============================================================
+# ZygoTrip — Standard Celery Worker Deployment
+# ============================================================
+# Handles background / non-urgent queues:
+#   notifications — FCM push, WhatsApp, SMS, email sends
+#   search        — Elasticsearch reindex, personalization updates
+#   default       — All tasks not assigned to a specific queue
+#
+# Design rationale:
+#   - Isolated from critical workers so a notification storm
+#     (e.g., bulk WhatsApp campaign) never delays booking tasks.
+#   - concurrency=4 matches docker-compose — lower than critical
+#     because these tasks are I/O-bound (network calls to FCM/MSG91)
+#     rather than CPU-bound.
+#   - Tasks in these queues are generally idempotent and can
+#     tolerate at-least-once delivery semantics.
+#
+# HPA will scale this from 2 → 10 replicas (via celery-standard-hpa
+# if added, or reuse critical HPA template with adjusted name).
+# ============================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-standard
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: celery-standard
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: kubectl
+    worker-tier: standard
+  annotations:
+    description: "Celery worker — notifications, search, default queues"
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: celery-standard
+      app.kubernetes.io/component: worker
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: celery-standard
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/part-of: zygotrip-platform
+        worker-tier: standard
+      annotations:
+        prometheus.io/scrape: "false"
+
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      # Reuses the same ServiceAccount created in celery-critical.yaml
+      serviceAccountName: zygotrip-celery
+
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis-service 6379; do
+                echo "Waiting for Redis broker..."; sleep 2;
+              done
+              echo "Redis ready."
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres-service 5432; do
+                echo "Waiting for PostgreSQL..."; sleep 2;
+              done
+              echo "PostgreSQL ready."
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+
+      containers:
+        - name: celery-standard
+          image: zygotrip/web:latest
+          imagePullPolicy: Always
+
+          command:
+            - celery
+            - -A
+            - zygotrip_project
+            - worker
+            - --loglevel=info
+            - --concurrency=4
+            - --queues=notifications,search,default
+            - --hostname=standard@%(h)s
+            - --without-gossip
+            - --without-mingle
+            - --max-tasks-per-child=1000
+
+          # ── Resources ─────────────────────────────────────────
+          # Lower CPU than critical workers; these tasks are I/O-bound
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "384Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          envFrom:
+            - configMapRef:
+                name: zygotrip-config
+
+          env:
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: DJANGO_SECRET_KEY
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: POSTGRES_PASSWORD
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: SENTRY_DSN
+            # Push notification credentials
+            - name: FCM_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: FCM_PROJECT_ID
+            - name: FCM_SERVER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: FCM_SERVER_KEY
+            # WhatsApp
+            - name: WHATSAPP_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: WHATSAPP_ACCESS_TOKEN
+            - name: WHATSAPP_PHONE_NUMBER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: WHATSAPP_PHONE_NUMBER_ID
+            # SMS
+            - name: MSG91_AUTH_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: MSG91_AUTH_KEY
+            - name: MSG91_TEMPLATE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: MSG91_TEMPLATE_ID
+            # Email
+            - name: EMAIL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: EMAIL_HOST
+            - name: EMAIL_HOST_USER
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: EMAIL_HOST_USER
+            - name: EMAIL_HOST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: EMAIL_HOST_PASSWORD
+
+          # ── Liveness probe ─────────────────────────────────────
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - >
+                  celery -A zygotrip_project inspect ping
+                  -d "standard@$(hostname)"
+                  --timeout 10
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 15
+            failureThreshold: 3
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 80
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: celery-standard
+                topologyKey: kubernetes.io/hostname
+
+      # Standard workers can be stopped more gracefully than critical ones
+      terminationGracePeriodSeconds: 90

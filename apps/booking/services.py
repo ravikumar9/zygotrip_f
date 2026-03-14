@@ -57,6 +57,7 @@ def create_booking(
     promo_code='',
     idempotency_key=None,
     locked_price=None,
+    booking_context=None,
 ):
     """
     Create booking with atomic transaction, inventory locking, and HOLD status.
@@ -68,6 +69,7 @@ def create_booking(
     4. Inventory decremented ONLY after HOLD created
     5. Raises InventoryUnavailableException if insufficient inventory
     6. Returns Booking in HOLD status with hold_expires_at set
+    7. Price lock validated against BookingContext expiry + drift before use
     """
     start_time = time.time()
     try:
@@ -107,9 +109,26 @@ def create_booking(
             tariff_per_night=Decimal(room_type.base_price),
         )
 
-        # If a locked price exists from BookingContext, use it as the final total
-        # This ensures the guest pays exactly the price they were shown
+        # If a locked price exists from BookingContext, validate and use it.
+        # This ensures the guest pays exactly the price they were shown,
+        # but only if the price lock is still valid.
         if locked_price is not None and Decimal(str(locked_price)) > 0:
+            if booking_context is not None:
+                from apps.booking.price_lock_service import verify_price_at_conversion
+                verification = verify_price_at_conversion(booking_context)
+                if not verification.get('price_valid', True):
+                    reason = verification.get('reason', 'price_drift_exceeded')
+                    import logging
+                    logger = logging.getLogger('zygotrip.booking')
+                    logger.warning(
+                        'Price lock invalid during booking: context=%s reason=%s drift=%.1f%%',
+                        getattr(booking_context, 'uuid', '?'), reason,
+                        verification.get('drift_pct', 0),
+                    )
+                    raise ValueError(
+                        f'Price lock is no longer valid ({reason}). '
+                        f'Please refresh and try again.'
+                    )
             breakdown['total_amount'] = Decimal(str(locked_price))
         
         # DISTRIBUTED LOCK + ATOMIC BLOCK: Redis lock prevents cross-process races,
@@ -158,7 +177,13 @@ def create_booking(
             booking = Booking.objects.create(**booking_fields)
             
             # Set financial fields (calculates all money fields)
-            set_booking_financials(booking, base_amount + meal_amount, tariff_per_night=Decimal(room_type.base_price))
+            # Pass locked_total when a locked_price was used to preserve promo-discounted total
+            set_booking_financials(
+                booking,
+                base_amount + meal_amount,
+                tariff_per_night=Decimal(room_type.base_price),
+                locked_total=breakdown['total_amount'] if locked_price else None,
+            )
             
             # Now decrement inventory AFTER hold created
             for day in _date_range(check_in, check_out):
@@ -180,10 +205,19 @@ def create_booking(
                     email=guest.get('email', ''),
                 )
             
-            BookingPriceBreakdown.objects.create(booking=booking, **breakdown)
+            # Remove non-model keys before creating breakdown record
+            breakdown_for_db = {k: v for k, v in breakdown.items() if k in (
+                'base_amount', 'meal_amount', 'service_fee', 'gst',
+                'promo_discount', 'total_amount',
+            )}
+            BookingPriceBreakdown.objects.create(booking=booking, **breakdown_for_db)
             
             if promo:
-                PromoUsage.objects.create(promo=promo, booking=booking, user=user)
+                if user:
+                    PromoUsage.objects.create(promo=promo, booking=booking, user=user)
+                else:
+                    # Guest booking — record promo on booking but skip per-user usage tracking
+                    pass
             
             # Record status history
             BookingStatusHistory.objects.create(

@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import GlobalSearchBar from '@/components/search/GlobalSearchBar';
-import CopyBtn from '@/components/ui/CopyBtn';
 import DestinationsSection from '@/components/home/DestinationsSection';
+import OffersSection from '@/components/home/OffersSection';
+import RecentlyViewed from '@/components/home/RecentlyViewed';
+import { WebSiteJsonLd, OrganizationJsonLd } from '@/components/seo/JsonLd';
 
 export const metadata: Metadata = {
   title: 'ZygoTrip — Hotels, Buses, Cabs & Packages at Best Prices',
@@ -11,41 +13,6 @@ export const metadata: Metadata = {
 };
 
 // ── Static data ───────────────────────────────────────────────────────────────
-
-const OFFERS = [
-  {
-    title:    'Flat 20% off on Hotels',
-    subtitle: 'Valid on prepaid bookings · Min ₹2,000',
-    code:     'ZYGO20',
-    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    emoji:    '🏨',
-    tag:      'Hotels',
-  },
-  {
-    title:    'Up to ₹500 Wallet Cashback',
-    subtitle: 'Use ZygoWallet · First booking only',
-    code:     'WALLET500',
-    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    emoji:    '💳',
-    tag:      'Cashback',
-  },
-  {
-    title:    '₹300 off Bus Tickets',
-    subtitle: 'Weekend special · Min booking ₹800',
-    code:     'BUS300',
-    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    emoji:    '🚌',
-    tag:      'Buses',
-  },
-  {
-    title:    'Free Cab Upgrade',
-    subtitle: 'Sedan → SUV on airport transfers',
-    code:     'CABUP',
-    gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-    emoji:    '🚕',
-    tag:      'Cabs',
-  },
-] as const;
 
 // Destinations are rendered dynamically by DestinationsSection (hotel counts from API)
 
@@ -79,8 +46,10 @@ const WHY = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   return (
-    <div className="min-h-screen">
-
+    <div className="min-h-screen page-listing-bg">
+      {/* Schema.org structured data for homepage SEO */}
+      <WebSiteJsonLd />
+      <OrganizationJsonLd />
       {/* ════════════════════════════════════════════════════════
           HERO SECTION
       ════════════════════════════════════════════════════════ */}
@@ -116,11 +85,11 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="relative max-w-5xl mx-auto px-4 text-center pb-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pb-8">
           {/* Trust badge */}
           <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white/80 text-xs font-bold px-4 py-1.5 rounded-full mb-5 backdrop-blur-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            Trusted by 2M+ travellers across India
+            Trusted by travellers across India
           </div>
 
           {/* Headline */}
@@ -139,42 +108,40 @@ export default function HomePage() {
         </div>
 
         {/* Floating search widget */}
-        <div className="relative max-w-5xl mx-auto px-4">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <GlobalSearchBar showTabs variant="hero" />
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          FARE BANNER
+          FARE BANNER — dynamic, shows only when offer is live
       ════════════════════════════════════════════════════════ */}
       <div className="fare-banner">
         <p className="text-white text-xs font-semibold truncate pr-4">
           🎉{' '}
-          <span className="font-black">MONSOON SALE:</span> Up to 40% off on
-          5,000+ hotels — Offer ends Sunday midnight
+          <span className="font-black">SPECIAL OFFER:</span> Great deals on
+          hotels across India — Book now &amp; save
         </p>
         <Link
           href="/hotels"
           className="shrink-0 bg-white text-xs font-black px-4 py-1.5 rounded-full transition-opacity hover:opacity-90"
           style={{ color: 'var(--primary)' }}
         >
-          GRAB DEAL →
+          VIEW DEALS →
         </Link>
       </div>
 
       {/* ════════════════════════════════════════════════════════
-          TOP OFFERS
+          HOTEL HIGHLIGHTS — Primary product focus
       ════════════════════════════════════════════════════════ */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-end justify-between mb-5">
           <div>
-            <h2
-              className="text-xl font-black text-neutral-900 font-heading"
-            >
-              Top Offers for You
+            <h2 className="text-xl font-black text-neutral-900 font-heading">
+              Top Hotel Deals
             </h2>
             <p className="text-xs text-neutral-400 mt-0.5">
-              Personalised deals · Updated daily
+              Handpicked stays with unbeatable prices
             </p>
           </div>
           <Link
@@ -182,40 +149,84 @@ export default function HomePage() {
             className="text-xs font-bold hover:underline"
             style={{ color: 'var(--primary)' }}
           >
-            View all →
+            View all hotels →
           </Link>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {OFFERS.map(offer => (
-            <div
-              key={offer.code}
-              className="bg-white rounded-2xl border border-neutral-100 shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all overflow-hidden"
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { city: 'Goa', tag: 'From ₹899', emoji: '🏖️', color: 'bg-orange-50' },
+            { city: 'Jaipur', tag: 'From ₹699', emoji: '🏰', color: 'bg-pink-50' },
+            { city: 'Manali', tag: 'From ₹999', emoji: '🏔️', color: 'bg-blue-50' },
+            { city: 'Mumbai', tag: 'From ₹1,199', emoji: '🌆', color: 'bg-purple-50' },
+          ].map(item => (
+            <Link
+              key={item.city}
+              href={`/hotels?location=${item.city}`}
+              className="group rounded-2xl border border-neutral-100 bg-white p-4 hover:shadow-md transition-all text-center"
             >
-              {/* Gradient banner */}
-              <div
-                className="h-24 flex items-center justify-center text-5xl"
-                style={{ background: offer.gradient }}
-              >
-                {offer.emoji}
+              <div className={`w-12 h-12 ${item.color} rounded-xl flex items-center justify-center text-2xl mx-auto mb-2 group-hover:scale-110 transition-transform`}>
+                {item.emoji}
               </div>
-
-              <div className="p-4">
-                <span className="offer-tag mb-2 inline-block">{offer.tag}</span>
-                <h3 className="font-black text-neutral-900 text-sm leading-tight mb-1">
-                  {offer.title}
-                </h3>
-                <p className="text-xs text-neutral-400 mb-3">{offer.subtitle}</p>
-
-                <div className="flex items-center justify-between">
-                  <CopyBtn code={offer.code} />
-                  <span className="text-xs text-neutral-300">tap to copy</span>
-                </div>
-              </div>
-            </div>
+              <h3 className="font-black text-neutral-900 text-sm">{item.city}</h3>
+              <p className="text-2xs text-primary-600 font-bold mt-0.5">{item.tag}</p>
+            </Link>
           ))}
         </div>
       </section>
+
+      {/* ════════════════════════════════════════════════════════
+          MORE SERVICES — Buses, Cabs, Packages (secondary)
+      ════════════════════════════════════════════════════════ */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link
+            href="/buses"
+            className="group relative rounded-2xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-md transition-shadow bg-white p-6 flex items-center gap-4"
+          >
+            <div className="shrink-0 w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+              🚌
+            </div>
+            <div>
+              <h3 className="font-black text-neutral-900 text-sm mb-0.5">Bus Tickets</h3>
+              <p className="text-xs text-neutral-400">AC, Sleeper &amp; Volvo buses across India</p>
+            </div>
+          </Link>
+          <Link
+            href="/cabs"
+            className="group relative rounded-2xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-md transition-shadow bg-white p-6 flex items-center gap-4"
+          >
+            <div className="shrink-0 w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+              🚕
+            </div>
+            <div>
+              <h3 className="font-black text-neutral-900 text-sm mb-0.5">Cab Rentals</h3>
+              <p className="text-xs text-neutral-400">Airport transfers, outstation &amp; hourly</p>
+            </div>
+          </Link>
+          <Link
+            href="/packages"
+            className="group relative rounded-2xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-md transition-shadow bg-white p-6 flex items-center gap-4"
+          >
+            <div className="shrink-0 w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+              🌴
+            </div>
+            <div>
+              <h3 className="font-black text-neutral-900 text-sm mb-0.5">Holiday Packages</h3>
+              <p className="text-xs text-neutral-400">All-inclusive curated travel packages</p>
+            </div>
+          </Link>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          TOP OFFERS — Fetched from backend API
+      ════════════════════════════════════════════════════════ */}
+      <OffersSection />
+
+      {/* ════════════════════════════════════════════════════════
+          RECENTLY VIEWED — personalized, only for returning users
+      ════════════════════════════════════════════════════════ */}
+      <RecentlyViewed />
 
       {/* ════════════════════════════════════════════════════════
           POPULAR DESTINATIONS
@@ -312,8 +323,7 @@ export default function HomePage() {
             Ready to explore India? 🗺️
           </h2>
           <p className="text-white/80 mb-7 max-w-lg mx-auto text-sm">
-            Join 2 million+ happy travellers. Find the best deals on hotels,
-            buses and holiday packages.
+            Find the best deals on hotels, buses and holiday packages across India.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
@@ -324,10 +334,16 @@ export default function HomePage() {
               🏨 Browse Hotels
             </Link>
             <Link
-              href="/account/register"
+              href="/buses"
               className="bg-white/20 border-2 border-white/40 text-white font-black px-8 py-3 rounded-xl text-sm hover:bg-white/30 transition-colors"
             >
-              Join Free →
+              🚌 Bus Tickets
+            </Link>
+            <Link
+              href="/packages"
+              className="bg-white/20 border-2 border-white/40 text-white font-black px-8 py-3 rounded-xl text-sm hover:bg-white/30 transition-colors"
+            >
+              🌴 Packages
             </Link>
           </div>
         </div>

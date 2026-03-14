@@ -462,7 +462,15 @@ class CeleryBeatScheduleTest(TestCase):
             import pathlib
             settings_path = pathlib.Path(__file__).resolve().parent.parent.parent / 'zygotrip_project' / 'settings.py'
             source = settings_path.read_text(encoding='utf-8')
-            for name in ['supplier-availability-sync', 'sync-search-index', 'reconcile-payments']:
+            for name in [
+                'supplier-availability-sync',
+                'sync-search-index',
+                'reconcile-payments',
+                'export-analytics-warehouse-backlog',
+                'warm-search-cache',
+                'warm-search-pattern-cache',
+                'warm-rate-cache',
+            ]:
                 self.assertIn(name, source, f'Missing from settings.py CELERY_BEAT_SCHEDULE: {name}')
 
 

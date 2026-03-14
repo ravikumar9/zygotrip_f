@@ -2,6 +2,7 @@
 import { Calendar, Users, Bed, Clock } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import type { BookingContext } from '@/types';
+import { getMealPlanLabel } from '@/lib/mealPlans';
 
 interface BookingSummaryProps {
   context: BookingContext;
@@ -91,16 +92,11 @@ export default function BookingSummary({ context }: BookingSummaryProps) {
         {/* Meal plan (if any) */}
         {context.meal_plan && context.meal_plan !== 'none' && (
           <div className="flex items-center gap-2 text-xs text-green-700 font-medium bg-green-50 rounded-xl px-3 py-2.5 border border-green-100">
-            🍽️ {context.meal_plan} included
+            🍽️ {getMealPlanLabel(context.meal_plan)}
           </div>
         )}
 
-        {/* Expiry warning */}
-        {context.expires_at && (
-          <p className="text-xs text-amber-600 text-center font-medium">
-            ⏳ Price locked until {fmtDate(context.expires_at)}
-          </p>
-        )}
+        {/* Timer is rendered separately below PriceBreakdown */}
       </div>
     </div>
   );

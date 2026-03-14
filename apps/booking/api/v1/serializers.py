@@ -100,6 +100,7 @@ class BookingContextSerializer(serializers.ModelSerializer):
     property_id = serializers.IntegerField(source='property.id', read_only=True)
     property_name = serializers.CharField(source='property.name', read_only=True)
     property_slug = serializers.CharField(source='property.slug', read_only=True)
+    room_type_id = serializers.IntegerField(source='room_type.id', read_only=True)
     room_type_name = serializers.CharField(source='room_type.name', read_only=True, default='')
     nights = serializers.SerializerMethodField()
 
@@ -112,6 +113,7 @@ class BookingContextSerializer(serializers.ModelSerializer):
         model = BookingContext
         fields = [
             'id', 'uuid', 'property_id', 'property_name', 'property_slug',
+            'room_type_id',
             'room_type_name', 'checkin', 'checkout', 'nights',
             'adults', 'children', 'rooms', 'meal_plan',
             'base_price', 'meal_amount', 'property_discount', 'platform_discount',

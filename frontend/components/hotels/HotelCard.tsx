@@ -2,15 +2,17 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, TrendingUp, Map, Tag, Zap, Star, Heart, Check } from 'lucide-react';
+import { MapPin, Tag, Zap, Star, Heart, Check, Coffee, Navigation } from 'lucide-react';
 import { clsx } from 'clsx';
-import { formatPrice } from '@/lib/formatPrice';
+import { useFormatPrice } from '@/hooks/useFormatPrice';
 import RatingStars from '@/components/ui/RatingStars';
 import AmenityBadge from '@/components/ui/AmenityBadge';
+import { analytics, bookingFunnel } from '@/lib/analytics';
 import type { Property } from '@/types';
 
 interface HotelCardProps {
   hotel: Property;
+  position?: number;
   checkin?: string;
   checkout?: string;
   adults?: string | number;
@@ -28,25 +30,15 @@ function getDealBadge(hotel: Property): { label: string; icon: React.ReactNode; 
 }
 
 /**
- * HotelCard — unified OTA-grade hotel card component.
+ * HotelCard — Goibibo-style horizontal OTA card component.
  *
- * Merges features from:
- *   - Original HotelCard.tsx (deal badges, map button, amenities)
- *   - PropertyCard.tsx (wishlist, gradient overlay, rating badge)
- *   - PropertyCard.jsx (trust signals, social proof)
- *
- * Includes:
- *   - Hotel photo with lazy loading
- *   - Hotel name + star rating
- *   - Guest rating score + tier badge
- *   - Location with map link
- *   - Amenity preview (top 5)
- *   - Strikethrough price + discounted price
- *   - Trust signals: "Only X rooms left", "Booked N times today", "Free cancellation"
- *   - Wishlist button
- *   - stopPropagation on image/map/wishlist clicks (Phase 5 fix)
+ * Three-column layout:
+ *   LEFT:   Hotel image with overlay badges
+ *   MIDDLE: Name, rating, location, amenities, trust signals
+ *   RIGHT:  Discount badge, price, crossed original, urgency, View Rooms CTA
  */
-export default function HotelCard({ hotel, checkin, checkout, adults, rooms, location }: HotelCardProps) {
+export default function HotelCard({ hotel, position, checkin, checkout, adults, rooms, location }: HotelCardProps) {
+  const { formatPrice } = useFormatPrice();
   const [wishlisted, setWishlisted] = useState(false);
   const [imgError, setImgError] = useState(false);
 
@@ -60,26 +52,67 @@ export default function HotelCard({ hotel, checkin, checkout, adults, rooms, loc
   const dealBadge = getDealBadge(hotel);
 
   const ratingNum = parseFloat(hotel.rating || '0');
-  // Show strikethrough only when the API provides an actual original price (rack_rate)
   const strikeThroughPrice = hotel.rack_rate && hotel.rack_rate > hotel.min_price
     ? hotel.rack_rate
     : null;
+  const computedDiscountBadge = strikeThroughPrice
+    ? `${Math.round(((strikeThroughPrice - hotel.min_price) / strikeThroughPrice) * 100)}% OFF`
+    : null;
+  const discountBadge = hotel.discount_badge || computedDiscountBadge;
+  const recentBookings = hotel.recent_bookings ?? hotel.bookings_today;
+
+  const trackHotelClick = () => {
+    const payload = JSON.stringify({
+      property_id: hotel.id,
+      source: 'hotel_listing_card',
+      position,
+      query_id: [location || 'all', checkin || 'any', checkout || 'any'].join(':'),
+    });
+
+    analytics.track('hotel_card_clicked', {
+      property_id: hotel.id,
+      property_name: hotel.name,
+      position,
+      location,
+    });
+    bookingFunnel.enter('hotel_page_viewed', {
+      property_id: hotel.id,
+      property_name: hotel.name,
+      source: 'hotel_listing_card',
+    });
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+        navigator.sendBeacon('/search/api/track-click/', new Blob([payload], { type: 'application/json' }));
+        return;
+      }
+      void fetch('/search/api/track-click/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      });
+    } catch {
+      // Click tracking is best-effort and must never block navigation.
+    }
+  };
 
   return (
-    <Link href={href} className="group block">
+    <Link href={href} className="group block" onClick={trackHotelClick}>
       <article className={clsx(
         'bg-white rounded-2xl overflow-hidden transition-all duration-200',
-        'hover:shadow-card-hover border border-neutral-100 shadow-card'
+        'hover:shadow-card-hover border border-neutral-100 shadow-card',
+        'flex flex-col sm:flex-row'
       )}>
-        {/* Image */}
-        <div className="relative h-52 overflow-hidden">
+        {/* ── LEFT COLUMN: Image ────────────────────────────── */}
+        <div className="relative sm:w-[200px] lg:w-[220px] xl:w-[200px] h-48 sm:h-auto sm:min-h-[190px] shrink-0 overflow-hidden">
           {hotel.primary_image && !imgError ? (
             <Image
               src={hotel.primary_image}
               alt={hotel.name}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              sizes="(max-width: 640px) 100vw, 240px"
               loading="lazy"
               onError={() => setImgError(true)}
             />
@@ -89,25 +122,17 @@ export default function HotelCard({ hotel, checkin, checkout, adults, rooms, loc
             </div>
           )}
 
-          {/* Gradient overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
 
-          {/* Badges overlay — top left */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-            {dealBadge && (
-              <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full shadow-md ${dealBadge.cls}`}>
-                {dealBadge.icon && dealBadge.icon}
-                {dealBadge.label}
-              </span>
-            )}
-            {hotel.is_trending && !dealBadge && (
-              <span className="flex items-center gap-1 bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm">
-                <TrendingUp size={10} /> Trending
-              </span>
-            )}
-          </div>
+          {/* Deal badge - top left */}
+          {dealBadge && (
+            <span className={`absolute top-3 left-3 flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full shadow-md ${dealBadge.cls}`}>
+              {dealBadge.icon}
+              {dealBadge.label}
+            </span>
+          )}
 
-          {/* Wishlist button — top right (Phase 5: stopPropagation) */}
+          {/* Wishlist */}
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); e.preventDefault(); setWishlisted(!wishlisted); }}
@@ -115,150 +140,155 @@ export default function HotelCard({ hotel, checkin, checkout, adults, rooms, loc
             style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)' }}
             aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           >
-            <Heart
-              size={16}
-              fill={wishlisted ? '#eb5757' : 'none'}
-              stroke={wishlisted ? '#eb5757' : '#374151'}
-            />
+            <Heart size={16} fill={wishlisted ? '#eb5757' : 'none'} stroke={wishlisted ? '#eb5757' : '#374151'} />
           </button>
 
-          {/* Star category badge — bottom left */}
+          {/* Star badge */}
           <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white text-xs font-bold px-2 py-0.5 rounded-full">
             {hotel.star_category}★
           </div>
-
-          {/* Free cancellation badge — bottom right */}
-          {hotel.has_free_cancellation && (
-            <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg text-xs font-semibold text-white"
-              style={{ background: 'rgba(16,185,129,0.9)', backdropFilter: 'blur(4px)' }}>
-              <Check size={10} className="inline mr-0.5" strokeWidth={3} />
-              Free Cancellation
-            </div>
-          )}
         </div>
 
-        {/* Content */}
-        <div className="p-4">
-          {/* Type + Rating row */}
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-primary-600 font-medium uppercase tracking-wide">
-              {hotel.property_type}
-            </span>
-            {ratingNum > 0 && (
-              <div className="rating-badge flex-shrink-0">
-                <Star size={11} fill="white" stroke="none" />{ratingNum.toFixed(1)}
+        {/* ── MIDDLE COLUMN: Details ────────────────────────── */}
+        <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
+          <div>
+            {/* Name + Type */}
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="min-w-0">
+                <span className="text-2xs text-primary-600 font-medium uppercase tracking-wide">
+                  {hotel.property_type}
+                </span>
+                <h3 className="font-bold text-neutral-900 text-[15px] leading-snug line-clamp-1 group-hover:text-primary-600 transition-colors font-heading">
+                  {hotel.name}
+                </h3>
               </div>
-            )}
-          </div>
-
-          {/* Name */}
-          <h3 className="font-bold text-neutral-900 text-base leading-snug mb-1.5 line-clamp-2 group-hover:text-primary-600 transition-colors font-heading">
-            {hotel.name}
-          </h3>
-
-          {/* Star category visual */}
-          {hotel.star_category > 0 && (
-            <div className="flex items-center gap-0.5 mb-1">
-              {Array.from({ length: hotel.star_category }).map((_, i) => (
-                <Star key={i} size={10} fill="#f59e0b" stroke="none" />
-              ))}
+              {ratingNum > 0 && (
+                <div className="rating-badge flex-shrink-0">
+                  <Star size={11} fill="white" stroke="none" />{ratingNum.toFixed(1)}
+                </div>
+              )}
             </div>
-          )}
 
-          {/* Location + Map */}
-          <div className="flex items-center justify-between mb-3">
-            <p className="flex items-center gap-1 text-xs text-neutral-500 min-w-0">
+            {/* Rating + Reviews */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <RatingStars rating={ratingNum} reviewCount={hotel.review_count} tier={hotel.rating_tier} showCount size="sm" />
+            </div>
+
+            {/* Location + Distance */}
+            <p className="flex items-center gap-1 text-xs text-neutral-500 mb-2">
               <MapPin size={12} className="shrink-0" />
               <span className="truncate">
                 {hotel.area || hotel.landmark
                   ? `${hotel.area || hotel.landmark}, ${hotel.city_name}`
                   : hotel.city_name}
               </span>
+              {hotel.distance_km != null && hotel.distance_km > 0 && (
+                <span className="inline-flex items-center gap-0.5 text-neutral-400 ml-1 shrink-0">
+                  <Navigation size={10} />
+                  {hotel.distance_km < 1
+                    ? `${Math.round(hotel.distance_km * 1000)}m`
+                    : `${hotel.distance_km.toFixed(1)} km`}
+                </span>
+              )}
             </p>
-            {hotel.latitude && hotel.longitude &&
-              parseFloat(String(hotel.latitude)) !== 0 &&
-              parseFloat(String(hotel.longitude)) !== 0 && (
-              <button
-                type="button"
-                aria-label="View on map"
-                onClick={e => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  window.open(
-                    `https://www.openstreetmap.org/?mlat=${hotel.latitude}&mlon=${hotel.longitude}&zoom=16`,
-                    '_blank',
-                    'noopener,noreferrer',
-                  );
-                }}
-                className="shrink-0 flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-colors ml-2"
-                style={{ color: 'var(--primary)', background: '#fff0f0' }}
-              >
-                <Map size={10} />
-                Map
-              </button>
+
+            {hotel.landmark_distance && (
+              <p className="text-2xs text-neutral-400 mb-2 line-clamp-1">
+                {hotel.landmark_distance}
+              </p>
+            )}
+
+            {hotel.trust_badges && hotel.trust_badges.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {hotel.trust_badges.slice(0, 2).map((badge) => (
+                  <span
+                    key={badge}
+                    className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700"
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Amenities — top 5 */}
+            {hotel.amenity_names && hotel.amenity_names.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {hotel.amenity_names.slice(0, 5).map((name) => (
+                  <AmenityBadge key={name} name={name} />
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Rating + Reviews (Booking.com style) */}
-          <div className="flex items-center gap-2 mb-3">
-            <RatingStars
-              rating={ratingNum}
-              reviewCount={hotel.review_count}
-              tier={hotel.rating_tier}
-              showCount
-              size="sm"
-            />
-          </div>
-
-          {/* Amenities — top 5 */}
-          {hotel.amenity_names && hotel.amenity_names.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-3">
-              {hotel.amenity_names.slice(0, 5).map((name) => (
-                <AmenityBadge key={name} name={name} />
-              ))}
-            </div>
-          )}
-
-          {/* Price + CTA */}
-          <div className="flex items-end justify-between pt-3 border-t border-neutral-100">
-            <div>
-              {hotel.min_price > 0 ? (
-                <>
-                  <p className="text-xs text-neutral-400">Starting from</p>
-                  <div className="flex items-baseline gap-2">
-                    {strikeThroughPrice && (
-                      <span className="text-sm text-neutral-400 line-through">
-                        {formatPrice(strikeThroughPrice)}
-                      </span>
-                    )}
-                    <p className="text-xl font-black text-neutral-900 font-heading">
-                      {formatPrice(hotel.min_price)}
-                    </p>
-                  </div>
-                  <p className="text-xs text-neutral-400">per night + taxes</p>
-                </>
-              ) : (
-                <p className="text-sm text-neutral-500">Contact for price</p>
-              )}
-            </div>
-            <span className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition-colors">
-              View Rooms
-            </span>
-          </div>
-
-          {/* Trust signals */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            {hotel.bookings_today > 0 && (
-              <span className="scarcity-badge">
-                🔥 Booked {hotel.bookings_today} times today
+          {/* Trust signals row */}
+          <div className="flex flex-wrap gap-1.5 mt-auto">
+            {hotel.has_breakfast && (
+              <span className="inline-flex items-center gap-1 text-2xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                <Coffee size={10} strokeWidth={2.5} /> Breakfast Included
+              </span>
+            )}
+            {hotel.has_free_cancellation && (
+              <span className="inline-flex items-center gap-1 text-2xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                <Check size={10} strokeWidth={3} /> Free Cancellation
               </span>
             )}
             {hotel.pay_at_hotel && (
-              <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+              <span className="text-2xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
                 Pay at Hotel
               </span>
             )}
+            {recentBookings > 0 && (
+              <span className="scarcity-badge">
+                🔥 {recentBookings} bookings in last 24h
+              </span>
+            )}
           </div>
+        </div>
+
+        {/* ── RIGHT COLUMN: Price + CTA ─────────────────────── */}
+        <div className="sm:w-[160px] lg:w-[170px] shrink-0 p-3 sm:p-4 sm:border-l border-t sm:border-t-0 border-neutral-100 flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 bg-neutral-50/50">
+          {/* Discount badge */}
+          {discountBadge && (
+            <span className="text-xs font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-lg mb-1">
+              {discountBadge}
+            </span>
+          )}
+
+          {hotel.min_price > 0 ? (
+            <div className="text-right">
+              {strikeThroughPrice && (
+                <p className="text-sm text-neutral-400 line-through">
+                  {formatPrice(strikeThroughPrice)}
+                </p>
+              )}
+              <p className="text-xl font-black text-neutral-900 font-heading">
+                {formatPrice(hotel.min_price)}
+              </p>
+              <p className="text-2xs text-neutral-400">per night + taxes</p>
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-500">Contact for price</p>
+          )}
+
+          {/* Urgency */}
+          {hotel.available_rooms != null && hotel.available_rooms > 0 && hotel.available_rooms <= 5 && (
+            <span className="text-2xs font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-200 animate-pulse-soft whitespace-nowrap">
+              ⚡ Only {hotel.available_rooms} left
+            </span>
+          )}
+
+          {/* CTA */}
+          <span className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors mt-2 whitespace-nowrap">
+            VIEW ROOMS
+          </span>
+
+          {/* Cashback */}
+          {hotel.cashback_amount && hotel.cashback_amount > 0 && (
+            <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-1">
+              🎁 {formatPrice(hotel.cashback_amount)} cashback
+            </span>
+          )}
         </div>
       </article>
     </Link>

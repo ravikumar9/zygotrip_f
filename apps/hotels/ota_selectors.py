@@ -6,7 +6,7 @@ import logging
 from datetime import date, timedelta
 from django.db.models import (
     Q, Count, Min, Max, Avg, F, Value, Case, When,
-    DecimalField, IntegerField, CharField
+    BooleanField, DecimalField, IntegerField, CharField, OuterRef, Subquery
 )
 from django.db.models.functions import Coalesce
 from django.core.cache import cache
@@ -31,6 +31,10 @@ def ota_visible_properties():
     - agreement_signed must be True
     - Seed data is responsible for creating valid properties
     """
+    from apps.search.models import PropertySearchIndex
+
+    search_index = PropertySearchIndex.objects.filter(property_id=OuterRef('pk'))
+
     return (
         Property.objects
         .filter(status='approved', agreement_signed=True)
@@ -41,17 +45,54 @@ def ota_visible_properties():
             'room_types',
             'room_types__amenities',  # Prefetch room-specific amenities
             'room_types__images',      # Prefetch room-specific photos
+            'room_types__meal_plans',  # Prefetch meal plans for has_breakfast check
         )
         .annotate(
             # Pricing: computed from RoomType
             min_room_price=Min('room_types__base_price'),
+            max_room_price=Max('room_types__base_price'),
             
             # Ratings: Use existing review_count field, compute avg from rating if available
             actual_review_count=F('review_count'),
             avg_rating=Coalesce(F('rating'), Value(0, output_field=DecimalField())),
             
-            # Bookings: trending signals (use integers)
-            recent_bookings=Value(0, output_field=IntegerField()),
+            # Conversion/search signals from the denormalized search index.
+            recent_bookings=Coalesce(
+                Subquery(
+                    search_index.values('recent_bookings')[:1],
+                    output_field=IntegerField(),
+                ),
+                Value(0, output_field=IntegerField()),
+            ),
+            _available_rooms=Coalesce(
+                Subquery(
+                    search_index.values('rooms_left')[:1],
+                    output_field=IntegerField(),
+                ),
+                Subquery(
+                    search_index.values('available_rooms')[:1],
+                    output_field=IntegerField(),
+                ),
+                Value(0, output_field=IntegerField()),
+            ),
+            _cashback_amount=Coalesce(
+                Subquery(
+                    search_index.values('cashback_amount')[:1],
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                ),
+                Value(0, output_field=DecimalField(max_digits=10, decimal_places=2)),
+            ),
+            _has_breakfast=Coalesce(
+                Subquery(
+                    search_index.values('has_breakfast')[:1],
+                    output_field=BooleanField(),
+                ),
+                Value(False, output_field=BooleanField()),
+            ),
+            _distance_km=Subquery(
+                search_index.values('distance_km')[:1],
+                output_field=DecimalField(max_digits=6, decimal_places=2),
+            ),
         )
     )
 

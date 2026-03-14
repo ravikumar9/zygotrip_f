@@ -72,6 +72,24 @@
 
         <div class="form-row">
           <div class="form-group mb-4">
+            <label for="id_place_id" class="form-label">Google Place ID</label>
+            {{ form.place_id }}
+            {% if form.place_id.errors %}
+              <p class="form-error">{{ form.place_id.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div class="form-group mb-4">
+            <label for="id_formatted_address" class="form-label">Formatted Address</label>
+            {{ form.formatted_address }}
+            {% if form.formatted_address.errors %}
+              <p class="form-error">{{ form.formatted_address.errors.0 }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group mb-4">
             <label for="id_latitude" class="form-label">Latitude *</label>
             {{ form.latitude }}
             {% if form.latitude.errors %}
@@ -94,6 +112,23 @@
           {% if form.country.errors %}
             <p class="form-error">{{ form.country.errors.0 }}</p>
           {% endif %}
+        </div>
+
+        <div class="form-group mb-4">
+          <label for="image_url" class="form-label">Featured Photo URL</label>
+          <input
+            id="image_url"
+            name="image_url"
+            type="url"
+            class="form-control"
+            placeholder="https://images.example.com/coorg-resort.jpg"
+          />
+          <p class="form-hint">Optional. You can also add more gallery photos after creating the property.</p>
+        </div>
+
+        <div class="card" style="background:#f8fafc;border:1px solid #e2e8f0;padding:16px;margin:8px 0 24px;">
+          <strong style="display:block;margin-bottom:8px;">Next setup steps after create</strong>
+          <span class="text-sm">Add gallery photos, room types, and inventory availability from the owner dashboard.</span>
         </div>
 
         <div class="form-actions d-flex gap-2 mt-6">

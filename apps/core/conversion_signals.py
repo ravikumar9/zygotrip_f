@@ -52,6 +52,7 @@ class ConversionSignals:
             'demand_level': cls._demand_level(property_obj, check_in),
             'great_deal': cls._great_deal(property_obj, check_in),
         }
+        signals['messages'] = cls._display_messages(signals)
         cache.set(cache_key, signals, cls.CACHE_TTL)
         return signals
 
@@ -220,22 +221,22 @@ class ConversionSignals:
         try:
             from apps.search.models import PropertySearchIndex
             idx = PropertySearchIndex.objects.filter(property_id=property_obj.id).first()
-            if not idx or not idx.base_price:
+            if not idx or not idx.price_min:
                 return {'is_great_deal': False, 'savings_percent': 0, 'badge_text': ''}
 
-            prop_price = float(idx.base_price)
+            prop_price = float(idx.price_min)
 
             # Get city average from the same index
-            city = idx.city
-            if not city:
+            city_id = idx.city_id
+            if not city_id:
                 return {'is_great_deal': False, 'savings_percent': 0, 'badge_text': ''}
 
             from django.db.models import Avg
             city_avg = PropertySearchIndex.objects.filter(
-                city=city, is_active=True,
+                city_id=city_id,
             ).exclude(
-                base_price__isnull=True,
-            ).aggregate(avg=Avg('base_price'))['avg']
+                price_min__isnull=True,
+            ).aggregate(avg=Avg('price_min'))['avg']
 
             if not city_avg or float(city_avg) <= 0:
                 return {'is_great_deal': False, 'savings_percent': 0, 'badge_text': ''}
@@ -254,7 +255,7 @@ class ConversionSignals:
     @staticmethod
     def _quick_signals(prop_id, check_in):
         """Lightweight signals for listing cards (no heavy DB reads)."""
-        return {
+        signals = {
             'rooms_left': None,
             'booked_today': ConversionSignals._booked_today(prop_id),
             'viewing_now': ConversionSignals._viewing_now(prop_id),
@@ -263,3 +264,42 @@ class ConversionSignals:
             'demand_level': 'moderate',
             'great_deal': {'is_great_deal': False, 'savings_percent': 0, 'badge_text': ''},
         }
+        try:
+            from apps.search.models import PropertySearchIndex
+            idx = PropertySearchIndex.objects.filter(property_id=prop_id).only(
+                'rooms_left', 'recent_bookings'
+            ).first()
+            if idx:
+                signals['rooms_left'] = idx.rooms_left or None
+                if idx.recent_bookings:
+                    signals['booked_today'] = max(signals['booked_today'], int(idx.recent_bookings))
+        except Exception:
+            pass
+
+        signals['messages'] = ConversionSignals._display_messages(signals)
+        return signals
+
+    @staticmethod
+    def _display_messages(signals):
+        messages = []
+
+        rooms_left = signals.get('rooms_left')
+        if rooms_left is not None and rooms_left > 0:
+            if rooms_left <= 3:
+                messages.append(f'Only {rooms_left} rooms left')
+            elif rooms_left <= 8:
+                messages.append(f'{rooms_left} rooms left')
+
+        viewers = signals.get('viewing_now') or 0
+        if viewers >= 2:
+            messages.append(f'{viewers} people viewing this hotel')
+
+        booked = signals.get('booked_today') or 0
+        if booked >= 1:
+            messages.append(f'Booked {booked} time{"s" if booked != 1 else ""} today')
+
+        great_deal = signals.get('great_deal') or {}
+        if great_deal.get('is_great_deal') and great_deal.get('badge_text'):
+            messages.append(great_deal['badge_text'])
+
+        return messages[:4]

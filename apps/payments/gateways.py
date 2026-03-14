@@ -649,6 +649,55 @@ class PaytmUPIGateway(PaymentGateway):
 
 
 # ===========================================================================
+# Dev Simulate Gateway — for local development without real PG credentials
+# ===========================================================================
+
+class DevSimulateGateway(PaymentGateway):
+    """
+    Simulated payment gateway for development/testing.
+    Auto-confirms payments instantly without any external API calls.
+    Only available when DEBUG=True in settings.
+    """
+
+    def initiate_payment(self, booking, amount, user, txn):
+        if not getattr(settings, 'DEBUG', False):
+            txn.mark_failed('Dev gateway not available in production')
+            return {'success': False, 'error': 'Dev gateway not available in production'}
+
+        try:
+            txn.mark_success(
+                gateway_txn_id=f'DEV-SIM-{txn.transaction_id}',
+                gateway_response={'simulated': True, 'mode': 'dev'},
+            )
+            logger.info(
+                'Dev-simulate payment auto-confirmed: %s for %s (₹%s)',
+                txn.transaction_id, booking.public_booking_id, amount,
+            )
+            return {
+                'success': True,
+                'transaction_id': txn.transaction_id,
+                'gateway': 'dev_simulate',
+                'instant': True,
+            }
+        except Exception as e:
+            logger.exception('Dev-simulate payment failed: %s', e)
+            txn.mark_failed(str(e))
+            return {'success': False, 'error': str(e)}
+
+    def verify_payment(self, txn):
+        return (txn.status == 'success', {'status': txn.status, 'simulated': True})
+
+    def process_refund(self, txn, amount):
+        logger.info('Dev-simulate refund: %s for ₹%s', txn.transaction_id, amount)
+        txn.initiate_refund(amount)
+        return (True, {'message': 'Simulated refund processed', 'simulated': True})
+
+    @staticmethod
+    def verify_webhook_signature(request):
+        return True, {}
+
+
+# ===========================================================================
 # Payment Router
 # ===========================================================================
 
@@ -660,6 +709,7 @@ class PaymentRouter:
         'cashfree': CashfreeGateway,
         'stripe': StripeGateway,
         'paytm_upi': PaytmUPIGateway,
+        'dev_simulate': DevSimulateGateway,
     }
 
     @staticmethod
@@ -675,25 +725,28 @@ class PaymentRouter:
         """
         Return list of available gateways for the given user and amount.
         Only includes gateways that are actually configured.
+        Wallet is only available for authenticated users with sufficient balance.
         """
         from apps.wallet.models import Wallet
 
         gateways = []
+        is_authenticated = user is not None and hasattr(user, 'pk') and user.pk
 
-        # 1. Wallet (always available if balance sufficient)
-        try:
-            wallet = Wallet.objects.get(user=user)
-            if wallet.can_debit(amount):
-                gateways.append({
-                    'gateway': 'wallet',
-                    'name': 'ZygoTrip Wallet',
-                    'description': 'Pay using your wallet balance',
-                    'balance': str(wallet.balance),
-                    'icon': 'wallet',
-                    'priority': 1,
-                })
-        except Wallet.DoesNotExist:
-            pass
+        # 1. Wallet — only for authenticated users with sufficient balance
+        if is_authenticated:
+            try:
+                wallet = Wallet.objects.get(user=user)
+                if wallet.can_debit(amount):
+                    gateways.append({
+                        'gateway': 'wallet',
+                        'name': 'ZygoTrip Wallet',
+                        'description': 'Pay using your wallet balance',
+                        'balance': str(wallet.balance),
+                        'icon': 'wallet',
+                        'priority': 1,
+                    })
+            except Wallet.DoesNotExist:
+                pass
 
         # 2. Cashfree (UPI + Cards) — only if configured
         if getattr(settings, 'CASHFREE_APP_ID', ''):
@@ -723,6 +776,22 @@ class PaymentRouter:
                 'description': 'Visa, Mastercard (international)',
                 'icon': 'globe',
                 'priority': 4,
+            })
+
+        # 5. Dev-simulate gateway — available only in DEBUG mode when
+        #    no real card/UPI gateway is configured. Allows testing the
+        #    full card-payment flow without Cashfree / Stripe / Paytm keys.
+        has_real_card_gateway = any(
+            g['gateway'] in ('cashfree', 'stripe', 'paytm_upi')
+            for g in gateways
+        )
+        if getattr(settings, 'DEBUG', False) and not has_real_card_gateway:
+            gateways.append({
+                'gateway': 'dev_simulate',
+                'name': 'Cards, UPI & Netbanking (Dev Mode)',
+                'description': 'Simulated payment — auto-confirms instantly',
+                'icon': 'credit-card',
+                'priority': 2,
             })
 
         return sorted(gateways, key=lambda g: g['priority'])

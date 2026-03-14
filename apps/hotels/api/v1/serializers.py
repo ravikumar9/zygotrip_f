@@ -150,14 +150,25 @@ class PropertyCardSerializer(serializers.ModelSerializer):
     """
     Compact serializer for listing cards.
     Uses pre-annotated fields (min_room_price, avg_rating) — zero extra queries.
+    Includes has_breakfast, rack_rate, available_rooms, cashback_amount, distance_km
+    for OTA-grade hotel card UI.
     """
     city_name = serializers.CharField(source='city.name', default='')
     min_price = serializers.SerializerMethodField()
+    rack_rate = serializers.SerializerMethodField()
     primary_image = serializers.SerializerMethodField()
     amenity_names = serializers.SerializerMethodField()
     rating_tier = serializers.SerializerMethodField()
     image_count = serializers.SerializerMethodField()
     room_types_count = serializers.SerializerMethodField()
+    recent_bookings = serializers.IntegerField(read_only=True)
+    has_breakfast = serializers.SerializerMethodField()
+    available_rooms = serializers.SerializerMethodField()
+    cashback_amount = serializers.SerializerMethodField()
+    distance_km = serializers.SerializerMethodField()
+    discount_badge = serializers.SerializerMethodField()
+    landmark_distance = serializers.SerializerMethodField()
+    trust_badges = serializers.SerializerMethodField()
 
     class Meta:
         model = Property
@@ -166,7 +177,7 @@ class PropertyCardSerializer(serializers.ModelSerializer):
             'city_name', 'area', 'landmark', 'address',
             'latitude', 'longitude',
             'rating', 'review_count', 'star_category',
-            'min_price',
+            'min_price', 'rack_rate',
             'primary_image',
             'amenity_names',
             'rating_tier',
@@ -174,15 +185,32 @@ class PropertyCardSerializer(serializers.ModelSerializer):
             'pay_at_hotel',
             'is_trending',
             'bookings_today',
+            'recent_bookings',
             'tags',
             'image_count',
             'room_types_count',
+            'has_breakfast',
+            'available_rooms',
+            'cashback_amount',
+            'distance_km',
+            'discount_badge',
+            'landmark_distance',
+            'trust_badges',
         ]
 
     def get_min_price(self, obj):
         # Always use annotation — never call .base_price property in a list
         val = getattr(obj, 'min_room_price', None)
         return int(val) if val else 0
+
+    def get_rack_rate(self, obj):
+        """Original room price before discounts (for strikethrough display)."""
+        val = getattr(obj, 'max_room_price', None)
+        min_val = getattr(obj, 'min_room_price', None)
+        # Only return rack_rate if it's meaningfully higher than min_price (> 5% diff)
+        if val and min_val and float(val) > float(min_val) * 1.05:
+            return int(val)
+        return None
 
     def get_primary_image(self, obj):
         # Uses prefetch cache — no extra query
@@ -210,6 +238,84 @@ class PropertyCardSerializer(serializers.ModelSerializer):
 
     def get_room_types_count(self, obj):
         return obj.room_types.count()
+
+    def get_has_breakfast(self, obj):
+        """Check if any room type has a breakfast meal plan (CP/R+B)."""
+        val = getattr(obj, '_has_breakfast', None)
+        if val is not None:
+            return val
+        # Fallback: check meal plans (uses prefetch if available)
+        for rt in obj.room_types.all():
+            for mp in rt.meal_plans.all():
+                if mp.code in ('CP', 'R+B', 'R+B+L/D', 'AP', 'MAP'):
+                    return True
+        return False
+
+    def get_available_rooms(self, obj):
+        """Total available rooms across all room types."""
+        val = getattr(obj, '_available_rooms', None)
+        if val is not None:
+            return val
+        return None
+
+    def get_cashback_amount(self, obj):
+        """Cashback amount from search index if annotated."""
+        val = getattr(obj, '_cashback_amount', None)
+        return float(val) if val else None
+
+    def get_distance_km(self, obj):
+        """Distance from search center if annotated by the view."""
+        val = getattr(obj, '_distance_km', None)
+        return float(val) if val else None
+
+    def get_discount_badge(self, obj):
+        """Discount percentage badge for strikethrough display (e.g. '30% OFF')."""
+        rack = getattr(obj, 'max_room_price', None)
+        min_p = getattr(obj, 'min_room_price', None)
+        if rack and min_p and float(rack) > 0:
+            discount_pct = int(round((1 - float(min_p) / float(rack)) * 100))
+            if discount_pct >= 5:
+                return f'{discount_pct}% OFF'
+        return None
+
+    def get_landmark_distance(self, obj):
+        """
+        Nearest landmark distance label (e.g. '500m from MG Road').
+        Uses pre-computed GeoIndex or computes on the fly.
+        """
+        # Try pre-computed from GeoIndex
+        try:
+            gi = getattr(obj, 'geo_index', None)
+            if gi and gi.nearest_landmark:
+                return gi.nearest_landmark
+        except Exception:
+            pass
+        # Fallback: compute from property landmark field
+        try:
+            from apps.core.geo_utils import get_nearby_landmarks_for_property
+            landmarks = get_nearby_landmarks_for_property(obj, radius_km=5, limit=1)
+            if landmarks:
+                return landmarks[0].get('label', '')
+        except Exception:
+            pass
+        return None
+
+    def get_trust_badges(self, obj):
+        """Trust badges from HotelQualityScore: Top Rated, Value Pick, Trending."""
+        badges = []
+        try:
+            from apps.core.intelligence import HotelQualityScore
+            quality = HotelQualityScore.objects.filter(property=obj).first()
+            if quality:
+                if quality.is_top_rated:
+                    badges.append('Top Rated')
+                if quality.is_value_pick:
+                    badges.append('Value Pick')
+                if getattr(quality, 'is_trending', False):
+                    badges.append('Trending')
+        except Exception:
+            pass
+        return badges
 
 
 class PropertyDetailSerializer(serializers.ModelSerializer):

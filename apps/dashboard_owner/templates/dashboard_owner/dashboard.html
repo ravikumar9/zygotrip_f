@@ -33,15 +33,22 @@
               <h3 class="text-lg font-semibold mb-2">{{ property.name }}</h3>
               <p class="text-sm mb-3">{{ property.city }}, {{ property.country }}</p>
 
+              <div class="mb-3">
+                <span class="badge badge-{{ property.status }}">{{ property.get_status_display }}</span>
+              </div>
+
               <div class="property-actions mb-4">
+                <a href="{% url 'dashboard_owner:edit_property' property.id %}" class="btn btn-primary btn-sm">Edit</a>
                 <a href="{% url 'dashboard_owner:add_property_image' property.id %}" class="btn btn-ghost btn-sm">Gallery</a>
                 <a href="{% url 'dashboard_owner:add_room' property.id %}" class="btn btn-ghost btn-sm">Rooms</a>
+                <a href="{% url 'dashboard_owner:inventory_management' property.id %}" class="btn btn-ghost btn-sm">Inventory</a>
                 <a href="{% url 'dashboard_owner:add_meal' property.id %}" class="btn btn-ghost btn-sm">Meals</a>
                 <a href="{% url 'dashboard_owner:add_offer' property.id %}" class="btn btn-ghost btn-sm">Offers</a>
+                <a href="{% url 'dashboard_owner:cancellation_policy' property.id %}" class="btn btn-ghost btn-sm">Policy</a>
               </div>
 
               <p class="text-xs">
-              0 rooms • 0 meal plans
+              {{ property.room_types.count }} rooms • {{ property.images.count }} photos
               </p>
             </div>
           </div>

@@ -5,9 +5,11 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { bookingsService } from '@/services/bookings';
 import { CheckCircle, Calendar, MapPin, Users, Printer, ArrowRight } from 'lucide-react';
-import { formatPrice as fmt } from '@/lib/formatPrice';
+import { useFormatPrice } from '@/hooks/useFormatPrice';
+import { BookingShareButton, ItineraryShareButton } from '@/components/social/ShareButton';
 
 function ConfirmationContent() {
+  const { formatPrice: fmt } = useFormatPrice();
   const { booking_uuid } = useParams<{ booking_uuid: string }>();
   const router = useRouter();
 
@@ -148,6 +150,27 @@ function ConfirmationContent() {
             </div>
           </div>
         </div>
+
+        {/* Share your trip */}
+        {booking.status === 'confirmed' && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-5 mb-5 text-center">
+            <p className="text-sm font-bold text-blue-800 mb-1">🌴 Share your upcoming trip!</p>
+            <p className="text-xs text-blue-600 mb-3">Let friends &amp; family know about your adventure</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <BookingShareButton
+                bookingRef={booking.public_booking_id}
+                hotelName={booking.property_name}
+                checkIn={booking.check_in}
+              />
+              <ItineraryShareButton
+                bookingRef={booking.public_booking_id}
+                hotelName={booking.property_name}
+                checkIn={booking.check_in}
+                checkOut={booking.check_out}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3">

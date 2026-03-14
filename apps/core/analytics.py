@@ -23,14 +23,24 @@ from apps.core.models import TimeStampedModel
 logger = logging.getLogger('zygotrip.analytics')
 
 
+EVENT_TYPE_ALIASES = {
+    'hotel_click': 'hotel_click',
+    'hotel_view': 'property_view',
+    'booking_attempt': 'booking_attempt',
+    'booking_created': 'booking_attempt',
+}
+
+
 class AnalyticsEvent(TimeStampedModel):
     """Core analytics event model — append-only event log."""
 
     # Event types
     EVENT_SEARCH = 'search'
+    EVENT_HOTEL_CLICK = 'hotel_click'
     EVENT_PROPERTY_VIEW = 'property_view'
     EVENT_ROOM_SELECT = 'room_select'
     EVENT_BOOKING_CONTEXT = 'booking_context_created'
+    EVENT_BOOKING_ATTEMPT = 'booking_attempt'
     EVENT_PAYMENT_INIT = 'payment_initiated'
     EVENT_PAYMENT_SUCCESS = 'payment_success'
     EVENT_PAYMENT_FAIL = 'payment_failed'
@@ -42,9 +52,11 @@ class AnalyticsEvent(TimeStampedModel):
 
     EVENT_CHOICES = [
         (EVENT_SEARCH, 'Search'),
+        (EVENT_HOTEL_CLICK, 'Hotel Click'),
         (EVENT_PROPERTY_VIEW, 'Property View'),
         (EVENT_ROOM_SELECT, 'Room Select'),
         (EVENT_BOOKING_CONTEXT, 'Booking Context Created'),
+        (EVENT_BOOKING_ATTEMPT, 'Booking Attempt'),
         (EVENT_PAYMENT_INIT, 'Payment Initiated'),
         (EVENT_PAYMENT_SUCCESS, 'Payment Success'),
         (EVENT_PAYMENT_FAIL, 'Payment Failed'),
@@ -176,13 +188,18 @@ def track_event(event_type: str, request=None, user=None, **kwargs):
     Saves directly for now; can be made async via Celery later.
     """
     try:
+        event_type = EVENT_TYPE_ALIASES.get(event_type, event_type)
+        properties = {
+            **(kwargs.get('properties', {}) or {}),
+            **(kwargs.get('metadata', {}) or {}),
+        }
         event_data = {
             'event_type': event_type,
             'user': user or (request.user if request and request.user.is_authenticated else None),
-            'properties': kwargs.get('properties', {}),
+            'properties': properties,
             'city': kwargs.get('city', ''),
-            'property_id': kwargs.get('property_id'),
-            'amount': kwargs.get('amount'),
+            'property_id': kwargs.get('property_id') or properties.get('property_id'),
+            'amount': kwargs.get('amount') or properties.get('amount'),
         }
 
         if request:
@@ -390,6 +407,7 @@ def compute_hotel_performance(date=None):
 def track_event_async(event_type: str, request=None, user=None, **kwargs):
     """Async version of track_event — dispatches via Celery."""
     from apps.core.analytics_tasks import track_event_task
+    event_type = EVENT_TYPE_ALIASES.get(event_type, event_type)
     req_data = {}
     if request:
         req_data = {

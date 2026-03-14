@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { MapPin, ExternalLink, Map } from 'lucide-react';
 
 interface PropertyMapProps {
@@ -10,19 +11,21 @@ interface PropertyMapProps {
   address?:  string;
 }
 
-/**
- * Zero-dependency OpenStreetMap embed via <iframe>.
- * Uses OSM's public export endpoint — no API key required.
- */
-export default function PropertyMap({ latitude, longitude, name, address }: PropertyMapProps) {
-  const [loaded, setLoaded] = useState(false);
-  const [error,  setError]  = useState(false);
+// ── Dynamic import: Leaflet requires `window` — must be client-only ──────────
+const LeafletMap = dynamic(() => import('./LeafletMapInner'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full animate-pulse bg-neutral-200" style={{ height: 320 }} />
+  ),
+});
 
+export default function PropertyMap({ latitude, longitude, name, address }: PropertyMapProps) {
   const lat = parseFloat(String(latitude));
   const lng = parseFloat(String(longitude));
-
-  // Validate coordinates
   const valid = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+
+  const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+  const osmUrl        = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}&zoom=16`;
 
   if (!valid) {
     return (
@@ -33,95 +36,48 @@ export default function PropertyMap({ latitude, longitude, name, address }: Prop
     );
   }
 
-  // Bounding box: ±0.006° (~650 m) around the point
-  const delta  = 0.006;
-  const bbox   = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`;
-  const iframeUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
-  const osmLink   = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}&zoom=16`;
-
   return (
     <div className="rounded-2xl overflow-hidden border border-neutral-200 bg-white shadow-card">
-
-      {/* Map header */}
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
         <div className="flex items-center gap-2">
           <MapPin size={15} style={{ color: 'var(--primary)' }} />
           <span className="text-sm font-bold text-neutral-800">Location</span>
           {address && (
-            <span className="text-xs text-neutral-400 truncate max-w-[220px]">
-              · {address}
-            </span>
+            <span className="text-xs text-neutral-400 truncate max-w-[220px]">· {address}</span>
           )}
         </div>
         <a
-          href={osmLink}
+          href={googleMapsUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-xs font-bold transition-colors hover:underline"
           style={{ color: 'var(--primary)' }}
         >
           <ExternalLink size={11} />
-          Open map
+          Open in Maps
         </a>
       </div>
 
-      {/* iframe embed */}
-      <div className="relative" style={{ height: 320 }}>
-        {/* Loading skeleton */}
-        {!loaded && !error && (
-          <div className="absolute inset-0 skeleton z-10" />
-        )}
+      {/* Leaflet map — dynamically loaded, no SSR */}
+      <LeafletMap lat={lat} lng={lng} name={name} />
 
-        {/* Error fallback */}
-        {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-50 gap-3 z-10">
-            <Map size={28} className="text-neutral-300" />
-            <p className="text-xs text-neutral-400">Could not load map</p>
-            <a
-              href={osmLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-bold hover:underline"
-              style={{ color: 'var(--primary)' }}
-            >
-              View on OpenStreetMap →
-            </a>
-          </div>
-        )}
-
-        <iframe
-          title={`Map – ${name}`}
-          src={iframeUrl}
-          width="100%"
-          height="320"
-          style={{
-            border: 'none',
-            display: error ? 'none' : 'block',
-            opacity: loaded ? 1 : 0,
-            transition: 'opacity 0.3s ease',
-          }}
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin"
-          onLoad={() => setLoaded(true)}
-          onError={() => setError(true)}
-        />
-      </div>
-
-      {/* Coordinates caption */}
-      <div className="px-4 py-2 bg-neutral-50 border-t border-neutral-100">
+      {/* Footer */}
+      <div className="px-4 py-2 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
         <p className="text-xs text-neutral-400">
-          {lat.toFixed(5)}°N, {lng.toFixed(5)}°E ·{' '}
-          <a
-            href={osmLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline"
-            style={{ color: 'var(--primary)' }}
-          >
-            View on OpenStreetMap
-          </a>
+          {lat.toFixed(5)}°N, {lng.toFixed(5)}°E
         </p>
+        <div className="flex items-center gap-3">
+          <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer"
+            className="text-xs font-semibold hover:underline" style={{ color: 'var(--primary)' }}>
+            Google Maps
+          </a>
+          <span className="text-neutral-200">·</span>
+          <a href={osmUrl} target="_blank" rel="noopener noreferrer"
+            className="text-xs font-semibold hover:underline text-neutral-400 hover:text-neutral-600">
+            OpenStreetMap
+          </a>
+        </div>
       </div>
     </div>
   );

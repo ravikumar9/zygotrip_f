@@ -46,6 +46,13 @@ class DeviceFingerprint(TimeStampedModel):
     canvas_hash = models.CharField(max_length=64, blank=True, help_text="Canvas fingerprint from JS")
     webgl_hash = models.CharField(max_length=64, blank=True, help_text="WebGL renderer hash")
 
+    # Push notification token (System 8)
+    fcm_token = models.CharField(
+        max_length=512, blank=True,
+        help_text="Firebase Cloud Messaging device token for push notifications",
+        db_index=True,
+    )
+
     # Fraud scoring
     fraud_score = models.IntegerField(default=0, help_text="0-100, higher = more suspicious")
     is_flagged = models.BooleanField(default=False, db_index=True)

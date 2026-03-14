@@ -3,7 +3,7 @@ Phase 4: Cancellation Policy Engine.
 Owner-configurable policies with free/partial/non-refundable windows.
 """
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as _stdlib_tz
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -127,7 +127,7 @@ class RefundCalculator:
             checkin_dt = checkin_date
         else:
             from datetime import datetime as _dt
-            checkin_dt = _dt.combine(checkin_date, _dt.min.time()).replace(tzinfo=timezone.utc)
+            checkin_dt = _dt.combine(checkin_date, _dt.min.time()).replace(tzinfo=_stdlib_tz.utc)
 
         hours_until_checkin = (checkin_dt - now).total_seconds() / 3600
         policy = self.policy
@@ -323,4 +323,192 @@ class ExceptionalRefundCalculator:
                     f'{refund_pct}% refund granted.',
             'exceptional': True,
             'exception_reason': exception_record.reason,
+        }
+
+
+# ── Rate Plan Policies (Room-Level) ───────────────────────────────────────────
+
+
+class RatePlanPolicy(TimeStampedModel):
+    """
+    Per-room-type rate plan with its own cancellation terms.
+
+    Supports multiple rate plans per room (e.g. "Free Cancellation" at ₹5500
+    vs "Non-Refundable" at ₹4200 for the same room type).
+
+    Used by the booking flow to show rate plan options and calculate
+    cancellation penalties at the rate-plan level (overrides property-level
+    CancellationPolicy when present).
+    """
+
+    PLAN_FREE_CANCEL = 'free_cancel'
+    PLAN_PARTIAL_REFUND = 'partial_refund'
+    PLAN_NON_REFUNDABLE = 'non_refundable'
+
+    PLAN_CHOICES = [
+        (PLAN_FREE_CANCEL, 'Free Cancellation'),
+        (PLAN_PARTIAL_REFUND, 'Partial Refund'),
+        (PLAN_NON_REFUNDABLE, 'Non-Refundable'),
+    ]
+
+    room_type = models.ForeignKey(
+        'rooms.RoomType', on_delete=models.CASCADE,
+        related_name='rate_plans',
+    )
+    plan_name = models.CharField(max_length=100)
+    plan_type = models.CharField(max_length=20, choices=PLAN_CHOICES, default=PLAN_FREE_CANCEL)
+
+    # Pricing modifier: % adjustment on base price (e.g. -15 for non-refundable discount)
+    price_modifier_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('0.00'),
+        help_text='Price adjustment vs base rate. Negative = discount (e.g. -15 for non-refundable).',
+    )
+
+    # Cancellation terms (override property-level policy)
+    free_cancel_hours = models.PositiveIntegerField(
+        default=24,
+        help_text='Hours before check-in for full refund. 0 for non-refundable plans.',
+    )
+    partial_refund_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('50.00'),
+        help_text='Refund % in partial window.',
+    )
+    partial_cancel_hours = models.PositiveIntegerField(
+        default=12,
+        help_text='Hours before check-in for partial refund.',
+    )
+
+    is_active = models.BooleanField(default=True)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        app_label = 'booking'
+        ordering = ['display_order', 'plan_type']
+
+    def __str__(self):
+        return f"{self.plan_name} ({self.get_plan_type_display()}) — {self.room_type}"
+
+    def get_display_note(self) -> str:
+        if self.plan_type == self.PLAN_NON_REFUNDABLE:
+            return 'Non-refundable — no cancellation allowed.'
+        if self.plan_type == self.PLAN_FREE_CANCEL:
+            return f'Free cancellation up to {self.free_cancel_hours}h before check-in.'
+        return (
+            f'{self.partial_refund_percent}% refund if cancelled '
+            f'{self.partial_cancel_hours}h+ before check-in.'
+        )
+
+
+class CancellationPenaltyCalculator:
+    """
+    Unified penalty calculator supporting both property-level and rate-plan-level policies.
+
+    Usage:
+        penalty = CancellationPenaltyCalculator.calculate(booking)
+        # Returns: {refund_amount, penalty_amount, refund_percent, tier, note, rate_plan}
+    """
+
+    @staticmethod
+    def calculate(booking, rate_plan: RatePlanPolicy | None = None) -> dict:
+        """
+        Calculate cancellation penalty for a booking.
+
+        If a rate_plan is provided (or found on the booking), uses rate-plan-level terms.
+        Otherwise falls back to property-level CancellationPolicy.
+        """
+        booking_total = Decimal(str(booking.total_amount))
+
+        # Try to resolve rate plan from booking metadata
+        if rate_plan is None:
+            rate_plan_id = getattr(booking, 'rate_plan_id', None)
+            if rate_plan_id:
+                try:
+                    rate_plan = RatePlanPolicy.objects.get(id=rate_plan_id)
+                except RatePlanPolicy.DoesNotExist:
+                    rate_plan = None
+
+        if rate_plan:
+            return CancellationPenaltyCalculator._from_rate_plan(booking, rate_plan, booking_total)
+
+        # Fall back to property-level policy
+        try:
+            policy = booking.property.cancellation_policy
+            calc = RefundCalculator(policy, booking_total)
+            result = calc.compute(booking.check_in)
+            result['penalty_amount'] = booking_total - result['refund_amount']
+            result['rate_plan'] = None
+            return result
+        except CancellationPolicy.DoesNotExist:
+            return {
+                'refund_amount': booking_total,
+                'penalty_amount': Decimal('0.00'),
+                'platform_fee': Decimal('0.00'),
+                'refund_percent': Decimal('100.00'),
+                'tier': 'no_policy_default',
+                'note': 'No cancellation policy — full refund.',
+                'rate_plan': None,
+            }
+
+    @staticmethod
+    def _from_rate_plan(booking, rate_plan: RatePlanPolicy, booking_total: Decimal) -> dict:
+        """Calculate penalty using rate-plan-level terms."""
+        now = timezone.now()
+        checkin_date = booking.check_in
+        if hasattr(checkin_date, 'date'):
+            checkin_dt = checkin_date
+        else:
+            checkin_dt = datetime.combine(checkin_date, datetime.min.time()).replace(
+                tzinfo=_stdlib_tz.utc
+            )
+
+        hours_until = (checkin_dt - now).total_seconds() / 3600
+        platform_fee = (booking_total * Decimal('0.02')).quantize(Decimal('0.01'))  # 2% platform fee
+
+        if rate_plan.plan_type == RatePlanPolicy.PLAN_NON_REFUNDABLE:
+            return {
+                'refund_amount': Decimal('0.00'),
+                'penalty_amount': booking_total,
+                'platform_fee': platform_fee,
+                'refund_percent': Decimal('0.00'),
+                'tier': 'non_refundable_plan',
+                'note': 'Non-refundable rate plan — no cancellation refund.',
+                'rate_plan': rate_plan.plan_name,
+            }
+
+        # Free cancellation window
+        if hours_until >= rate_plan.free_cancel_hours and rate_plan.free_cancel_hours > 0:
+            refund = booking_total - platform_fee
+            return {
+                'refund_amount': max(Decimal('0.00'), refund),
+                'penalty_amount': platform_fee,
+                'platform_fee': platform_fee,
+                'refund_percent': Decimal('98.00'),
+                'tier': 'free_cancel',
+                'note': f'Free cancellation applied ({rate_plan.plan_name}).',
+                'rate_plan': rate_plan.plan_name,
+            }
+
+        # Partial refund window
+        if hours_until >= rate_plan.partial_cancel_hours:
+            partial = (booking_total * rate_plan.partial_refund_percent / 100).quantize(Decimal('0.01'))
+            refund = partial - platform_fee
+            return {
+                'refund_amount': max(Decimal('0.00'), refund),
+                'penalty_amount': booking_total - max(Decimal('0.00'), refund),
+                'platform_fee': platform_fee,
+                'refund_percent': rate_plan.partial_refund_percent,
+                'tier': 'partial',
+                'note': f'{rate_plan.partial_refund_percent}% refund ({rate_plan.plan_name}).',
+                'rate_plan': rate_plan.plan_name,
+            }
+
+        # Past all windows
+        return {
+            'refund_amount': Decimal('0.00'),
+            'penalty_amount': booking_total,
+            'platform_fee': platform_fee,
+            'refund_percent': Decimal('0.00'),
+            'tier': 'no_refund',
+            'note': f'Cancellation past all refund windows ({rate_plan.plan_name}).',
+            'rate_plan': rate_plan.plan_name,
         }

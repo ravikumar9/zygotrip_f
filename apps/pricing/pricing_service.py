@@ -22,19 +22,52 @@ Pipeline (15 steps):
   15. Final dict assembly
 
 GST SLABS (Indian accommodation tax law):
+  Room tariff  < ₹1000/night →  0 % GST (exempt)
   Room tariff ≤ ₹7500/night  →  5 % GST
   Room tariff  > ₹7500/night →  18 % GST
   NO 12 % slab anywhere in the codebase.
+
+SERVICE FEE & GST POLICY:
+  Service fee and GST are always calculated on the ORIGINAL room price
+  + meal amount (pre-discount).  Promo, property, and platform discounts
+  must NOT reduce the service fee or GST base.
 """
 import logging
 from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.db import models
+
 logger = logging.getLogger('zygotrip.pricing')
+
+
+# ── Pricing step exception (structured failure tracking) ─────────────────────
+
+class PricingStepError(Exception):
+    """
+    Raised internally when a non-critical pricing step fails.
+
+    Non-critical steps (demand, advance booking, competitor cap, LOS, occupancy)
+    catch this exception, log it, and fall back to zero-adjustment so the
+    pipeline NEVER crashes. Critical steps (base price, GST, service fee) do
+    NOT catch this exception — they propagate to the caller.
+
+    Attributes:
+        step:     Step name (e.g. 'demand_adjustment', 'competitor_cap')
+        original: The original exception that caused this
+    """
+    def __init__(self, step: str, original: Exception):
+        self.step = step
+        self.original = original
+        super().__init__(f"Pricing step '{step}' failed: {original}")
+
+    def __repr__(self):
+        return f"PricingStepError(step={self.step!r}, original={self.original!r})"
 
 # ── Constants ────────────────────────────────────────────────────────────────
 _SERVICE_FEE_RATE = Decimal('0.05')
 _SERVICE_FEE_CAP = Decimal('500.00')
+_GST_EXEMPT_THRESHOLD = Decimal('1000.00')   # No GST if room tariff < ₹1000/night
 _GST_LOW_THRESHOLD = Decimal('7500.00')
 _GST_LOW_RATE = Decimal('0.05')
 _GST_HIGH_RATE = Decimal('0.18')
@@ -49,11 +82,17 @@ def _q(value):
 
 
 def get_gst_rate(tariff_per_night):
-    return _GST_LOW_RATE if Decimal(str(tariff_per_night)) <= _GST_LOW_THRESHOLD else _GST_HIGH_RATE
+    tariff = Decimal(str(tariff_per_night))
+    if tariff < _GST_EXEMPT_THRESHOLD:
+        return Decimal('0')          # No GST for rooms below ₹1000/night
+    return _GST_LOW_RATE if tariff <= _GST_LOW_THRESHOLD else _GST_HIGH_RATE
 
 
 def get_gst_percentage(tariff_per_night):
-    return '5' if Decimal(str(tariff_per_night)) <= _GST_LOW_THRESHOLD else '18'
+    tariff = Decimal(str(tariff_per_night))
+    if tariff < _GST_EXEMPT_THRESHOLD:
+        return '0'                    # No GST for rooms below ₹1000/night
+    return '5' if tariff <= _GST_LOW_THRESHOLD else '18'
 
 
 # ── Meal plan resolution ────────────────────────────────────────────────────
@@ -91,7 +130,7 @@ def resolve_meal_plan_price(room_type, meal_plan_code):
 
 # ── Intelligence helpers (safe — never crash pricing) ────────────────────────
 def _demand_adjustment(property_obj, checkin_date, subtotal):
-    """Occupancy-based surge: ≥95 % → +15 %, ≥85 % → +10 %, ≥75 % → +5 %."""
+    """Occupancy-based surge aligned to OTA demand rules."""
     if not property_obj or not checkin_date:
         return Decimal('0'), None
     try:
@@ -100,13 +139,17 @@ def _demand_adjustment(property_obj, checkin_date, subtotal):
         if fc and fc.predicted_occupancy:
             occ = float(fc.predicted_occupancy)
             if occ >= 0.95:
-                return _q(subtotal * Decimal('0.15')), occ
-            if occ >= 0.85:
-                return _q(subtotal * Decimal('0.10')), occ
-            if occ >= 0.75:
-                return _q(subtotal * Decimal('0.05')), occ
-    except Exception:
-        pass
+                return _q(subtotal * Decimal('0.28')), occ
+            if occ >= 0.80:
+                return _q(subtotal * Decimal('0.20')), occ
+            if occ >= 0.70:
+                return _q(subtotal * Decimal('0.08')), occ
+    except Exception as exc:
+        logger.warning(
+            'Pricing step [demand_adjustment] failed — using zero adjustment: '
+            'property=%s date=%s error=%s',
+            getattr(property_obj, 'id', '?'), checkin_date, exc,
+        )
     return Decimal('0'), None
 
 
@@ -123,9 +166,58 @@ def _advance_booking_modifier(checkin_date, subtotal):
             return _q(subtotal * Decimal('-0.03'))
         if days <= 1:
             return _q(subtotal * Decimal('0.05'))
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(
+            'Pricing step [advance_booking_modifier] failed — using zero modifier: '
+            'date=%s error=%s',
+            checkin_date, exc,
+        )
     return Decimal('0')
+
+
+def _los_modifier(property_obj, nights):
+    """Length-of-Stay discount/surcharge based on booking duration."""
+    if not property_obj or nights <= 1:
+        return Decimal('1.00'), ''
+    try:
+        from apps.pricing.models import LOSPricing
+        los = LOSPricing.objects.filter(
+            property=property_obj,
+            min_nights__lte=nights,
+            is_active=True,
+        ).filter(
+            models.Q(max_nights__gte=nights) | models.Q(max_nights__isnull=True),
+        ).order_by('-min_nights').first()
+        if los:
+            return _q(los.multiplier), los.label or f'{nights}-night rate'
+    except Exception as exc:
+        logger.warning(
+            'Pricing step [los_modifier] failed — using 1.0x multiplier: '
+            'property=%s nights=%s error=%s',
+            getattr(property_obj, 'id', '?'), nights, exc,
+        )
+    return Decimal('1.00'), ''
+
+
+def _occupancy_charges(room_type, nights, adults=2, children=0, infants=0):
+    """Extra occupancy charges for adults/children/infants beyond base occupancy."""
+    if not room_type:
+        return Decimal('0'), {}
+    try:
+        from apps.pricing.models import OccupancyPricing
+        occ = OccupancyPricing.objects.filter(
+            room_type=room_type, is_active=True,
+        ).first()
+        if occ:
+            details = occ.calculate_extra_charges(adults, children, infants, nights)
+            return _q(details['total_extra']), details
+    except Exception as exc:
+        logger.warning(
+            'Pricing step [occupancy_charges] failed — using zero charge: '
+            'room_type=%s adults=%s children=%s infants=%s error=%s',
+            getattr(room_type, 'id', '?'), adults, children, infants, exc,
+        )
+    return Decimal('0'), {}
 
 
 def _competitor_price_cap(property_obj, nights, rooms, subtotal):
@@ -142,8 +234,12 @@ def _competitor_price_cap(property_obj, nights, rooms, subtotal):
             cap = _q(Decimal(str(avg)) * Decimal('1.05') * nights * rooms)
             if subtotal > cap:
                 return cap, True
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(
+            'Pricing step [competitor_price_cap] failed — cap not applied: '
+            'property=%s nights=%s rooms=%s error=%s',
+            getattr(property_obj, 'id', '?'), nights, rooms, exc,
+        )
     return subtotal, False
 
 
@@ -189,13 +285,17 @@ def calculate(
     user=None,
     loyalty_points=0,
     wallet_deduct=False,
+    adults=2,
+    children=0,
+    infants=0,
 ):
     """
-    Unified 15-step pricing pipeline.  ALL callers MUST use this function.
+    Unified 17-step pricing pipeline.  ALL callers MUST use this function.
 
     Returns canonical dict:
       tariff_per_night, nights, rooms, base_price,
       meal_plan_price, meal_price_per_room_night,
+      los_multiplier, los_label, occupancy_charges, occupancy_details,
       property_discount, platform_discount, promo_discount,
       demand_adjustment, advance_modifier, competitor_cap_applied,
       loyalty_discount, wallet_credit,
@@ -230,9 +330,20 @@ def calculate(
         meal_per_night = resolve_meal_plan_price(room_type, meal_plan_code)
     meal_total = _q(meal_per_night * int(nights) * int(rooms))
 
+    # 2a. LOS (Length-of-Stay) modifier — applied to base price
+    los_mult, los_label = _los_modifier(property_obj, int(nights))
+    los_adjusted_base = _q(base_price * los_mult)
+    los_discount = _q(base_price - los_adjusted_base)
+
+    # 2b. Occupancy charges — extra adults/children/infants
+    occ_charges, occ_details = _occupancy_charges(
+        room_type, int(nights), adults=adults, children=children, infants=infants,
+    )
+    occ_total = _q(occ_charges * int(rooms))
+
     # 3. Property discount
-    prop_disc = _q(base_price * Decimal(str(property_discount_percent)) / Decimal('100'))
-    subtotal = base_price - prop_disc
+    prop_disc = _q(los_adjusted_base * Decimal(str(property_discount_percent)) / Decimal('100'))
+    subtotal = los_adjusted_base - prop_disc
 
     # 4. Platform discount
     plat_disc = _q(subtotal * Decimal(str(platform_discount_percent)) / Decimal('100'))
@@ -240,12 +351,14 @@ def calculate(
 
     # 5. Promo discount
     promo_disc = _q(Decimal(str(promo_discount)))
-    subtotal = subtotal + meal_total - promo_disc
+    subtotal = subtotal + meal_total + occ_total - promo_disc
     if subtotal < Decimal('0'):
         subtotal = Decimal('0')
 
-    # 6. Service fee
-    svc_fee = _q(subtotal * _SERVICE_FEE_RATE)
+    # 6. Service fee — calculated on ORIGINAL room price + meals + occupancy (pre-discount)
+    #    Promo/coupon discounts must NOT reduce service fee or GST.
+    pre_discount_base = _q(base_price + meal_total + occ_total)
+    svc_fee = _q(pre_discount_base * _SERVICE_FEE_RATE)
     if svc_fee > _SERVICE_FEE_CAP:
         svc_fee = _SERVICE_FEE_CAP
     subtotal_with_fee = subtotal + svc_fee
@@ -273,10 +386,12 @@ def calculate(
     if total_before_tax < Decimal('0'):
         total_before_tax = Decimal('0')
 
-    # 11. GST
+    # 11. GST — calculated on ORIGINAL room price + meals + service fee (pre-discount)
+    #    Discounts (promo, property, platform) must NOT reduce GST base.
     gst_rate = get_gst_rate(tariff)
     gst_pct = get_gst_percentage(tariff)
-    gst_amount = _q(total_before_tax * gst_rate)
+    gst_base = _q(pre_discount_base + svc_fee)   # original amounts, not discounted
+    gst_amount = _q(gst_base * gst_rate)
     total_after_tax = _q(total_before_tax + gst_amount)
 
     # 12. Loyalty
@@ -299,9 +414,17 @@ def calculate(
         'tariff_per_night': tariff,
         'nights': int(nights),
         'rooms': int(rooms),
+        'adults': adults,
+        'children': children,
+        'infants': infants,
         'base_price': _q(base_price),
         'meal_plan_price': _q(meal_total),
         'meal_price_per_room_night': _q(meal_per_night),
+        'los_multiplier': str(los_mult),
+        'los_label': los_label,
+        'los_discount': _q(los_discount),
+        'occupancy_charges': _q(occ_total),
+        'occupancy_details': occ_details,
         'property_discount': _q(prop_disc),
         'platform_discount': _q(plat_disc),
         'promo_discount': _q(promo_disc),
@@ -350,14 +473,18 @@ def calculate_from_amounts(
     if total_before_tax < Decimal('0'):
         total_before_tax = Decimal('0')
 
-    svc_fee = _q(total_before_tax * _SERVICE_FEE_RATE)
+    # Service fee on ORIGINAL amounts (pre-discount), not discounted subtotal
+    pre_discount_base = _q(base_amount + meal_amount)
+    svc_fee = _q(pre_discount_base * _SERVICE_FEE_RATE)
     if svc_fee > _SERVICE_FEE_CAP:
         svc_fee = _SERVICE_FEE_CAP
 
+    # GST on ORIGINAL amounts + service fee (pre-discount), not discounted subtotal
     slab = _q(tariff_per_night) if tariff_per_night is not None else base_amount
     gst_rate = get_gst_rate(slab)
     gst_pct = get_gst_percentage(slab)
-    gst_amount = _q((total_before_tax + svc_fee) * gst_rate)
+    gst_base = _q(pre_discount_base + svc_fee)   # original amounts, not discounted
+    gst_amount = _q(gst_base * gst_rate)
     total_after_tax = _q(total_before_tax + svc_fee + gst_amount)
 
     return {
@@ -443,13 +570,17 @@ def calculate_date_range(
     if total_before_tax < Decimal('0'):
         total_before_tax = Decimal('0')
 
-    svc_fee = _q(total_before_tax * _SERVICE_FEE_RATE)
+    # Service fee on ORIGINAL amounts (pre-discount)
+    pre_discount_base = _q(total_base + total_meal)
+    svc_fee = _q(pre_discount_base * _SERVICE_FEE_RATE)
     if svc_fee > _SERVICE_FEE_CAP:
         svc_fee = _SERVICE_FEE_CAP
 
+    # GST on ORIGINAL amounts + service fee (pre-discount)
     gst_rate = get_gst_rate(tariff)
     gst_pct = get_gst_percentage(tariff)
-    gst_amount = _q((total_before_tax + svc_fee) * gst_rate)
+    gst_base = _q(pre_discount_base + svc_fee)
+    gst_amount = _q(gst_base * gst_rate)
     total_after_tax = _q(total_before_tax + svc_fee + gst_amount)
 
     return {

@@ -254,6 +254,83 @@ def warm_search_cache(cities=None):
     return warmed
 
 
+# ============================================================================
+# DATE-PARAMETERIZED CACHE WARMING — Popular search patterns
+# ============================================================================
+
+# Travel pattern labels → date resolvers
+POPULAR_PATTERNS = ['tonight', 'tomorrow', 'weekend', 'next_week']
+
+
+def _resolve_pattern_dates(pattern):
+    """Resolve a travel pattern label to (check_in, check_out) dates."""
+    from datetime import date, timedelta
+    today = date.today()
+    dow = today.isoweekday()  # Mon=1 .. Sun=7
+
+    if pattern == 'tonight':
+        return today, today + timedelta(days=1)
+    elif pattern == 'tomorrow':
+        return today + timedelta(days=1), today + timedelta(days=2)
+    elif pattern == 'weekend':
+        # Next Friday → Sunday
+        days_to_fri = (5 - dow) % 7 or 7  # 0 means today is Fri, still use next
+        fri = today + timedelta(days=days_to_fri)
+        return fri, fri + timedelta(days=2)
+    elif pattern == 'next_week':
+        days_to_mon = (8 - dow) % 7 or 7
+        mon = today + timedelta(days=days_to_mon)
+        return mon, mon + timedelta(days=2)
+    return today, today + timedelta(days=1)
+
+
+def warm_popular_search_patterns(cities=None, patterns=None):
+    """
+    Pre-compute popular search combinations into Redis.
+    Creates keys like: search:goa:2026-03-14:2026-03-16:any:all
+
+    Called by Celery task on schedule. Targets <150ms search latency for
+    popular city+date combinations that represent ~60% of OTA traffic.
+    """
+    from datetime import date, timedelta
+
+    cities = cities or POPULAR_CITIES
+    patterns = patterns or POPULAR_PATTERNS
+    warmed = 0
+
+    try:
+        from apps.search.models import PropertySearchIndex
+
+        for city_name in cities:
+            for pattern in patterns:
+                ci, co = _resolve_pattern_dates(pattern)
+                results = list(
+                    PropertySearchIndex.objects.filter(
+                        city_name__iexact=city_name,
+                        has_availability=True,
+                    ).order_by('-popularity_score')[:50].values(
+                        'property_id', 'property_name', 'slug', 'price_min',
+                        'rating', 'featured_image_url', 'city_name',
+                        'has_free_cancellation', 'review_count',
+                    )
+                )
+                if results:
+                    # Structured cache key matching _search_key() format
+                    cache_key = (
+                        f"search:{city_name.lower()}:{ci}:{co}:any:all"
+                    )
+                    price_cache.set(cache_key, results, TTL_SEARCH)
+                    warmed += 1
+
+        logger.info(
+            'Pattern cache warming: %d city×pattern combos warmed', warmed,
+        )
+    except Exception as exc:
+        logger.error('Pattern cache warming failed: %s', exc)
+
+    return warmed
+
+
 def warm_rate_cache_bulk(property_id=None, days_ahead=30):
     """
     Pre-compute and cache rates for high-demand hotels.

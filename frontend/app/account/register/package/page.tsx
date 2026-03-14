@@ -13,7 +13,7 @@ const BENEFITS = [
 
 export default function PackageRegisterPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen page-booking-bg flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-6">
@@ -51,9 +51,9 @@ export default function PackageRegisterPage() {
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-card p-8">
           <RegisterForm
-            role="tour_operator"
-            roleLabel="Tour Operator"
-            redirectTo="/account"
+            role="package_provider"
+            roleLabel="Package Provider"
+            redirectTo="/dashboard"
             extraFields={
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">

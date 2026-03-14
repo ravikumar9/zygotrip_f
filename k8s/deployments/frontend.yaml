@@ -1,0 +1,215 @@
+# ============================================================
+# ZygoTrip — Next.js Frontend Deployment
+# ============================================================
+# Runs the Next.js 14 frontend in production mode (next start).
+# The app is pre-built into the Docker image (next build runs
+# at image build time, not at container startup).
+#
+# Port: 3000 (Node.js HTTP server)
+#
+# Environment injection:
+#   NEXT_PUBLIC_* variables are baked into the JS bundle at
+#   build time by Next.js. However, they can also be passed
+#   as runtime env vars if the app uses next/config or
+#   reads them at server-component render time.
+#   Non-public vars (API secrets for BFF patterns) are injected
+#   as Kubernetes Secrets at runtime.
+#
+# Scaling:
+#   2 replicas minimum; HPA (frontend-hpa.yaml) scales to 15.
+#   Next.js server components are stateless — horizontal scaling
+#   works without sticky sessions.
+# ============================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "Next.js 14 + TypeScript frontend server (next start)"
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+      app.kubernetes.io/component: frontend
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/part-of: zygotrip-platform
+      annotations:
+        prometheus.io/scrape: "false"
+
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        # Node.js images commonly use uid 1001 (node user in official image)
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: zygotrip-frontend
+
+      containers:
+        - name: frontend
+          image: zygotrip/frontend:latest
+          imagePullPolicy: Always
+
+          # next start serves the pre-built app.
+          # Port is set via the PORT env var which Next.js respects.
+          command:
+            - node
+            - server.js
+          # Alternative if using npm:
+          # command: ["npm", "run", "start"]
+
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+
+          # ── Resources ─────────────────────────────────────────
+          # Next.js server-side rendering is CPU-light but memory-hungry
+          # (React virtual DOM, module cache). 512Mi request is comfortable.
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          # ── ConfigMap env (NEXT_PUBLIC_* and NODE_ENV) ─────────
+          envFrom:
+            - configMapRef:
+                name: zygotrip-config
+
+          # ── Runtime env vars ───────────────────────────────────
+          env:
+            # PORT tells Next.js which port to listen on
+            - name: PORT
+              value: "3000"
+            # HOSTNAME binds to all interfaces inside the container
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            # Next.js telemetry disabled for privacy
+            - name: NEXT_TELEMETRY_DISABLED
+              value: "1"
+            # If using server-side API calls that need a secret:
+            # (uncomment and add to secrets.yaml if needed)
+            # - name: NEXTAUTH_SECRET
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: zygotrip-secrets
+            #       key: NEXTAUTH_SECRET
+
+          # ── Startup probe ──────────────────────────────────────
+          # Next.js server takes a few seconds to initialize module cache
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            failureThreshold: 12
+            periodSeconds: 5
+            timeoutSeconds: 5
+
+          # ── Readiness probe ────────────────────────────────────
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          # ── Liveness probe ─────────────────────────────────────
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            # Next.js caches build output in .next/cache
+            - name: next-cache
+              mountPath: /app/.next/cache
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 1001
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        # Ephemeral cache — lost on pod restart but Next.js regenerates it
+        # For persistent caching across restarts, mount a PVC here
+        - name: next-cache
+          emptyDir: {}
+
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: frontend
+              app.kubernetes.io/component: frontend
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: frontend
+                    app.kubernetes.io/component: frontend
+                topologyKey: kubernetes.io/hostname
+
+      terminationGracePeriodSeconds: 30
+
+---
+# ============================================================
+# ServiceAccount for the frontend Deployment
+# ============================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zygotrip-frontend
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: zygotrip-platform
+automountServiceAccountToken: false

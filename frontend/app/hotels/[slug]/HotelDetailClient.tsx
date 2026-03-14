@@ -5,8 +5,10 @@ import dynamic from 'next/dynamic';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { getHotel, fetchPricingIntelligence } from '@/services/hotels';
-import { bookingsService } from '@/services/bookings';
-import type { RoomType, RoomMealPlan, PricingIntelligence, PromoResult } from '@/types';
+import { checkoutService } from '@/services/checkout';
+import type { RoomType, RoomMealPlan, PricingIntelligence } from '@/types';
+import { personalization } from '@/lib/personalization';
+// CouponSuggestionCard is used on the booking page, not here
 
 // Dynamic imports — only loaded when the component mounts (reduces initial bundle)
 const PropertyGallery = dynamic(() => import('@/components/hotels/PropertyGallery'), {
@@ -21,16 +23,30 @@ const PropertyMap = dynamic(() => import('@/components/hotels/PropertyMap'), {
   loading: () => <div className="h-56 bg-neutral-100 animate-pulse rounded-2xl" />,
   ssr: false,
 });
+const ReviewSection = dynamic(() => import('@/components/hotels/ReviewSection'), {
+  loading: () => <div className="h-48 bg-neutral-100 animate-pulse rounded-2xl" />,
+  ssr: false,
+});
+const PriceCalendar = dynamic(() => import('@/components/hotels/PriceCalendar'), {
+  loading: () => <div className="h-48 bg-neutral-100 animate-pulse rounded-2xl" />,
+  ssr: false,
+});
+const AmenityBreakdown = dynamic(() => import('@/components/hotels/AmenityBreakdown'), {
+  loading: () => <div className="h-32 bg-neutral-100 animate-pulse rounded-2xl" />,
+  ssr: false,
+});
 import {
   MapPin, Star, Shield, AlertCircle, ChevronRight, Check,
   Calendar, Users, Minus, Plus, ArrowLeft, Share2, Heart,
   Wifi, ParkingCircle, Utensils, Waves, Dumbbell, Wind, Bed,
-  Tag, TrendingDown, BadgeCheck, Loader2, X,
+  Tag, TrendingDown, BadgeCheck,
 } from 'lucide-react';
+import WishlistButton from '@/components/hotels/WishlistButton';
+import { HotelShareButton } from '@/components/social/ShareButton';
 import toast from 'react-hot-toast';
 import { addDays, format, parseISO, isValid } from 'date-fns';
 import { clsx } from 'clsx';
-import { formatPrice as fmt } from '@/lib/formatPrice';
+import { useFormatPrice } from '@/hooks/useFormatPrice';
 
 /** Format date string (yyyy-MM-dd) → "Mon, 12 Feb" for compact display */
 function fmtDateCompact(dateStr: string): string {
@@ -43,7 +59,7 @@ function fmtDateCompact(dateStr: string): string {
   }
 }
 
-const TABS = ['Room Options', 'Amenities', 'Location', 'Policies'] as const;
+const TABS = ['Room Options', 'Amenities', 'Location', 'Reviews', 'Policies'] as const;
 type Tab = typeof TABS[number];
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
@@ -56,6 +72,7 @@ const AMENITY_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function HotelDetailClient() {
+  const { formatPrice: fmt } = useFormatPrice();
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -70,43 +87,11 @@ export default function HotelDetailClient() {
   const [checkOut, setCheckOut] = useState(searchParams.get('checkout') || format(dayAfter, 'yyyy-MM-dd'));
   const [guests, setGuests] = useState(parseInt(searchParams.get('adults') || '2', 10));
   const [rooms, setRooms] = useState(1);
-  const [wishlisted, setWishlisted] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [mealFilter, setMealFilter] = useState('');  // '' = all plans
 
-  // ── Promo code state ─────────────────────────────────────────
-  const [promoCode, setPromoCode] = useState('');
-  const [promoResult, setPromoResult] = useState<PromoResult | null>(null);
-  const [promoLoading, setPromoLoading] = useState(false);
-  const [promoError, setPromoError] = useState('');
-
   // ── Price intelligence state ─────────────────────────────────
   const [priceIntel, setPriceIntel] = useState<PricingIntelligence | null>(null);
-
-  // Preserve location for back-navigation
-  const searchLocation = searchParams.get('location') || '';
-
-  const handleApplyPromo = async () => {
-    if (!promoCode.trim()) return;
-    setPromoLoading(true);
-    setPromoError('');
-    setPromoResult(null);
-    try {
-      const baseAmt = estimatedTotal > 0 ? estimatedTotal : (property?.min_price ?? 0) * Math.max(nights, 1) * rooms;
-      const mealAmt = selectedMealPlan && mealPlanModifier > 0 ? mealPlanModifier * Math.max(nights, 1) * rooms : 0;
-      const result = await bookingsService.applyPromo({
-        promo_code: promoCode.trim().toUpperCase(),
-        base_amount: String(baseAmt),
-        meal_amount: String(mealAmt),
-      });
-      setPromoResult(result);
-      if (!result.valid) setPromoError('Invalid or expired promo code');
-    } catch {
-      setPromoError('Could not validate promo code. Try again.');
-    } finally {
-      setPromoLoading(false);
-    }
-  };
 
   const { data: property, isLoading, error } = useQuery({
     queryKey: ['property', slug],
@@ -123,6 +108,21 @@ export default function HotelDetailClient() {
     });
   }, [property?.uuid]);
 
+  // Track hotel view for "Recently Viewed" personalization on homepage
+  useEffect(() => {
+    if (!property) return;
+    personalization.trackView({
+      id: property.id,
+      name: property.name,
+      slug: property.slug,
+      city: property.city_name || '',
+      image: property.images?.[0]?.url,
+      price: property.min_price,
+      rating: parseFloat(property.rating) || undefined,
+      stars: property.star_category,
+    });
+  }, [property?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleBook = async () => {
     if (!property || !checkIn || !checkOut) return;
     if (!selectedRoom) {
@@ -132,24 +132,16 @@ export default function HotelDetailClient() {
     }
     setBookingLoading(true);
     try {
-      const ctx = await bookingsService.createContext({
+      const session = await checkoutService.startCheckout({
         property_id: property.id,
         room_type_id: selectedRoom.id,
-        checkin: checkIn,
-        checkout: checkOut,
+        check_in: checkIn,
+        check_out: checkOut,
+        guests,
         rooms,
-        adults: guests,
-        meal_plan: selectedMealPlan?.code || 'room_only',
+        meal_plan_code: selectedMealPlan?.code || 'R',
       });
-      // Preserve all search context in booking URL (Goibibo-parity URL framing)
-      const params = new URLSearchParams();
-      if (searchLocation) params.set('location', searchLocation);
-      params.set('checkin', checkIn);
-      params.set('checkout', checkOut);
-      params.set('adults', String(guests));
-      params.set('rooms', String(rooms));
-      if (property.city_name) params.set('city', property.city_name);
-      router.push(`/booking/${ctx.uuid}?${params.toString()}`);
+      router.push(`/checkout/${session.session_id}`);
     } catch {
       toast.error('Could not initiate booking. Please try again.', { duration: 6000 });
     } finally {
@@ -168,8 +160,7 @@ export default function HotelDetailClient() {
     ? parseFloat(String(selectedRoom.base_price)) + mealPlanModifier
     : (property?.min_price ?? 0);
   const estimatedTotal = pricePerNight * nights * rooms;
-  const promoDiscount = promoResult?.valid ? parseFloat(promoResult.discount_amount ?? '0') : 0;
-  const discountedTotal = Math.max(0, estimatedTotal - promoDiscount);
+
 
   // Filter rooms by meal plan
   const filteredRooms = mealFilter && property?.room_types
@@ -198,7 +189,7 @@ export default function HotelDetailClient() {
       { code: '', label: 'All Plans' },
       ...Array.from(codes)
         .sort((a, b) => {
-          const order = ['room_only', 'breakfast', 'half_board', 'full_board', 'all_inclusive'];
+          const order = ['R', 'R+B', 'R+B+L/D', 'R+A'];
           return order.indexOf(a) - order.indexOf(b);
         })
         .map(code => ({ code, label: nameMap[code] })),
@@ -243,7 +234,7 @@ export default function HotelDetailClient() {
       {/* ── Sticky top context bar (Goibibo-parity) ───────────── */}
       <div className="sticky top-14 z-30 hidden lg:block"
            style={{ background: 'linear-gradient(90deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)' }}>
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-6">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-6">
           {/* Back */}
           <button
             onClick={() => router.back()}
@@ -283,7 +274,7 @@ export default function HotelDetailClient() {
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         {/* Back / actions bar — mobile only */}
         <div className="flex items-center justify-between mb-5 lg:hidden">
@@ -291,46 +282,59 @@ export default function HotelDetailClient() {
             <ArrowLeft size={18} /> Back
           </button>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-3 py-2 rounded-xl border border-neutral-200 bg-white text-sm font-medium text-neutral-600 hover:shadow-sm transition-all">
-              <Share2 size={14} /> Share
-            </button>
-            <button
-              onClick={() => setWishlisted(!wishlisted)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-neutral-200 bg-white text-sm font-medium transition-all hover:shadow-sm"
-              style={{ color: wishlisted ? '#eb5757' : '#4b5563' }}
-            >
-              <Heart size={14} fill={wishlisted ? '#eb5757' : 'none'} stroke="currentColor" />
-              {wishlisted ? 'Saved' : 'Save'}
-            </button>
+            <HotelShareButton
+              propertyName={property?.name ?? ''}
+              slug={slug}
+              city={property?.city_name}
+            />
+            {property?.id && (
+              <WishlistButton
+                propertyId={property.id}
+                variant="button"
+                size="sm"
+              />
+            )}
           </div>
         </div>
 
         {/* Desktop share/save — above gallery */}
         <div className="hidden lg:flex items-center justify-end gap-2 mb-4">
-          <button className="flex items-center gap-2 px-3 py-2 rounded-xl border border-neutral-200 bg-white text-sm font-medium text-neutral-600 hover:shadow-sm transition-all">
-            <Share2 size={14} /> Share
-          </button>
-          <button
-            onClick={() => setWishlisted(!wishlisted)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-neutral-200 bg-white text-sm font-medium transition-all hover:shadow-sm"
-            style={{ color: wishlisted ? '#eb5757' : '#4b5563' }}
-          >
-            <Heart size={14} fill={wishlisted ? '#eb5757' : 'none'} stroke="currentColor" />
-            {wishlisted ? 'Saved' : 'Save'}
-          </button>
+          <HotelShareButton
+            propertyName={property?.name ?? ''}
+            slug={slug}
+            city={property?.city_name}
+          />
+          {property?.id && (
+            <WishlistButton
+              propertyId={property.id}
+              variant="button"
+              size="sm"
+            />
+          )}
         </div>
 
         {/* Gallery */}
         <PropertyGallery images={property.images} propertyName={property.name} />
 
-        {/* Goibibo-style coupon / offer strip */}
-        <div className="flex items-center gap-3 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200 rounded-xl px-4 py-3 my-4 overflow-x-auto">
-          <div className="shrink-0 w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-            <Tag size={14} className="text-primary-600" />
+        {/* Urgency & trust signals strip */}
+        <div className="flex items-center gap-3 bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 border border-green-200 rounded-xl px-4 py-3 my-4 overflow-x-auto">
+          <div className="flex items-center gap-4 text-xs font-semibold">
+            <span className="flex items-center gap-1.5 text-green-700"><Check size={13} className="text-green-600" /> Free Cancellation</span>
+            <span className="flex items-center gap-1.5 text-green-700"><Shield size={13} className="text-green-600" /> Instant Confirmation</span>
+            <span className="flex items-center gap-1.5 text-green-700"><BadgeCheck size={13} className="text-green-600" /> Best Price Guaranteed</span>
           </div>
-          <div className="shrink-0">
-            <p className="text-xs font-bold text-neutral-800">Best deals &amp; offers</p>
-            <p className="text-xs text-neutral-500">Enter a promo code in the booking panel for exclusive discounts</p>
+          {/* Urgency signals from backend data */}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            {property.bookings_today > 0 && (
+              <span className="text-2xs font-bold text-orange-700 bg-orange-100 px-2 py-1 rounded-full whitespace-nowrap">
+                🔥 Booked {property.bookings_today}x today
+              </span>
+            )}
+            {property.available_rooms != null && property.available_rooms > 0 && property.available_rooms <= 5 && (
+              <span className="text-2xs font-bold text-red-700 bg-red-50 px-2 py-1 rounded-full animate-pulse-soft whitespace-nowrap">
+                ⚡ Only {property.available_rooms} rooms left
+              </span>
+            )}
           </div>
         </div>
 
@@ -445,6 +449,11 @@ export default function HotelDetailClient() {
                         {property.room_types.length}
                       </span>
                     )}
+                    {tab === 'Reviews' && property.review_count > 0 && (
+                      <span className="ml-1.5 text-xs bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded-full">
+                        {property.review_count}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -504,15 +513,14 @@ export default function HotelDetailClient() {
 
                 {activeTab === 'Amenities' && (
                   <div>
-                    <h3 className="font-bold text-neutral-800 mb-4 text-sm font-heading">All Amenities</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {property.amenities?.map((a) => (
-                        <div key={a.name} className="flex items-center gap-2.5 text-sm text-neutral-700 bg-neutral-50 rounded-xl px-3 py-3 border border-neutral-100 hover:border-primary-200 transition-colors">
-                          <span className="text-primary-500 shrink-0">{AMENITY_ICONS[a.name] ?? <Check size={13} className="text-green-500" strokeWidth={2.5} />}</span>
-                          {a.name}
-                        </div>
-                      ))}
-                    </div>
+                    {property.amenities && property.amenities.length > 0 ? (
+                      <AmenityBreakdown amenities={property.amenities} />
+                    ) : (
+                      <div className="text-center py-10 text-neutral-400">
+                        <Wifi size={32} className="mx-auto mb-2 opacity-30" />
+                        <p className="text-sm">No amenities listed for this property.</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -537,40 +545,119 @@ export default function HotelDetailClient() {
                 )}
 
                 {activeTab === 'Policies' && (
-                  <div className="space-y-3">
-                    {property.policies && property.policies.length > 0 ? (
-                      property.policies.map((p) => (
-                        <div key={p.id} className="rounded-xl bg-neutral-50 p-4 border border-neutral-100">
-                          <h4 className="font-semibold text-neutral-800 text-sm mb-1 flex items-center gap-2">
-                            <AlertCircle size={13} className="text-orange-400" />{p.title}
-                          </h4>
-                          <p className="text-sm text-neutral-500 leading-relaxed">{p.description}</p>
-                        </div>
-                      ))
-                    ) : (
+                  <div className="space-y-4">
+                    {/* Check-in / Check-out times */}
+                    {(property.check_in_time || property.check_out_time) && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {property.check_in_time && (
+                          <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                            <p className="text-xs text-green-600 font-semibold uppercase tracking-wider mb-1">Check-in from</p>
+                            <p className="text-xl font-black text-green-800">{property.check_in_time}</p>
+                          </div>
+                        )}
+                        {property.check_out_time && (
+                          <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                            <p className="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-1">Check-out by</p>
+                            <p className="text-xl font-black text-amber-800">{property.check_out_time}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* House rules */}
+                    {property.house_rules && (
+                      <div className="rounded-xl bg-neutral-50 p-4 border border-neutral-100">
+                        <h4 className="font-semibold text-neutral-800 text-sm mb-2 flex items-center gap-2">
+                          <Shield size={13} className="text-primary-400" /> House Rules
+                        </h4>
+                        <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">{property.house_rules}</p>
+                      </div>
+                    )}
+
+                    {/* Cancellation policy */}
+                    {property.has_free_cancellation !== undefined && (
+                      <div className={`rounded-xl p-4 border ${property.has_free_cancellation ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
+                        <h4 className={`font-semibold text-sm mb-1 flex items-center gap-2 ${property.has_free_cancellation ? 'text-green-800' : 'text-orange-800'}`}>
+                          <Check size={13} /> Cancellation Policy
+                        </h4>
+                        <p className={`text-sm leading-relaxed ${property.has_free_cancellation ? 'text-green-700' : 'text-orange-700'}`}>
+                          {property.has_free_cancellation
+                            ? `Free cancellation up to ${property.cancellation_hours || 48} hours before check-in.`
+                            : 'This property has a strict cancellation policy. Please review before booking.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Other policies */}
+                    {property.policies && property.policies.length > 0 && property.policies.map((p: any) => (
+                      <div key={p.id} className="rounded-xl bg-neutral-50 p-4 border border-neutral-100">
+                        <h4 className="font-semibold text-neutral-800 text-sm mb-1 flex items-center gap-2">
+                          <AlertCircle size={13} className="text-orange-400" />{p.title}
+                        </h4>
+                        <p className="text-sm text-neutral-500 leading-relaxed">{p.description}</p>
+                      </div>
+                    ))}
+
+                    {!property.check_in_time && !property.check_out_time && !property.house_rules && !(property.policies?.length) && (
                       <div className="text-center py-8 text-neutral-400">
                         <AlertCircle size={28} className="mx-auto mb-2 opacity-40" />
                         <p className="text-sm">No specific policies listed for this property.</p>
-                        {property.has_free_cancellation && (
-                          <p className="text-sm text-green-600 mt-2 font-medium">Free cancellation available</p>
-                        )}
                       </div>
                     )}
                   </div>
                 )}
+
+                {activeTab === 'Reviews' && (
+                  <ReviewSection
+                    propertyId={property.id}
+                    propertySlug={property.slug}
+                    propertyName={property.name}
+                    overallRating={parseFloat(String(property.rating)) || 0}
+                    reviewCount={property.review_count || 0}
+                    ratingBreakdown={property.rating_breakdown}
+                  />
+                )}
               </div>
             </div>
+
+            {/* Price Calendar */}
+            {property.id && (
+              <PriceCalendar
+                propertyId={property.id}
+                roomTypeId={selectedRoom?.id}
+                onDateSelect={(ci, co) => { setCheckIn(ci); setCheckOut(co); }}
+              />
+            )}
           </div>
 
-          {/* ── Booking Panel ──────────────────────────────────────── */}
+          {/* ── Booking Panel (Sticky Sidebar) ───────────────────── */}
           <div>
             <div className="booking-panel p-5 sticky top-24">
+              {/* Price hero with discount */}
               <div className="text-center mb-5 pb-4 border-b border-neutral-100">
                 <p className="text-xs text-neutral-400">Starting from</p>
-                <p className="text-3xl font-black text-neutral-900 mt-0.5 font-heading">
-                  {fmt(property.min_price)}
-                </p>
+                <div className="flex items-baseline justify-center gap-2 mt-0.5">
+                  {property.rack_rate && property.rack_rate > property.min_price && (
+                    <span className="text-sm text-neutral-400 line-through">
+                      {fmt(property.rack_rate)}
+                    </span>
+                  )}
+                  <p className="text-3xl font-black text-neutral-900 font-heading">
+                    {fmt(property.min_price)}
+                  </p>
+                  {property.rack_rate && property.rack_rate > property.min_price && (
+                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      {Math.round(((property.rack_rate - property.min_price) / property.rack_rate) * 100)}% off
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-neutral-400">per night + taxes</p>
+                {/* Cashback incentive */}
+                {property.cashback_amount && property.cashback_amount > 0 && (
+                  <p className="text-2xs font-bold text-emerald-600 mt-2 bg-emerald-50 inline-block px-2 py-0.5 rounded-full">
+                    🎁 Earn {fmt(property.cashback_amount)} cashback
+                  </p>
+                )}
               </div>
 
               {/* Dates */}
@@ -594,8 +681,8 @@ export default function HotelDetailClient() {
               {/* Guests / Rooms */}
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {[
-                  { label: 'Guests', val: guests, min: 1, set: setGuests },
-                  { label: 'Rooms', val: rooms, min: 1, set: setRooms },
+                  { label: 'Guests', val: guests, min: 1, max: 12, set: setGuests },
+                  { label: 'Rooms', val: rooms, min: 1, max: 8, set: setRooms },
                 ].map((item) => (
                   <div key={item.label}>
                     <label className="text-xs font-semibold text-neutral-500 block mb-1">{item.label}</label>
@@ -605,7 +692,7 @@ export default function HotelDetailClient() {
                         <Minus size={10} />
                       </button>
                       <span className="text-sm font-bold">{item.val}</span>
-                      <button type="button" onClick={() => item.set(item.val + 1)}
+                      <button type="button" onClick={() => item.set(Math.min(item.max, item.val + 1))}
                         className="w-6 h-6 rounded-full bg-white border border-neutral-300 flex items-center justify-center hover:border-primary-400">
                         <Plus size={10} />
                       </button>
@@ -614,44 +701,10 @@ export default function HotelDetailClient() {
                 ))}
               </div>
 
-              {/* Promo code widget */}
-              <div className="mb-4">
-                {promoResult?.valid ? (
-                  <div className="promo-applied">
-                    <BadgeCheck size={14} className="shrink-0" />
-                    <span className="flex-1">{promoResult.promo_code} applied — {fmt(promoDiscount)} off</span>
-                    <button
-                      onClick={() => { setPromoResult(null); setPromoCode(''); setPromoError(''); }}
-                      className="text-green-500 hover:text-green-700 shrink-0"
-                      aria-label="Remove promo"
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="promo-input-row">
-                      <input
-                        type="text"
-                        placeholder="Promo code"
-                        value={promoCode}
-                        onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); }}
-                        onKeyDown={e => e.key === 'Enter' && handleApplyPromo()}
-                        className="flex-1 text-xs border border-neutral-200 rounded-xl px-3 py-2 outline-none focus:border-primary-400 font-mono tracking-wider bg-neutral-50 uppercase"
-                        disabled={promoLoading}
-                      />
-                      <button
-                        onClick={handleApplyPromo}
-                        disabled={promoLoading || !promoCode.trim()}
-                        className="flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 transition-colors shrink-0"
-                      >
-                        {promoLoading ? <Loader2 size={11} className="animate-spin" /> : <Tag size={11} />}
-                        Apply
-                      </button>
-                    </div>
-                    {promoError && <p className="promo-error">{promoError}</p>}
-                  </div>
-                )}
+              {/* Promo codes are applied at checkout — show hint */}
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 mb-4">
+                <Tag size={12} className="text-amber-600 shrink-0" />
+                <p className="text-xs text-amber-700">Have a promo code? Apply it at checkout for exclusive discounts</p>
               </div>
 
               {/* Room select reminder */}
@@ -703,23 +756,35 @@ export default function HotelDetailClient() {
                     <span>{fmt(pricePerNight)}/night × {nights}N × {rooms}R</span>
                     <span className="font-semibold">{fmt(estimatedTotal)}</span>
                   </div>
-                  {promoDiscount > 0 && (
-                    <div className="flex justify-between text-xs text-green-600 font-semibold mb-1">
-                      <span className="flex items-center gap-1"><Tag size={10} /> Promo ({promoResult?.promo_code})</span>
-                      <span>−{fmt(promoDiscount)}</span>
-                    </div>
-                  )}
+
                   <div className="flex justify-between text-xs text-neutral-400 mb-2">
                     <span>Taxes &amp; fees (GST)</span>
                     <span className="italic">calculated at checkout</span>
                   </div>
                   <div className="pt-2 border-t border-neutral-200 flex justify-between">
                     <span className="font-bold text-xs text-neutral-700">Estimated subtotal</span>
-                    <span className="font-black text-sm text-neutral-900">{fmt(discountedTotal)}</span>
+                    <span className="font-black text-sm text-neutral-900">{fmt(estimatedTotal)}</span>
                   </div>
                   <p className="text-[10px] text-neutral-400 mt-1 text-center">
                     Final price confirmed at checkout
                   </p>
+                </div>
+              )}
+
+              {/* Savings celebration banner */}
+              {nights > 0 && property.rack_rate && property.rack_rate > property.min_price && selectedRoom && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">🎉</span>
+                    <div>
+                      <p className="text-xs font-bold text-green-700">
+                        You save {fmt((property.rack_rate - property.min_price) * nights * rooms)}
+                      </p>
+                      <p className="text-2xs text-green-600">
+                        Room discount applied
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -776,6 +841,42 @@ export default function HotelDetailClient() {
 
         </div>
       </div>
+
+      {/* ── Sticky Mobile Booking Bar ─────────────────────────────── */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-neutral-200 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] px-4 py-3 safe-area-bottom">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            {selectedRoom ? (
+              <>
+                <p className="text-lg font-black text-neutral-900 font-heading leading-tight">
+                  {fmt(pricePerNight)}
+                  <span className="text-xs font-normal text-neutral-400">/night</span>
+                </p>
+                <p className="text-[10px] text-neutral-500 truncate">
+                  {selectedRoom.name}{selectedMealPlan ? ` · ${selectedMealPlan.name}` : ''}
+                  {nights > 0 && <> · {nights}N · {fmt(estimatedTotal)}</>}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-black text-neutral-900 font-heading leading-tight">
+                  {property?.min_price ? fmt(property.min_price) : '—'}
+                </p>
+                <p className="text-[10px] text-neutral-400">per night + taxes</p>
+              </>
+            )}
+          </div>
+          <button
+            onClick={handleBook}
+            disabled={bookingLoading || !selectedRoom}
+            className="btn-primary px-6 py-3 text-sm font-bold shrink-0 disabled:opacity-50"
+          >
+            {bookingLoading ? 'Booking…' : selectedRoom ? 'Book Now' : 'Select a Room'}
+          </button>
+        </div>
+      </div>
+      {/* Spacer for mobile sticky bar */}
+      <div className="lg:hidden h-20" />
     </div>
   );
 }

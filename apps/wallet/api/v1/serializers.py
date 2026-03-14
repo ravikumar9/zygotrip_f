@@ -1,4 +1,6 @@
 """Wallet API serializers for v1."""
+from decimal import Decimal
+
 from rest_framework import serializers
 from apps.wallet.models import Wallet, WalletTransaction, OwnerWallet, OwnerWalletTransaction
 
@@ -39,11 +41,10 @@ class WalletTransactionSerializer(serializers.ModelSerializer):
 class TopUpSerializer(serializers.Serializer):
     """Request to add money to wallet."""
 
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value='1.00')
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('1.00'))
     note = serializers.CharField(max_length=200, default='Manual top-up', required=False)
 
     def validate_amount(self, value):
-        from decimal import Decimal
         if value > Decimal('100000'):
             raise serializers.ValidationError('Cannot top-up more than ₹1,00,000 in a single transaction.')
         return value

@@ -1,7 +1,8 @@
 'use client';
 import Image from 'next/image';
 import { Users, Check, BedDouble, Layers, X, ChevronRight } from 'lucide-react';
-import { formatPrice } from '@/lib/formatPrice';
+import { useFormatPrice } from '@/hooks/useFormatPrice';
+import { MEAL_PLAN_META } from '@/lib/mealPlans';
 import type { RoomType, RoomMealPlan } from '@/types';
 
 interface RoomCardProps {
@@ -11,13 +12,7 @@ interface RoomCardProps {
   onSelect: (room: RoomType, mealPlan?: RoomMealPlan) => void;
 }
 
-const MEAL_META: Record<string, { label: string; short: string; color: string }> = {
-  room_only:     { label: 'Room Only',          short: 'EP',  color: 'text-neutral-700' },
-  breakfast:     { label: 'Breakfast Included', short: 'CP',  color: 'text-green-700' },
-  half_board:    { label: 'Half Board',         short: 'MAP', color: 'text-blue-700' },
-  full_board:    { label: 'Full Board',         short: 'AP',  color: 'text-purple-700' },
-  all_inclusive: { label: 'All Inclusive',      short: 'AI',  color: 'text-amber-700' },
-};
+/* Meal plan display meta comes from canonical lib/mealPlans.ts */
 
 /**
  * RoomCard — individual room type card for hotel detail page.
@@ -28,6 +23,7 @@ const MEAL_META: Record<string, { label: string; short: string; color: string }>
  * to hotel detail page (Phase 5 fix).
  */
 export default function RoomCard({ room, isSelected, selectedMealPlanCode, onSelect }: RoomCardProps) {
+  const { formatPrice } = useFormatPrice();
   const primaryImage = room.images?.find(i => i.is_primary) ?? room.images?.[0];
   const availCount = room.inventory_remaining ?? room.available_count ?? 0;
   const basePrice = parseFloat(String(room.base_price));
@@ -155,7 +151,7 @@ export default function RoomCard({ room, isSelected, selectedMealPlanCode, onSel
             const modifier = parseFloat(String(mp.price_modifier));
             const totalPrice = basePrice + modifier;
             const isMpSelected = isSelected && selectedMealPlanCode === mp.code;
-            const meta = MEAL_META[mp.code];
+            const meta = MEAL_PLAN_META[mp.code];
 
             return (
               <div

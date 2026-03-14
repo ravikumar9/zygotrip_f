@@ -1,0 +1,388 @@
+# ============================================================
+# ZygoTrip — Redis StatefulSet
+# ============================================================
+# Single-node Redis for: Celery broker (DB 0), Django cache (DB 1),
+# Celery results backend (DB 2).
+#
+# Why StatefulSet instead of Deployment?
+#   - Stable network identity (redis-0.redis-headless.zygotrip.svc)
+#   - Ordered termination ensures the PVC is not deleted with the pod
+#   - Required for future upgrade to Redis Cluster / Sentinel
+#
+# CURRENT: Single-node (no replication). Suitable for initial launch.
+#
+# UPGRADE PATH TO REDIS CLUSTER (when needed):
+#   Option A — Bitnami Redis Cluster Helm chart:
+#     helm upgrade --install redis-cluster bitnami/redis-cluster \
+#       --namespace zygotrip \
+#       --set cluster.nodes=6 \
+#       --set cluster.replicas=1 \
+#       --set auth.password="<REDIS_PASSWORD>"
+#
+#   Option B — Redis Sentinel (3-node HA):
+#     helm upgrade --install redis bitnami/redis \
+#       --namespace zygotrip \
+#       --set sentinel.enabled=true \
+#       --set replica.replicaCount=2
+#
+#   Option C — AWS ElastiCache (managed):
+#     Replace this StatefulSet with an ExternalName Service:
+#       type: ExternalName
+#       externalName: my-cluster.abc123.ng.0001.apse1.cache.amazonaws.com
+#
+# Configuration (matches docker-compose.yml):
+#   --appendonly yes        — AOF persistence (survives pod restart)
+#   --maxmemory 512mb       — Hard memory ceiling
+#   --maxmemory-policy allkeys-lru — Evict LRU keys when full
+#   --save 60 1000          — RDB snapshot every 60s if 1000+ writes
+#
+# Storage:
+#   PersistentVolumeClaim requests 2Gi.
+#   For cloud deployments, use a StorageClass that provisions
+#   fast SSD volumes (e.g., gp3 on AWS, pd-ssd on GCP).
+# ============================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: zygotrip-platform
+data:
+  redis.conf: |
+    # Persistence: Append-Only File (survives pod restarts via PVC)
+    appendonly yes
+    appendfsync everysec
+    no-appendfsync-on-rewrite no
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 64mb
+
+    # RDB snapshot (additional safety net)
+    save 3600 1
+    save 300 100
+    save 60 10000
+
+    # Memory management
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+    maxmemory-samples 10
+
+    # Network
+    bind 0.0.0.0
+    port 6379
+    tcp-keepalive 300
+    timeout 0
+
+    # Performance
+    tcp-backlog 511
+    hz 10
+    dynamic-hz yes
+
+    # Security: disable dangerous commands in production
+    # Rename FLUSHALL and FLUSHDB to random strings to prevent accidents
+    # (uncomment and set random suffixes once all app code is updated)
+    # rename-command FLUSHALL ""
+    # rename-command FLUSHDB ""
+    # rename-command CONFIG ""
+    # rename-command DEBUG ""
+
+    # Logging
+    loglevel notice
+    logfile ""
+
+    # Slow log: log queries taking >10ms
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
+
+---
+# ============================================================
+# Headless Service — required for StatefulSet stable DNS
+# ============================================================
+# Pod DNS: redis-0.redis-headless.zygotrip.svc.cluster.local
+# Use this for direct pod addressing (Sentinel, Cluster mode).
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: zygotrip-platform
+spec:
+  # clusterIP: None makes this a headless service
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+
+---
+# ============================================================
+# ClusterIP Service — used by Django / Celery
+# ============================================================
+# Apps connect to redis-service:6379, which load-balances across
+# Redis pods (currently just redis-0 in single-node mode).
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: zygotrip-platform
+  annotations:
+    description: "ClusterIP for Redis — apps use redis-service:6379"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+      protocol: TCP
+
+---
+# ============================================================
+# StatefulSet
+# ============================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/version: "7-alpine"
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "Single-node Redis 7 StatefulSet with AOF persistence"
+    upgrade-path: "See comments above for Redis Cluster / Sentinel migration"
+spec:
+  # Single-node for now — see UPGRADE PATH comments above
+  replicas: 1
+
+  # Links to the headless service for stable DNS
+  serviceName: redis-headless
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/component: cache
+
+  # StatefulSet uses OrderedReady by default — only 1 pod updated at a time
+  updateStrategy:
+    type: RollingUpdate
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/component: cache
+        app.kubernetes.io/part-of: zygotrip-platform
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+        prometheus.io/path: "/metrics"
+
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        # Redis official image uses uid 999
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: zygotrip-redis
+
+      # ── Init container: set kernel parameters ─────────────────
+      # Redis recommends vm.overcommit_memory=1 and disabling THP.
+      # This requires a privileged init container (not the main app).
+      # Remove if cluster nodes already have these settings applied.
+      initContainers:
+        - name: sysctl-tuning
+          image: busybox:1.36
+          # Must run as root to modify kernel params
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - |
+              sysctl -w vm.overcommit_memory=1 || true
+              echo never > /sys/kernel/mm/transparent_hugepage/enabled || true
+              echo "Kernel parameters set."
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+
+          # Load configuration from ConfigMap
+          command:
+            - redis-server
+            - /etc/redis/redis.conf
+
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              # Limit is set above the maxmemory (512Mi) to allow Redis
+              # overhead (AOF buffers, replication backlog, client output)
+              memory: "768Mi"
+
+          # ── Liveness probe ─────────────────────────────────────
+          # redis-cli ping returns "PONG" if the server is responsive
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # ── Readiness probe ────────────────────────────────────
+          # Only mark ready once Redis can accept commands (not just alive)
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+
+          volumeMounts:
+            # AOF and RDB data — persisted via PVC
+            - name: redis-data
+              mountPath: /data
+            # Configuration file from ConfigMap
+            - name: redis-config
+              mountPath: /etc/redis/redis.conf
+              subPath: redis.conf
+              readOnly: true
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # Redis writes to /data
+            runAsNonRoot: true
+            runAsUser: 999
+            capabilities:
+              drop:
+                - ALL
+
+        # ── Sidecar: redis-exporter (Prometheus metrics) ──────────
+        # Exposes Redis metrics on :9121/metrics for Prometheus scraping.
+        # Remove this sidecar if using a DaemonSet-based exporter instead.
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.57.0-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics
+              containerPort: 9121
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+          env:
+            - name: REDIS_ADDR
+              value: "redis://localhost:6379"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        # ConfigMap-backed configuration file
+        - name: redis-config
+          configMap:
+            name: redis-config
+            items:
+              - key: redis.conf
+                path: redis.conf
+
+      # PVC is defined in volumeClaimTemplates below (StatefulSet feature)
+
+      terminationGracePeriodSeconds: 60
+
+  # ── PersistentVolumeClaim template ──────────────────────────
+  # StatefulSet creates one PVC per replica: redis-data-redis-0
+  # This PVC persists independently of the pod lifecycle.
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+        labels:
+          app.kubernetes.io/name: redis
+          app.kubernetes.io/component: cache
+          app.kubernetes.io/part-of: zygotrip-platform
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        # 2Gi is comfortable for the ZygoTrip cache + queue workload.
+        # Celery queue messages are ephemeral; cache entries are bounded
+        # by maxmemory (512Mi). AOF file growth depends on write volume.
+        resources:
+          requests:
+            storage: 2Gi
+        # Specify your cluster's fast SSD StorageClass:
+        #   AWS EKS:  storageClassName: gp3
+        #   GKE:      storageClassName: premium-rwo
+        #   AKS:      storageClassName: managed-premium
+        #   Local:    storageClassName: local-path (k3s) or hostpath
+        # Leave empty to use the cluster default StorageClass.
+        # storageClassName: gp3
+
+---
+# ============================================================
+# ServiceAccount for Redis
+# ============================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zygotrip-redis
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: zygotrip-platform
+automountServiceAccountToken: false

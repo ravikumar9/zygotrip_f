@@ -55,9 +55,15 @@ class DomainEvent:
 
 class EventBus:
     """
-    Simple in-process pub/sub with glob-pattern matching.
+    Pub/sub with glob-pattern matching.
     Thread-safe; listeners are called synchronously in the publisher's thread.
     For async processing, listeners should defer to Celery tasks.
+
+    Supports pluggable backends via set_backend():
+      'memory'   — default in-process (dev/test)
+      'celery'   — async via Celery tasks
+      'kafka'    — Kafka topic producer
+      'rabbitmq' — RabbitMQ exchange publisher
     """
 
     def __init__(self):
@@ -65,15 +71,31 @@ class EventBus:
         self._lock = threading.Lock()
         self._event_log: list[dict] = []      # ring buffer (last 1 000)
         self._LOG_MAX = 1000
+        self._backend = 'memory'
+
+    def set_backend(self, backend: str):
+        """Switch event delivery backend at runtime."""
+        self._backend = backend
+        logger.info('Event bus backend set to: %s', backend)
 
     # ── Publish ──────────────────────────────────────────────────────────
 
     def publish(self, event: DomainEvent):
         """
         Publish an event to all matching subscribers.
-        Subscribers matching on exact type or glob pattern receive the event.
+        If a remote backend (kafka/rabbitmq) is configured, also forwards there.
         """
         self._record(event)
+
+        # Remote backends
+        if self._backend == 'kafka':
+            self._publish_kafka(event)
+        elif self._backend == 'rabbitmq':
+            self._publish_rabbitmq(event)
+        elif self._backend == 'celery':
+            self._publish_celery(event)
+
+        # Always dispatch to local listeners
         matched = 0
         with self._lock:
             listeners = list(self._listeners)  # snapshot
@@ -138,6 +160,99 @@ class EventBus:
         self._event_log.append(entry)
         if len(self._event_log) > self._LOG_MAX:
             self._event_log = self._event_log[-self._LOG_MAX:]
+
+    # ── Remote backends ──────────────────────────────────────────────
+
+    # Kafka producer singleton — created ONCE, reused for all publishes.
+    # Creating a producer per-call is O(100ms) and would kill throughput.
+    _kafka_producer_instance = None
+
+    def _get_kafka_producer(self):
+        """Return a cached Kafka producer (confluent-kafka preferred)."""
+        if self._kafka_producer_instance is None:
+            try:
+                # Prefer confluent-kafka (C-based, much faster)
+                from confluent_kafka import Producer as ConfluentProducer
+                from django.conf import settings as _s
+                bootstrap = getattr(_s, 'KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+                cfg = getattr(_s, 'KAFKA_PRODUCER_CONFIG', {
+                    'bootstrap.servers': bootstrap,
+                    'acks': 'all',
+                    'linger.ms': 5,
+                    'compression.type': 'lz4',
+                })
+                self._kafka_producer_instance = ('confluent', ConfluentProducer(cfg))
+                logger.info('Kafka producer initialized (confluent-kafka): %s', bootstrap)
+            except ImportError:
+                try:
+                    import json as _j
+                    from kafka import KafkaProducer
+                    from django.conf import settings as _s
+                    bootstrap = getattr(_s, 'KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+                    prod = KafkaProducer(
+                        bootstrap_servers=bootstrap,
+                        value_serializer=lambda v: _j.dumps(v, default=str).encode('utf-8'),
+                    )
+                    self._kafka_producer_instance = ('kafka-python', prod)
+                    logger.info('Kafka producer initialized (kafka-python): %s', bootstrap)
+                except ImportError:
+                    logger.warning('No Kafka client installed. Install confluent-kafka or kafka-python.')
+                    self._kafka_producer_instance = ('none', None)
+            except Exception as exc:
+                logger.error('Kafka producer init failed: %s', exc)
+                self._kafka_producer_instance = ('error', None)
+        return self._kafka_producer_instance
+
+    def _publish_kafka(self, event: DomainEvent):
+        import json as _json
+        try:
+            lib_type, producer = self._get_kafka_producer()
+            if producer is None:
+                return
+            # Use dot-separated topic names (Kafka best practice)
+            topic = f"zygotrip.{event.event_type}"
+            payload = _json.dumps({
+                'event_id': event.event_id, 'event_type': event.event_type,
+                'payload': event.payload, 'timestamp': str(event.timestamp),
+            }, default=str).encode('utf-8')
+            if lib_type == 'confluent':
+                producer.produce(topic=topic, key=event.event_id.encode(), value=payload)
+                producer.poll(0)  # non-blocking delivery trigger
+            else:
+                producer.send(topic, value=payload)
+        except Exception as exc:
+            logger.warning('Kafka publish failed: type=%s error=%s', event.event_type, exc)
+
+    def _publish_rabbitmq(self, event: DomainEvent):
+        try:
+            import pika, json as _json
+            url = getattr(settings, 'RABBITMQ_URL', 'amqp://guest:guest@localhost:5672/')
+            conn = pika.BlockingConnection(pika.URLParameters(url))
+            ch = conn.channel()
+            ch.exchange_declare(exchange='zygotrip_events', exchange_type='topic', durable=True)
+            ch.basic_publish(
+                exchange='zygotrip_events',
+                routing_key=event.event_type,
+                body=_json.dumps({
+                    'event_id': event.event_id, 'event_type': event.event_type,
+                    'payload': event.payload, 'timestamp': str(event.timestamp),
+                }, default=str),
+            )
+            conn.close()
+        except ImportError:
+            logger.debug('pika not installed')
+        except Exception as e:
+            logger.warning('RabbitMQ publish failed: %s', e)
+
+    def _publish_celery(self, event: DomainEvent):
+        from celery import current_app
+        current_app.send_task(
+            'apps.core.event_bus.celery_dispatch_event',
+            args=[{
+                'event_id': event.event_id, 'event_type': event.event_type,
+                'payload': event.payload, 'timestamp': str(event.timestamp),
+            }],
+        )
 
 
 # ── Singleton ────────────────────────────────────────────────────────────────

@@ -132,6 +132,11 @@ const config: Config = {
         'fade-in':    'fadeIn 0.3s ease forwards',
         'slide-down': 'slideDown 0.2s ease forwards',
         'spin-slow':  'spin 2s linear infinite',
+        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+        'slide-up':   'slideUp 0.3s ease forwards',
+        'bounce-in':  'bounceIn 0.5s ease forwards',
+        'shimmer':    'shimmer 1.5s ease-in-out infinite',
+        'count-up':   'countUp 0.6s ease-out forwards',
       },
 
       keyframes: {
@@ -145,6 +150,27 @@ const config: Config = {
         },
         slideDown: {
           from: { opacity: '0', transform: 'translateY(-8px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        slideUp: {
+          from: { opacity: '0', transform: 'translateY(12px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        pulseSoft: {
+          '0%, 100%': { opacity: '1' },
+          '50%':      { opacity: '0.7' },
+        },
+        bounceIn: {
+          '0%':   { opacity: '0', transform: 'scale(0.9)' },
+          '60%':  { opacity: '1', transform: 'scale(1.02)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        shimmer: {
+          '0%':   { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        countUp: {
+          from: { opacity: '0', transform: 'translateY(8px)' },
           to:   { opacity: '1', transform: 'translateY(0)' },
         },
       },

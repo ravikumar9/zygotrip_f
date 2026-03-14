@@ -1,17 +1,21 @@
 /**
- * Axios instance with JWT auth interceptors.
+ * Axios instance with JWT auth interceptors + retry with exponential backoff.
  * Tokens are stored in memory (access) and localStorage (refresh).
  * On 401, attempts token refresh before retrying.
+ * On network/5xx errors, retries up to 3 times with exponential backoff.
  *
- * Phase 2: baseURL reads from NEXT_PUBLIC_API_BASE_URL env var.
- * Direct connection to Django — Django CORS allows http://localhost:3000.
+ * Phase 3: Uses relative URL '/api/v1' to go through the Next.js proxy,
+ * eliminating all CORS issues. The proxy rewrites /api/* → Django backend.
+ * For SSR/server-side, falls back to BACKEND_URL for direct access.
  */
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-// Phase 2: Env-var driven base URL. NEVER hardcode this.
+// Phase 3: Relative URL routes through the Next.js rewrite proxy (no CORS).
+// Server-side (SSR) needs the absolute URL since there's no browser proxy.
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  'http://127.0.0.1:8000/api/v1';
+  typeof window === 'undefined'
+    ? `${process.env.BACKEND_URL || 'http://127.0.0.1:8000'}/api/v1`
+    : (process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1');
 
 // In-memory token storage (avoids XSS via localStorage for access tokens)
 let accessToken: string | null = null;
@@ -101,6 +105,43 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
+  }
+);
+
+// ── Retry interceptor — exponential backoff for network/5xx errors ──
+
+const MAX_RETRIES = 3;
+const RETRY_BASE_DELAY = 1000; // 1s base, then 2s, 4s
+
+function isRetryableError(error: AxiosError): boolean {
+  // Network errors (no response)
+  if (!error.response) return true;
+  // Server errors (5xx)
+  if (error.response.status >= 500) return true;
+  // Rate limiting (429)
+  if (error.response.status === 429) return true;
+  return false;
+}
+
+api.interceptors.response.use(
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    const config = error.config as InternalAxiosRequestConfig & { _retryCount?: number; _retry?: boolean };
+    if (!config) return Promise.reject(error);
+
+    // Skip retry for auth-related failures (handled by refresh logic above)
+    if (error.response?.status === 401) return Promise.reject(error);
+
+    const retryCount = config._retryCount || 0;
+    if (retryCount >= MAX_RETRIES || !isRetryableError(error)) {
+      return Promise.reject(error);
+    }
+
+    config._retryCount = retryCount + 1;
+    const delay = RETRY_BASE_DELAY * Math.pow(2, retryCount) + Math.random() * 500;
+
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    return api(config);
   }
 );
 

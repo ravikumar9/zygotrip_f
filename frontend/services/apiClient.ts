@@ -1,12 +1,11 @@
 /**
  * apiClient — lightweight PUBLIC Axios instance.
  *
- * Phase 2 API Contract:
- *   baseURL = NEXT_PUBLIC_API_BASE_URL env var (absolute URL)
- *   Default: http://127.0.0.1:8000/api/v1
+ * Phase 3 API Contract:
+ *   Browser: baseURL = '/api/v1' (routed through Next.js rewrite proxy → Django)
+ *   Server:  baseURL = BACKEND_URL/api/v1 (direct connection)
  *
- * Django CORS is configured to allow http://localhost:3000.
- * All requests go directly to the Django backend — no Next.js proxy needed.
+ * Using the Next.js proxy eliminates all CORS issues.
  *
  * For authenticated requests use the default `api` export from ./api
  * which adds Authorization: Bearer headers automatically.
@@ -14,11 +13,11 @@
 
 import axios from 'axios';
 
-// Phase 2: Read from env var — NEVER hardcode the URL.
-// NEXT_PUBLIC_ prefix exposes it to the browser bundle.
+// Phase 3: Relative URL for browser (proxy), absolute for SSR.
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  'http://127.0.0.1:8000/api/v1';
+  typeof window === 'undefined'
+    ? `${process.env.BACKEND_URL || 'http://127.0.0.1:8000'}/api/v1`
+    : (process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1');
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -49,12 +48,14 @@ export async function fetchAutosuggest(
   query: string,
   limit = 8,
 ): Promise<Array<{
-  type:      'city' | 'area' | 'property';
+  type:      'city' | 'area' | 'property' | 'bus_city' | 'cab_city' | 'landmark';
   label:     string;
   sublabel?: string;
   count?:    number;
   slug?:     string;
   id?:       number | string | null;
+  place_id?: string;
+  source?:   'local' | 'google';
 }>> {
   if (!query || query.length < 2) return [];
   try {

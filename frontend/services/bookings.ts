@@ -57,6 +57,7 @@ export const bookingsService = {
     guest_name?: string;
     guest_email?: string;
     guest_phone?: string;
+    use_wallet?: boolean;
     idempotency_key?: string;
   }): Promise<BookingDetail> {
     const { data } = await api.post('/booking/', payload);
@@ -85,6 +86,16 @@ export const bookingsService = {
   }> {
     const { data } = await api.post('/promo/apply/', payload);
     return unwrap(data);
+  },
+
+  /**
+   * Apply (or remove) a promo code on an existing BookingContext.
+   * The backend recalculates service_fee, tax, final_price, locked_price.
+   * Send promo_code="" to remove a previously applied promo.
+   */
+  async applyPromoToContext(contextUuid: string, promoCode: string): Promise<BookingContext> {
+    const { data } = await api.post(`/booking/context/${contextUuid}/apply-promo/`, { promo_code: promoCode });
+    return unwrap<BookingContext>(data);
   },
 
   /** Fetch the current user's bookings */

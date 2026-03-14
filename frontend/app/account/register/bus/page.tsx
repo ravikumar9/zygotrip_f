@@ -13,7 +13,7 @@ const BENEFITS = [
 
 export default function BusRegisterPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen page-booking-bg flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-6">
@@ -53,7 +53,7 @@ export default function BusRegisterPage() {
           <RegisterForm
             role="bus_operator"
             roleLabel="Bus Operator"
-            redirectTo="/account"
+            redirectTo="/dashboard"
             extraFields={
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">

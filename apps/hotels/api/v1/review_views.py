@@ -9,6 +9,7 @@ Endpoints (appended to hotels API v1):
 import logging
 from decimal import Decimal, InvalidOperation
 
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -30,9 +31,14 @@ def property_reviews(request, property_id):
     Returns paginated approved reviews for a property.
     Query params: ?page=1&page_size=10&sort=newest|highest|lowest
     """
+    # Lookup by slug first, fall back to numeric PK
+    lookup = Q(slug=str(property_id))
     try:
-        prop = Property.objects.get_by_id_or_slug(property_id)
-    except Property.DoesNotExist:
+        lookup |= Q(pk=int(property_id))
+    except (TypeError, ValueError):
+        pass
+    prop = Property.objects.filter(lookup).first()
+    if not prop:
         return Response(
             {'success': False, 'error': {'code': 'not_found', 'message': 'Property not found'}},
             status=status.HTTP_404_NOT_FOUND,
@@ -134,7 +140,7 @@ def submit_review(request):
         )
 
     # Validate booking status
-    if booking.status not in (Booking.STATUS_CONFIRMED, Booking.STATUS_COMPLETED):
+    if booking.status not in (Booking.STATUS_CONFIRMED, Booking.STATUS_CHECKED_OUT, Booking.STATUS_SETTLED):
         return Response(
             {'success': False, 'error': {'code': 'invalid_status', 'message': 'Can only review confirmed or completed bookings'}},
             status=status.HTTP_400_BAD_REQUEST,

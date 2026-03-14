@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import './globals.css';
-import { Toaster } from 'react-hot-toast';
+import 'leaflet/dist/leaflet.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import QueryProvider from './providers';
+import AnalyticsProvider from '@/components/AnalyticsProvider';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import AbandonmentBanner from '@/components/booking/AbandonmentBanner';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://zygotrip.com'),
@@ -30,28 +34,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <QueryProvider>
-          <Header />
-          <main className="pt-14 min-h-screen">{children}</main>
-          <Footer />
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              duration: 6000,
-              style: {
-                maxWidth: '440px',
-                fontSize: '14px',
-                fontWeight: '600',
-                borderRadius: '12px',
-                padding: '12px 16px',
-              },
-              success: {
-                iconTheme: { primary: '#00a652', secondary: '#fff' },
-              },
-              error: {
-                iconTheme: { primary: '#EB2026', secondary: '#fff' },
-              },
-            }}
-          />
+          <Suspense fallback={null}>
+            <AnalyticsProvider>
+              <ErrorBoundary>
+                <Header />
+                <main className="pt-14 min-h-screen bg-page">{children}</main>
+                <AbandonmentBanner />
+                <Footer />
+              </ErrorBoundary>
+            </AnalyticsProvider>
+          </Suspense>
         </QueryProvider>
       </body>
     </html>

@@ -93,3 +93,17 @@ class PlatformSettingsAdmin(admin.ModelAdmin):
 	def has_delete_permission(self, request, obj=None):
 		"""Prevent deletion of PlatformSettings"""
 		return False
+
+# HolidayCalendar admin (System 2)
+try:
+    from apps.core.models import HolidayCalendar
+
+    @admin.register(HolidayCalendar)
+    class HolidayCalendarAdmin(admin.ModelAdmin):
+        list_display = ['holiday_name', 'date', 'holiday_type', 'demand_multiplier', 'country', 'state', 'is_active']
+        list_filter = ['holiday_type', 'country', 'state', 'is_active']
+        search_fields = ['holiday_name', 'country', 'state']
+        date_hierarchy = 'date'
+        ordering = ['date']
+except Exception:
+    pass

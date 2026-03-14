@@ -27,6 +27,13 @@ from apps.core.models import TimeStampedModel
 logger = logging.getLogger('zygotrip.fraud')
 
 
+def _increment_counter(cache_key, ttl_seconds):
+    try:
+        cache.incr(cache_key)
+    except ValueError:
+        cache.set(cache_key, 1, ttl_seconds)
+
+
 # ── Risk Score Thresholds ──────────────────────────────────────────────────────
 
 RISK_LOW = 0          # 0-30: allow
@@ -108,10 +115,22 @@ def assess_booking_risk(user, ip_address: str, amount: Decimal, property_id=None
         reasons.append(f'Moderate velocity: {ip_count} bookings from IP in 30min')
 
     # Increment IP counter
-    try:
-        cache.incr(ip_key)
-    except ValueError:
-        cache.set(ip_key, 1, 1800)  # 30 min window
+    _increment_counter(ip_key, 1800)
+
+    # 1b. Shared IP fan-out across multiple accounts in 24 hours
+    if user and user.is_authenticated:
+        ip_users_key = f'fraud:booking_ip_users:{ip_address}'
+        ip_users = cache.get(ip_users_key, []) or []
+        if user.id not in ip_users:
+            ip_users = [*ip_users, user.id][-10:]
+            cache.set(ip_users_key, ip_users, 86400)
+        distinct_users = len(ip_users)
+        if distinct_users >= 5:
+            score += 30
+            reasons.append(f'Shared IP across {distinct_users} accounts in 24h')
+        elif distinct_users >= 3:
+            score += 15
+            reasons.append(f'Shared IP across {distinct_users} accounts in 24h')
 
     # 2. User velocity — bookings per user in last hour
     if user and user.is_authenticated:
@@ -123,10 +142,7 @@ def assess_booking_risk(user, ip_address: str, amount: Decimal, property_id=None
         elif user_count >= 3:
             score += 15
             reasons.append(f'User velocity: {user_count} bookings in 1hr')
-        try:
-            cache.incr(user_key)
-        except ValueError:
-            cache.set(user_key, 1, 3600)  # 1 hour window
+        _increment_counter(user_key, 3600)
 
     # 3. Amount anomaly
     if amount > Decimal('100000'):
@@ -154,6 +170,16 @@ def assess_booking_risk(user, ip_address: str, amount: Decimal, property_id=None
         if fail_count >= 3:
             score += 25
             reasons.append(f'Multiple payment failures: {fail_count} in 24hrs')
+
+    if ip_address:
+        ip_fail_key = f'fraud:pay_fail_ip:{ip_address}'
+        ip_fail_count = cache.get(ip_fail_key, 0)
+        if ip_fail_count >= 6:
+            score += 30
+            reasons.append(f'Payment failures concentrated on IP: {ip_fail_count} in 24hrs')
+        elif ip_fail_count >= 3:
+            score += 15
+            reasons.append(f'Payment failures concentrated on IP: {ip_fail_count} in 24hrs')
 
     # Determine action
     if score >= RISK_CRITICAL:
@@ -188,14 +214,14 @@ def assess_booking_risk(user, ip_address: str, amount: Decimal, property_id=None
     }
 
 
-def record_payment_failure(user):
+def record_payment_failure(user, ip_address: str | None = None):
     """Track payment failure for fraud scoring."""
     if user and user.is_authenticated:
         fail_key = f'fraud:pay_fail:{user.id}'
-        try:
-            cache.incr(fail_key)
-        except ValueError:
-            cache.set(fail_key, 1, 86400)  # 24 hour window
+        _increment_counter(fail_key, 86400)
+    if ip_address:
+        ip_fail_key = f'fraud:pay_fail_ip:{ip_address}'
+        _increment_counter(ip_fail_key, 86400)
 
 
 def assess_login_risk(ip_address: str, email: str) -> dict:
@@ -230,3 +256,289 @@ def record_login_failure(ip_address: str):
         cache.incr(login_key)
     except ValueError:
         cache.set(login_key, 1, 3600)  # 1 hour window
+
+
+# ── Section 9: Coupon Abuse + Excessive Cancellation Detection ─────────────
+
+
+def detect_coupon_abuse(user) -> dict:
+    """
+    Detect coupon/promo abuse patterns.
+
+    Flags:
+    - User applying >5 different coupons in 24h (coupon farming)
+    - Same payment method used across multiple accounts
+    - User creating multiple accounts for first-booking coupons
+    """
+    score = 0
+    reasons = []
+
+    if not user or not user.is_authenticated:
+        return {'risk_score': 0, 'action': 'allow', 'reasons': []}
+
+    # 1. Coupon velocity — too many coupon attempts in 24h
+    coupon_key = f'fraud:coupon_attempts:{user.id}'
+    coupon_count = cache.get(coupon_key, 0)
+    if coupon_count >= 10:
+        score += 50
+        reasons.append(f'Excessive coupon attempts: {coupon_count} in 24h')
+    elif coupon_count >= 5:
+        score += 25
+        reasons.append(f'High coupon attempts: {coupon_count} in 24h')
+
+    # 2. Check PromoUsage frequency
+    try:
+        from apps.promos.models import PromoUsage
+        from datetime import timedelta
+
+        week_ago = timezone.now() - timedelta(days=7)
+        promo_uses = PromoUsage.objects.filter(
+            user=user,
+            used_at__gte=week_ago,
+        ).count()
+
+        if promo_uses >= 10:
+            score += 40
+            reasons.append(f'Used {promo_uses} promos in 7 days')
+        elif promo_uses >= 5:
+            score += 15
+            reasons.append(f'Used {promo_uses} promos in 7 days')
+    except Exception:
+        pass
+
+    # 3. Check for same payment fingerprint across users
+    try:
+        from apps.core.device_fingerprint import DeviceFingerprint
+        user_fps = DeviceFingerprint.objects.filter(user=user).values_list(
+            'fingerprint_hash', flat=True
+        )[:5]
+        if user_fps:
+            other_users = DeviceFingerprint.objects.filter(
+                fingerprint_hash__in=list(user_fps),
+            ).exclude(user=user).values('user_id').distinct().count()
+            if other_users >= 3:
+                score += 45
+                reasons.append(f'Same device fingerprint on {other_users} other accounts')
+            elif other_users >= 1:
+                score += 20
+                reasons.append(f'Shared device fingerprint with {other_users} account(s)')
+    except Exception:
+        pass
+
+    # Determine action
+    if score >= RISK_CRITICAL:
+        action = FraudFlag.ACTION_BLOCK
+    elif score >= RISK_HIGH:
+        action = FraudFlag.ACTION_VERIFY
+    elif score >= RISK_MEDIUM:
+        action = FraudFlag.ACTION_FLAG
+    else:
+        action = FraudFlag.ACTION_ALLOW
+
+    if score >= RISK_MEDIUM:
+        FraudFlag.objects.create(
+            user=user,
+            risk_score=score,
+            action_taken=action,
+            reason='; '.join(reasons),
+            reference_type='coupon_abuse',
+        )
+        logger.warning('Coupon abuse: score=%d user=%s reasons=%s', score, user.id, reasons)
+
+    return {'risk_score': score, 'action': action, 'reasons': reasons}
+
+
+def record_coupon_attempt(user):
+    """Track coupon application attempt for abuse detection."""
+    if user and user.is_authenticated:
+        key = f'fraud:coupon_attempts:{user.id}'
+        try:
+            cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, 86400)  # 24h window
+
+
+def detect_excessive_cancellations(user) -> dict:
+    """
+    Flag users who repeatedly book and cancel hotels.
+
+    Thresholds:
+    - ≥5 cancellations in 30 days → flag
+    - ≥10 cancellations in 30 days → block
+    - Cancellation rate >60% → flag
+    """
+    score = 0
+    reasons = []
+
+    if not user or not user.is_authenticated:
+        return {'risk_score': 0, 'action': 'allow', 'reasons': []}
+
+    try:
+        from apps.booking.models import Booking
+        from datetime import timedelta
+        from django.db.models import Count, Q
+
+        month_ago = timezone.now() - timedelta(days=30)
+
+        stats = Booking.objects.filter(
+            user=user,
+            created_at__gte=month_ago,
+        ).aggregate(
+            total=Count('id'),
+            cancelled=Count('id', filter=Q(
+                status__in=['cancelled', 'cancelled_by_hotel', 'refunded'],
+            )),
+        )
+
+        total = stats['total'] or 0
+        cancelled = stats['cancelled'] or 0
+
+        if cancelled >= 10:
+            score += 60
+            reasons.append(f'{cancelled} cancellations in 30 days')
+        elif cancelled >= 5:
+            score += 30
+            reasons.append(f'{cancelled} cancellations in 30 days')
+
+        if total >= 3 and cancelled / total > 0.60:
+            score += 25
+            reasons.append(f'Cancellation rate: {cancelled}/{total} ({int(cancelled/total*100)}%)')
+
+    except Exception as exc:
+        logger.debug('Cancellation check failed: %s', exc)
+
+    if score >= RISK_CRITICAL:
+        action = FraudFlag.ACTION_BLOCK
+    elif score >= RISK_HIGH:
+        action = FraudFlag.ACTION_VERIFY
+    elif score >= RISK_MEDIUM:
+        action = FraudFlag.ACTION_FLAG
+    else:
+        action = FraudFlag.ACTION_ALLOW
+
+    if score >= RISK_MEDIUM:
+        FraudFlag.objects.create(
+            user=user,
+            risk_score=score,
+            action_taken=action,
+            reason='; '.join(reasons),
+            reference_type='excessive_cancellation',
+        )
+
+    return {'risk_score': score, 'action': action, 'reasons': reasons}
+
+
+# ── Shared Payment Method Detection ──────────────────────────────────────────
+
+
+def detect_shared_payment_method(user) -> dict:
+    """
+    Detect multiple accounts using the same payment method.
+
+    Flags:
+    - Same card last-4 + card fingerprint used across ≥2 accounts → flag
+    - Same UPI VPA across ≥3 accounts → flag
+    - Same bank account across ≥2 accounts → block
+
+    Relies on payment records stored by the payment gateway module.
+    """
+    score = 0
+    reasons = []
+
+    if not user or not user.is_authenticated:
+        return {'risk_score': 0, 'action': 'allow', 'reasons': []}
+
+    try:
+        from apps.payments.models import PaymentTransaction
+
+        # Get this user's payment fingerprints from last 90 days
+        cutoff = timezone.now() - timedelta(days=90)
+        user_payments = PaymentTransaction.objects.filter(
+            user=user,
+            created_at__gte=cutoff,
+        ).exclude(
+            payment_method_fingerprint='',
+        ).values_list('payment_method_fingerprint', flat=True).distinct()
+
+        fingerprints = list(user_payments[:20])
+
+        if fingerprints:
+            # Find other users sharing the same payment fingerprints
+            shared_users = (
+                PaymentTransaction.objects.filter(
+                    payment_method_fingerprint__in=fingerprints,
+                    created_at__gte=cutoff,
+                )
+                .exclude(user=user)
+                .values('user_id')
+                .distinct()
+                .count()
+            )
+
+            if shared_users >= 3:
+                score += 60
+                reasons.append(
+                    f'Payment method shared with {shared_users} other accounts'
+                )
+            elif shared_users >= 1:
+                score += 30
+                reasons.append(
+                    f'Payment method shared with {shared_users} other account(s)'
+                )
+
+        # Check UPI VPA sharing
+        user_vpas = PaymentTransaction.objects.filter(
+            user=user,
+            created_at__gte=cutoff,
+            payment_mode='upi',
+        ).exclude(
+            upi_vpa='',
+        ).values_list('upi_vpa', flat=True).distinct()
+
+        vpas = list(user_vpas[:10])
+
+        if vpas:
+            vpa_shared = (
+                PaymentTransaction.objects.filter(
+                    upi_vpa__in=vpas,
+                    created_at__gte=cutoff,
+                )
+                .exclude(user=user)
+                .values('user_id')
+                .distinct()
+                .count()
+            )
+            if vpa_shared >= 2:
+                score += 40
+                reasons.append(f'UPI VPA shared with {vpa_shared} other accounts')
+            elif vpa_shared >= 1:
+                score += 15
+                reasons.append(f'UPI VPA shared with {vpa_shared} account(s)')
+
+    except Exception as exc:
+        logger.debug('Shared payment check failed: %s', exc)
+
+    # Determine action
+    if score >= RISK_CRITICAL:
+        action = FraudFlag.ACTION_BLOCK
+    elif score >= RISK_HIGH:
+        action = FraudFlag.ACTION_VERIFY
+    elif score >= RISK_MEDIUM:
+        action = FraudFlag.ACTION_FLAG
+    else:
+        action = FraudFlag.ACTION_ALLOW
+
+    if score >= RISK_MEDIUM:
+        FraudFlag.objects.create(
+            user=user,
+            risk_score=score,
+            action_taken=action,
+            reason='; '.join(reasons),
+            reference_type='shared_payment_method',
+        )
+        logger.warning(
+            'Shared payment detected: score=%d user=%s reasons=%s',
+            score, user.id, reasons,
+        )
+
+    return {'risk_score': score, 'action': action, 'reasons': reasons}

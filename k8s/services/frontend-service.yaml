@@ -1,0 +1,43 @@
+# ============================================================
+# ZygoTrip — Next.js Frontend Service
+# ============================================================
+# ClusterIP service — internal cluster DNS only.
+# External traffic enters via the NGINX Ingress (ingress.yaml)
+# which routes zygotrip.com → this Service → frontend pods.
+#
+# DNS name inside the cluster:
+#   frontend-service.zygotrip.svc.cluster.local:80
+#   (shortened: frontend-service.zygotrip:80 or frontend-service:80)
+#
+# Port mapping:
+#   Service port 80 → container port 3000 (Next.js HTTP server)
+#
+# The Ingress terminates TLS and forwards plain HTTP to this service.
+# ============================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "ClusterIP service for Next.js 14 frontend pods"
+spec:
+  type: ClusterIP
+
+  selector:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/component: frontend
+
+  ports:
+    - name: http
+      port: 80
+      targetPort: http        # Named port "http" on container (3000)
+      protocol: TCP
+
+  sessionAffinity: None

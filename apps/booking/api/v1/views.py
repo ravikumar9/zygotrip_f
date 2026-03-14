@@ -22,14 +22,19 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 
+from decimal import Decimal
+
 from apps.booking.models import Booking, BookingContext, BookingRoom, GuestBookingContext
 from apps.hotels.models import Property
 from apps.rooms.models import RoomType
-from apps.pricing.pricing_service import calculate as calculate_price
+from apps.pricing.pricing_service import calculate as calculate_price, calculate_from_amounts
 from apps.booking.services import create_booking, transition_booking_status
 from apps.booking.exceptions import InventoryUnavailableException
 from apps.booking.cancellation_models import CancellationPolicy, RefundCalculator
 from apps.inventory.services import release_inventory, create_hold, release_booking_inventory
+from apps.promos.selectors import get_active_promo
+from apps.promos.services import calculate_promo_discount
+from apps.promos.models import PromoUsage
 
 from .serializers import (
     BookingContextCreateSerializer,
@@ -255,6 +260,123 @@ def get_booking_context_by_id(request, context_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def apply_promo_to_context(request, context_uuid):
+    """
+    POST /api/v1/booking/context/<uuid>/apply-promo/
+
+    Applies (or removes) a promo code on an existing BookingContext.
+    Recalculates service_fee, tax, final_price, locked_price server-side
+    so the frontend NEVER computes discounts locally.
+
+    To remove a promo, send {"promo_code": ""}.
+    """
+    try:
+        ctx = BookingContext.objects.select_related('property', 'room_type').get(
+            uuid=context_uuid,
+            context_status=BookingContext.STATUS_ACTIVE,
+        )
+    except BookingContext.DoesNotExist:
+        return Response(
+            {'success': False, 'error': {'code': 'not_found', 'message': 'Booking context not found or expired.'}},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    ctx, err = _get_context_or_error(ctx)
+    if err:
+        return err
+
+    promo_code = (request.data.get('promo_code') or '').strip()
+
+    # ── Remove promo ────────────────────────────────────────────────
+    if not promo_code:
+        ctx.promo_code = ''
+        ctx.promo_discount = Decimal('0')
+
+        nights = max(1, (ctx.checkout - ctx.checkin).days)
+        rooms = max(1, ctx.rooms or 1)
+        tariff_per_night = ctx.base_price / Decimal(str(nights * rooms))
+
+        breakdown = calculate_from_amounts(
+            base_amount=ctx.base_price,
+            meal_amount=ctx.meal_amount,
+            promo_discount=Decimal('0'),
+            tariff_per_night=tariff_per_night,
+        )
+        ctx.service_fee = breakdown['service_fee']
+        ctx.tax = breakdown['gst']
+        ctx.final_price = breakdown['total_amount']
+        ctx.locked_price = breakdown['total_amount']
+        ctx.save(update_fields=[
+            'promo_code', 'promo_discount', 'service_fee', 'tax',
+            'final_price', 'locked_price',
+        ])
+        logger.info('Promo removed from context %s', context_uuid)
+        return Response({'success': True, 'data': BookingContextSerializer(ctx).data})
+
+    # ── Validate promo ──────────────────────────────────────────────
+    promo = get_active_promo(promo_code)
+    if not promo:
+        return Response(
+            {'success': False, 'error': {'code': 'invalid_promo', 'message': 'Promo code is invalid or has expired.'}},
+            status=status.HTTP_200_OK,
+        )
+
+    # Max global uses
+    if promo.max_uses and promo.max_uses > 0:
+        usage_count = PromoUsage.objects.filter(promo=promo).count()
+        if usage_count >= promo.max_uses:
+            return Response(
+                {'success': False, 'error': {'code': 'promo_exhausted', 'message': 'This promo code has reached its usage limit.'}},
+                status=status.HTTP_200_OK,
+            )
+
+    # Per-user guard
+    if request.user.is_authenticated:
+        already_used = PromoUsage.objects.filter(promo=promo, user=request.user).exists()
+        if already_used:
+            return Response(
+                {'success': False, 'error': {'code': 'already_used', 'message': 'You have already used this promo code.'}},
+                status=status.HTTP_200_OK,
+            )
+
+    # ── Calculate discount & recalculate breakdown ──────────────────
+    subtotal = ctx.base_price + ctx.meal_amount
+    discount_amount = calculate_promo_discount(promo, subtotal)
+    if promo.max_discount and discount_amount > promo.max_discount:
+        discount_amount = Decimal(str(promo.max_discount))
+
+    nights = max(1, (ctx.checkout - ctx.checkin).days)
+    rooms = max(1, ctx.rooms or 1)
+    tariff_per_night = ctx.base_price / Decimal(str(nights * rooms))
+
+    breakdown = calculate_from_amounts(
+        base_amount=ctx.base_price,
+        meal_amount=ctx.meal_amount,
+        promo_discount=discount_amount,
+        tariff_per_night=tariff_per_night,
+    )
+
+    ctx.promo_code = promo.code
+    ctx.promo_discount = discount_amount
+    ctx.service_fee = breakdown['service_fee']
+    ctx.tax = breakdown['gst']
+    ctx.final_price = breakdown['total_amount']
+    ctx.locked_price = breakdown['total_amount']
+    ctx.save(update_fields=[
+        'promo_code', 'promo_discount', 'service_fee', 'tax',
+        'final_price', 'locked_price',
+    ])
+
+    logger.info(
+        'Promo %s applied to context %s — discount=%s new_total=%s',
+        promo.code, context_uuid, discount_amount, breakdown['total_amount'],
+    )
+
+    return Response({'success': True, 'data': BookingContextSerializer(ctx).data})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def create_booking_view(request):
     """
     POST /api/v1/booking/
@@ -339,6 +461,23 @@ def create_booking_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # ── Wallet balance check (before creating booking) ────────────────
+    payment_method = data.get('payment_method', 'wallet')
+    if payment_method == 'wallet' and is_authenticated:
+        try:
+            from apps.wallet.services import check_wallet_balance
+            booking_amount = context.locked_price if context.price_locked else context.final_price
+            if not check_wallet_balance(request.user, booking_amount):
+                return Response(
+                    {'success': False, 'error': {
+                        'code': 'insufficient_balance',
+                        'message': f'Insufficient wallet balance. You need ₹{booking_amount} but your wallet balance is too low. Please add funds or choose a different payment method.',
+                    }},
+                    status=status.HTTP_402_PAYMENT_REQUIRED,
+                )
+        except Exception as wb_err:
+            logger.warning('Wallet balance check failed (non-blocking): %s', wb_err)
+
     # Determine booking user
     booking_user = request.user if is_authenticated else None
 
@@ -417,6 +556,58 @@ def create_booking_view(request):
     user_label = request.user.email if is_authenticated else f'guest:{data["guest_email"]}'
     logger.info('Booking created: %s for %s (guest=%s)', booking.public_booking_id, user_label, is_guest)
 
+    # ── Wallet payment: auto-process for authenticated wallet payments ──
+    # This handles HOLD → PAYMENT_PENDING → CONFIRMED in one shot
+    payment_processed = False
+    if payment_method == 'wallet' and is_authenticated:
+        booking_amount = Decimal(str(booking.total_amount))
+        try:
+            from apps.wallet.services import use_wallet_for_payment
+            from apps.booking.state_machine import BookingStateMachine
+
+            with transaction.atomic():
+                # Step 1: HOLD → PAYMENT_PENDING
+                booking = BookingStateMachine.transition(
+                    booking, Booking.STATUS_PAYMENT_PENDING,
+                    note='Wallet payment initiated',
+                    user=request.user,
+                )
+
+                # Step 2: Debit wallet
+                success, err = use_wallet_for_payment(
+                    user=request.user,
+                    amount=booking_amount,
+                    booking_reference=str(booking.uuid),
+                )
+                if not success:
+                    raise ValueError(err or 'Wallet payment failed')
+
+                # Step 3: PAYMENT_PENDING → CONFIRMED
+                booking = BookingStateMachine.transition(
+                    booking, Booking.STATUS_CONFIRMED,
+                    note=f'Wallet payment confirmed (₹{booking_amount})',
+                    user=request.user,
+                )
+
+            payment_processed = True
+            logger.info(
+                'Wallet payment processed: %s amount=₹%s user=%s',
+                booking.public_booking_id, booking_amount, user_label,
+            )
+            # Invalidate wallet balance cache after debit
+            try:
+                from django.core.cache import cache
+                cache.delete(f'wallet_balance_{request.user.id}')
+            except Exception:
+                pass
+        except Exception as pay_err:
+            # Payment failed — booking stays in HOLD, user can retry
+            logger.warning(
+                'Wallet auto-payment failed for %s: %s',
+                booking.public_booking_id, pay_err,
+            )
+            # Don't fail the entire booking — just return it in HOLD status
+
     booking_detail = Booking.objects.prefetch_related('rooms__room_type').select_related('property').get(pk=booking.pk)
     return Response(
         {'success': True, 'data': BookingDetailSerializer(booking_detail).data},
@@ -472,7 +663,7 @@ def booking_detail(request, booking_uuid):
     GET /api/v1/booking/<uuid>/
 
     Authenticated users see their own bookings.
-    Guest users provide ?email=x for verification.
+    Guest bookings can be accessed by UUID alone (UUID is the secret token).
     """
     try:
         qs = (
@@ -483,14 +674,8 @@ def booking_detail(request, booking_uuid):
         if request.user and request.user.is_authenticated:
             booking = qs.get(uuid=booking_uuid, user=request.user)
         else:
-            # Guest access: require email match
-            email = request.query_params.get('email', '').strip()
-            if not email:
-                return Response(
-                    {'success': False, 'error': {'code': 'auth_required', 'message': 'Provide email for guest booking lookup.'}},
-                    status=status.HTTP_401_UNAUTHORIZED,
-                )
-            booking = qs.get(uuid=booking_uuid, is_guest_booking=True, guest_email__iexact=email)
+            # Guest access: UUID is the authentication token for guest bookings
+            booking = qs.get(uuid=booking_uuid, is_guest_booking=True)
     except Booking.DoesNotExist:
         return Response(
             {'success': False, 'error': {'code': 'not_found', 'message': 'Booking not found.'}},
@@ -595,6 +780,35 @@ def cancel_booking(request, booking_uuid):
                 booking.refund_amount = refund_data['refund_amount']
                 booking.save(update_fields=['refund_amount', 'updated_at'])
 
+                # 4. Process wallet refund if payment was via wallet
+                refund_amount = Decimal(str(refund_data['refund_amount']))
+                if refund_amount > 0 and booking.user:
+                    try:
+                        from apps.wallet.services import refund_to_wallet
+                        wallet_refunded = refund_to_wallet(
+                            user=booking.user,
+                            amount=refund_amount,
+                            booking_reference=str(booking.uuid),
+                            note=f'Refund for cancelled booking {booking.public_booking_id} ({refund_data["tier"]})',
+                        )
+                        if wallet_refunded:
+                            logger.info(
+                                'Wallet refund processed: %s amount=₹%s user=%s',
+                                booking.public_booking_id, refund_amount, booking.user.email,
+                            )
+                            if refund_data:
+                                refund_data['wallet_credited'] = True
+                            # Invalidate wallet balance cache after refund
+                            try:
+                                from django.core.cache import cache
+                                cache.delete(f'wallet_balance_{booking.user.id}')
+                            except Exception:
+                                pass
+                    except Exception as refund_err:
+                        logger.error('Wallet refund failed for %s: %s', booking.public_booking_id, refund_err)
+                        if refund_data:
+                            refund_data['wallet_credited'] = False
+
     except Exception as e:
         logger.exception('Booking cancellation failed: %s', e)
         return Response(
@@ -615,5 +829,96 @@ def cancel_booking(request, booking_uuid):
             'amount': str(refund_data['refund_amount']),
             'tier': refund_data['tier'],
             'note': refund_data['note'],
+            'wallet_credited': refund_data.get('wallet_credited', False),
         }
     return Response({'success': True, 'data': response_data})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def refund_preview(request, booking_uuid):
+    """
+    GET /api/v1/booking/<uuid>/refund-preview/
+
+    Preview the refund amount WITHOUT cancelling.
+    Used by frontend cancellation modal to show the user what they'll get back.
+    """
+    from apps.booking.models import Booking, CancellationPolicy
+    from django.utils import timezone
+
+    # Auth: authenticated users see own bookings; guest uuid acts as token
+    try:
+        if request.user.is_authenticated:
+            booking = Booking.objects.select_related('property').get(
+                uuid=booking_uuid, user=request.user
+            )
+        else:
+            booking = Booking.objects.select_related('property').get(uuid=booking_uuid)
+    except Booking.DoesNotExist:
+        return Response({'error': 'Booking not found'}, status=404)
+
+    # Not cancellable statuses
+    if booking.status not in ('hold', 'payment_pending', 'confirmed'):
+        return Response({
+            'amount': 0,
+            'tier': 'not_cancellable',
+            'note': f'Booking is {booking.status} and cannot be cancelled.',
+        })
+
+    # If booking was unpaid (HOLD/PAYMENT_PENDING) → full refund trivially
+    if booking.status in ('hold', 'payment_pending'):
+        return Response({
+            'amount': 0,          # No money was charged
+            'tier': 'free',
+            'note': 'No charge — booking was not yet paid.',
+        })
+
+    # For confirmed bookings: apply CancellationPolicy tiers
+    try:
+        policy = (
+            CancellationPolicy.objects
+            .filter(property=booking.property, is_active=True)
+            .first()
+        )
+        if policy:
+            try:
+                from apps.booking.refund_calculator import RefundCalculator
+                refund_data = RefundCalculator.calculate(
+                    booking, policy, cancelled_at=timezone.now()
+                )
+                return Response({
+                    'amount': float(refund_data.get('refund_amount', 0)),
+                    'tier':   refund_data.get('tier', 'custom'),
+                    'note':   refund_data.get('note', ''),
+                })
+            except ImportError:
+                pass
+
+        # Fallback: check cancellation_hours on property
+        prop = booking.property
+        cancellation_hours = getattr(prop, 'cancellation_hours', 48) or 48
+        now = timezone.now()
+        check_in_dt = timezone.datetime.combine(booking.check_in, timezone.datetime.min.time())
+        check_in_dt = timezone.make_aware(check_in_dt) if timezone.is_naive(check_in_dt) else check_in_dt
+        hours_until_checkin = (check_in_dt - now).total_seconds() / 3600
+
+        if hours_until_checkin >= cancellation_hours:
+            return Response({
+                'amount': float(booking.gross_amount or 0),
+                'tier':   'free',
+                'note':   f'Free cancellation — more than {cancellation_hours}h before check-in.',
+            })
+        else:
+            return Response({
+                'amount': 0,
+                'tier':   'non_refundable',
+                'note':   f'Non-refundable — less than {cancellation_hours}h before check-in.',
+            })
+
+    except Exception as exc:
+        logger.warning('refund_preview error booking=%s: %s', booking_uuid, exc)
+        return Response({
+            'amount': float(booking.gross_amount or 0),
+            'tier':   'unknown',
+            'note':   'Refund amount to be confirmed after cancellation.',
+        })

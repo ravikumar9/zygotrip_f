@@ -468,21 +468,34 @@ class QualityScorer:
 
     @staticmethod
     def _score_completeness(property_obj):
-        """Listing completeness (0-100)."""
+        """Listing completeness with geo validation and amenity check (0-100)."""
         score = 0
         if property_obj.name:
-            score += 15
+            score += 10
         if getattr(property_obj, 'description', ''):
-            score += 20
+            score += 15
         if getattr(property_obj, 'address', ''):
-            score += 15
-        if getattr(property_obj, 'latitude', None) and getattr(property_obj, 'longitude', None):
-            score += 15
+            score += 10
+
+        # Geo validation: lat/lng must exist AND be within reasonable India bounds
+        lat = getattr(property_obj, 'latitude', None)
+        lng = getattr(property_obj, 'longitude', None)
+        if lat and lng:
+            try:
+                lat_f, lng_f = float(lat), float(lng)
+                # India bounding box: lat 6.5-37.5, lng 68-97.5
+                if 6.5 <= lat_f <= 37.5 and 68.0 <= lng_f <= 97.5:
+                    score += 15  # Valid Indian coordinates
+                else:
+                    score += 5   # Has coords but outside India — partial credit
+            except (ValueError, TypeError):
+                score += 0  # Invalid coordinates
+
         if getattr(property_obj, 'star_category', 0):
             score += 10
         try:
             if property_obj.images.exists():
-                score += 15
+                score += 10
         except Exception:
             pass
         try:
@@ -491,6 +504,20 @@ class QualityScorer:
                 score += 10
         except Exception:
             pass
+
+        # Amenity completeness: at least 3 amenities populated
+        try:
+            amenity_count = property_obj.amenities.count()
+            if amenity_count >= 5:
+                score += 20
+            elif amenity_count >= 3:
+                score += 15
+            elif amenity_count >= 1:
+                score += 10
+        except Exception:
+            # amenities relation may not exist on all Property implementations
+            pass
+
         return min(100, score)
 
     @staticmethod
@@ -628,41 +655,102 @@ class ConversionSignals:
 
     @staticmethod
     def get_signals(property_obj, check_in=None, check_out=None):
-        """
-        Get all conversion signals for a property.
-        Returns dict of signals suitable for frontend display.
-        """
+        """Get conversion signals through the production-safe signal service."""
+        from apps.core.conversion_signals import ConversionSignals as ConversionSignalService
+
+        raw = ConversionSignalService.for_property(property_obj, check_in, check_out)
+        rooms_left = raw.get('rooms_left')
+        booked_today = raw.get('booked_today', 0)
+        viewing_now = raw.get('viewing_now', 0)
+
         signals = {}
+        if rooms_left is not None and rooms_left <= 8:
+            signals['scarcity'] = {
+                'show': True,
+                'text': f'Only {rooms_left} room{"s" if rooms_left != 1 else ""} left!' if rooms_left <= 3 else f'{rooms_left} rooms left',
+                'urgency': 'high' if rooms_left <= 3 else 'medium',
+            }
+        else:
+            signals['scarcity'] = {'show': False}
 
-        # 1. Scarcity: rooms remaining
-        if check_in and check_out:
-            signals['scarcity'] = ConversionSignals._scarcity_signal(
-                property_obj, check_in, check_out,
-            )
+        if booked_today > 0:
+            signals['popularity'] = {
+                'show': True,
+                'text': f'Booked {booked_today} time{"s" if booked_today != 1 else ""} today',
+                'urgency': 'high' if booked_today >= 5 else 'low',
+            }
+        else:
+            signals['popularity'] = {'show': False}
 
-        # 2. Popularity: recent bookings
-        signals['popularity'] = ConversionSignals._popularity_signal(property_obj)
+        price_trend = raw.get('price_trend', 'stable')
+        signals['price_trend'] = {
+            'show': price_trend in {'rising', 'falling'},
+            'text': 'Price rising - book now' if price_trend == 'rising' else ('Price dropped recently' if price_trend == 'falling' else ''),
+            'direction': 'up' if price_trend == 'rising' else ('down' if price_trend == 'falling' else 'stable'),
+        }
 
-        # 3. Price trend
-        signals['price_trend'] = ConversionSignals._price_trend_signal(property_obj)
+        review_count = getattr(property_obj, 'review_count', 0) or 0
+        rating = float(getattr(property_obj, 'rating', 0) or 0)
+        if viewing_now >= 2:
+            signals['social_proof'] = {
+                'show': True,
+                'text': f'{viewing_now} people viewing this now',
+            }
+        elif review_count >= 50 and rating >= 4.0:
+            signals['social_proof'] = {
+                'show': True,
+                'text': f'Loved by guests - {rating}★ ({review_count} reviews)',
+            }
+        elif review_count >= 10:
+            signals['social_proof'] = {
+                'show': True,
+                'text': f'{review_count} verified reviews',
+            }
+        else:
+            signals['social_proof'] = {'show': False}
 
-        # 4. Social proof
-        signals['social_proof'] = ConversionSignals._social_proof_signal(property_obj)
-
-        # 5. Trust badges
+        badges = []
         try:
             quality = HotelQualityScore.objects.get(property=property_obj)
-            badges = []
             if quality.is_top_rated:
                 badges.append({'type': 'top_rated', 'text': 'Top Rated'})
             if quality.is_value_pick:
                 badges.append({'type': 'value_pick', 'text': 'Value Pick'})
             if quality.is_trending:
                 badges.append({'type': 'trending', 'text': 'Trending'})
-            signals['trust_badges'] = badges
         except HotelQualityScore.DoesNotExist:
-            signals['trust_badges'] = []
+            pass
+        great_deal = raw.get('great_deal') or {}
+        if great_deal.get('is_great_deal') and great_deal.get('badge_text'):
+            badges.append({'type': 'great_deal', 'text': great_deal['badge_text']})
+        signals['trust_badges'] = badges
 
+        last_booked_ago = raw.get('last_booked_ago')
+        if last_booked_ago is not None:
+            if last_booked_ago < 60:
+                text = f'Last booked {last_booked_ago} minute{"s" if last_booked_ago != 1 else ""} ago'
+            else:
+                hours = max(1, int(last_booked_ago / 60))
+                text = f'Last booked {hours} hour{"s" if hours != 1 else ""} ago'
+            signals['last_booked'] = {
+                'show': True,
+                'text': text,
+                'urgency': 'high' if last_booked_ago < 60 else 'medium',
+            }
+        else:
+            signals['last_booked'] = {'show': False}
+
+        if viewing_now >= 2:
+            signals['viewers_now'] = {
+                'show': True,
+                'text': f'{viewing_now} people viewing this now',
+                'count': viewing_now,
+                'urgency': 'high' if viewing_now >= 5 else 'medium',
+            }
+        else:
+            signals['viewers_now'] = {'show': False}
+
+        signals['summary'] = raw
         return signals
 
     @staticmethod
@@ -761,4 +849,71 @@ class ConversionSignals:
                 'show': True,
                 'text': f'{review_count} verified reviews',
             }
+        return {'show': False}
+
+    @staticmethod
+    def _last_booked_signal(property_obj):
+        """Show 'Last booked X hours/minutes ago' for recent bookings."""
+        from apps.booking.models import Booking
+
+        last = Booking.objects.filter(
+            property=property_obj,
+            status__in=['confirmed', 'hold'],
+        ).order_by('-created_at').values_list('created_at', flat=True).first()
+
+        if not last:
+            return {'show': False}
+
+        now = timezone.now()
+        delta = now - last
+        hours = delta.total_seconds() / 3600
+
+        if hours < 1:
+            minutes = max(1, int(delta.total_seconds() / 60))
+            return {
+                'show': True,
+                'text': f'Last booked {minutes} minute{"s" if minutes != 1 else ""} ago',
+                'urgency': 'high',
+            }
+        elif hours < 24:
+            h = int(hours)
+            return {
+                'show': True,
+                'text': f'Last booked {h} hour{"s" if h != 1 else ""} ago',
+                'urgency': 'medium' if h <= 3 else 'low',
+            }
+        elif hours < 72:
+            days = int(hours / 24)
+            return {
+                'show': True,
+                'text': f'Last booked {days} day{"s" if days != 1 else ""} ago',
+                'urgency': 'low',
+            }
+        return {'show': False}
+
+    @staticmethod
+    def _viewers_now_signal(property_obj):
+        """
+        Estimate current viewers from recent analytics pageviews.
+        Shows 'X people viewing this now' when there's active interest.
+        """
+        try:
+            from apps.core.analytics import AnalyticsEvent
+            # Count unique sessions viewing this property in last 15 minutes
+            cutoff = timezone.now() - timedelta(minutes=15)
+            viewer_count = AnalyticsEvent.objects.filter(
+                property_id=property_obj.pk,
+                event_type=AnalyticsEvent.EVENT_PROPERTY_VIEW,
+                created_at__gte=cutoff,
+            ).values('session_id').distinct().count()
+
+            if viewer_count >= 2:
+                return {
+                    'show': True,
+                    'text': f'{viewer_count} people viewing this now',
+                    'count': viewer_count,
+                    'urgency': 'high' if viewer_count >= 5 else 'medium',
+                }
+        except Exception:
+            pass
         return {'show': False}

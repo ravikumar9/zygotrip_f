@@ -46,7 +46,7 @@ export default function ListPropertyPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen page-booking-bg flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
 
         {/* Logo */}

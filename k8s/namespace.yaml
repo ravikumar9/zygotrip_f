@@ -1,0 +1,83 @@
+# ============================================================
+# ZygoTrip — Kubernetes Namespace
+# ============================================================
+# All ZygoTrip resources live in this namespace, providing:
+#   - Logical isolation from other workloads in the cluster
+#   - Scoped RBAC, NetworkPolicies, and ResourceQuotas
+#   - Clean kubectl context: kubectl -n zygotrip <cmd>
+#
+# Apply first before any other manifest:
+#   kubectl apply -f k8s/namespace.yaml
+# ============================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: zygotrip
+  labels:
+    # Standard Kubernetes recommended labels
+    app.kubernetes.io/name: zygotrip
+    app.kubernetes.io/part-of: zygotrip-platform
+    environment: production
+    # Istio sidecar injection — set to "enabled" if using a service mesh
+    istio-injection: disabled
+  annotations:
+    # Contact annotation for ops alerting
+    contact: "platform-team@zygotrip.com"
+    description: "ZygoTrip OTA platform — Django + Next.js + Celery"
+
+---
+# ============================================================
+# ResourceQuota — prevent runaway resource consumption
+# Adjust ceilings as cluster capacity grows.
+# ============================================================
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: zygotrip-quota
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: zygotrip
+    app.kubernetes.io/part-of: zygotrip-platform
+spec:
+  hard:
+    # Compute ceilings for the namespace
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "60"
+    limits.memory: 80Gi
+    # Object count limits
+    pods: "100"
+    services: "30"
+    persistentvolumeclaims: "20"
+    secrets: "50"
+    configmaps: "30"
+
+---
+# ============================================================
+# LimitRange — default resource constraints for any pod that
+# omits explicit requests/limits (safety net).
+# ============================================================
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: zygotrip-limits
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: zygotrip
+    app.kubernetes.io/part-of: zygotrip-platform
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      max:
+        cpu: "4"
+        memory: "8Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"

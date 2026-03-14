@@ -123,6 +123,71 @@ class PropertySearchIndex(TimeStampedModel):
         help_text="Pre-computed ranking score from enhanced_ranking engine",
     )
 
+    # ── Conversion Signals (Goibibo-parity) ──────────────────────
+    rooms_left = models.IntegerField(
+        default=0, help_text="Rooms left for nearest check-in date (urgency)",
+    )
+    recent_bookings = models.IntegerField(
+        default=0, help_text="Bookings in last 24h (social proof)",
+    )
+    discount_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        help_text="Current discount % vs rack rate",
+    )
+    rack_price = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Rack/strikethrough price for discount display",
+    )
+    deal_score = models.IntegerField(
+        default=0, help_text="0-100 deal quality score",
+    )
+    has_breakfast = models.BooleanField(
+        default=False, db_index=True,
+        help_text="At least one room type includes breakfast",
+    )
+    cashback_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Max cashback available",
+    )
+    distance_km = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        help_text="Distance from city center in km",
+    )
+
+    # ── CTR / Engagement Tracking (S1: Search ranking signals) ────
+    total_impressions = models.PositiveIntegerField(
+        default=0, help_text="Total search result impressions",
+    )
+    total_clicks = models.PositiveIntegerField(
+        default=0, help_text="Total clicks from search results",
+    )
+    click_through_rate = models.DecimalField(
+        max_digits=5, decimal_places=4, default=0,
+        db_index=True,
+        help_text="CTR = clicks / impressions (updated by Celery task)",
+    )
+    total_views = models.PositiveIntegerField(
+        default=0, help_text="Total detail page views",
+    )
+    total_bookings = models.PositiveIntegerField(
+        default=0, help_text="Total confirmed bookings (for conversion rate)",
+    )
+
+    # ── Reliability / Quality Signals ─────────────────────────────────
+    cancellation_rate = models.DecimalField(
+        max_digits=5, decimal_places=4, default=0,
+        db_index=True,
+        help_text="Cancellation rate = cancellations / total bookings (lower is better)",
+    )
+    availability_reliability = models.DecimalField(
+        max_digits=5, decimal_places=4, default=1,
+        help_text="How often rooms are actually available when listed (0-1)",
+    )
+    commission_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=15,
+        help_text="OTA commission % for margin scoring",
+    )
+
     # S11: Full-text search vector (populated by Celery task / signal)
     search_vector = SearchVectorField(null=True, blank=True)
 
@@ -222,3 +287,7 @@ class SearchResult:
                 'images': list(hotel_obj.images.values_list('image_url', flat=True))[:3],
             }
         )
+
+
+# Import personalization model so Django discovers it for migrations
+from apps.search.personalization import UserSearchProfile  # noqa: F401, E402

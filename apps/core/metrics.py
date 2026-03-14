@@ -227,6 +227,47 @@ class MetricsMiddleware:
 # BUSINESS METRICS COLLECTOR
 # ============================================================================
 
+def track_search_latency(duration_seconds: float, search_type: str = 'hotel'):
+    """
+    Record a search request latency observation.
+    Call this from search views after computing results.
+
+    Args:
+        duration_seconds: Time taken to complete the search.
+        search_type: hotel | bus | cab | package
+    """
+    registry.histogram_observe(
+        'zygotrip_search_latency_seconds',
+        duration_seconds,
+        labels={'search_type': search_type},
+        help_text='Search request latency in seconds',
+    )
+
+
+def track_booking_outcome(success: bool):
+    """
+    Increment the booking success or failure counter.
+    Call this after a booking attempt resolves.
+    """
+    registry.counter(
+        'zygotrip_booking_attempts_total',
+        labels={'outcome': 'success' if success else 'failure'},
+        help_text='Total booking attempts by outcome',
+    )
+
+
+def track_payment_outcome(success: bool, gateway: str = 'razorpay'):
+    """
+    Increment the payment success or failure counter.
+    Call this after a payment transaction resolves.
+    """
+    registry.counter(
+        'zygotrip_payment_attempts_total',
+        labels={'outcome': 'success' if success else 'failure', 'gateway': gateway},
+        help_text='Total payment attempts by outcome and gateway',
+    )
+
+
 def collect_business_metrics():
     """
     Collect current business metrics from DB.
@@ -264,6 +305,36 @@ def collect_business_metrics():
         registry.gauge('zygotrip_conversion_rate_percent', rate,
                       help_text='Booking context to booking conversion rate (%)')
 
+        # ── Booking success rate (last 24h) ──
+        last_24h = now - timezone.timedelta(hours=24)
+        total_24h = Booking.objects.filter(created_at__gte=last_24h).count()
+        confirmed_24h = Booking.objects.filter(
+            created_at__gte=last_24h,
+            status__in=['confirmed', 'checked_in'],
+        ).count()
+        failed_24h = Booking.objects.filter(
+            created_at__gte=last_24h,
+            status__in=['failed', 'payment_failed'],
+        ).count()
+        cancelled_24h = Booking.objects.filter(
+            created_at__gte=last_24h,
+            status='cancelled',
+        ).count()
+
+        registry.gauge('zygotrip_bookings_confirmed_24h', confirmed_24h,
+                      help_text='Confirmed bookings in last 24h')
+        registry.gauge('zygotrip_bookings_failed_24h', failed_24h,
+                      help_text='Failed bookings in last 24h')
+        registry.gauge('zygotrip_bookings_cancelled_24h', cancelled_24h,
+                      help_text='Cancelled bookings in last 24h')
+
+        if total_24h > 0:
+            success_rate = round(confirmed_24h / total_24h * 100, 2)
+        else:
+            success_rate = 0
+        registry.gauge('zygotrip_booking_success_rate_percent', success_rate,
+                      help_text='Booking success rate in last 24h (%)')
+
     except Exception as exc:
         logger.warning('Business metrics collection failed: %s', exc)
 
@@ -274,8 +345,43 @@ def collect_business_metrics():
         ).count()
         registry.gauge('zygotrip_payments_pending', pending_payments,
                       help_text='Number of pending payment transactions')
+
+        # ── Payment failure rate (last 24h) ──
+        last_24h = timezone.now() - timezone.timedelta(hours=24)
+        total_payments_24h = PaymentTransaction.objects.filter(
+            created_at__gte=last_24h,
+        ).count()
+        failed_payments_24h = PaymentTransaction.objects.filter(
+            created_at__gte=last_24h,
+            status='failed',
+        ).count()
+
+        registry.gauge('zygotrip_payments_total_24h', total_payments_24h,
+                      help_text='Total payment transactions in last 24h')
+        registry.gauge('zygotrip_payments_failed_24h', failed_payments_24h,
+                      help_text='Failed payment transactions in last 24h')
+
+        if total_payments_24h > 0:
+            fail_rate = round(failed_payments_24h / total_payments_24h * 100, 2)
+        else:
+            fail_rate = 0
+        registry.gauge('zygotrip_payment_failure_rate_percent', fail_rate,
+                      help_text='Payment failure rate in last 24h (%)')
+
     except Exception as exc:
         logger.warning('Payment metrics collection failed: %s', exc)
+
+    # ── Inventory & supplier health ──
+    try:
+        from apps.inventory.models import SupplierHealth
+        unhealthy = SupplierHealth.objects.filter(is_healthy=False).count()
+        total_suppliers = SupplierHealth.objects.count()
+        registry.gauge('zygotrip_suppliers_total', total_suppliers,
+                      help_text='Total registered supplier connections')
+        registry.gauge('zygotrip_suppliers_unhealthy', unhealthy,
+                      help_text='Number of unhealthy supplier connections')
+    except Exception as exc:
+        logger.warning('Supplier metrics collection failed: %s', exc)
 
 
 # ============================================================================

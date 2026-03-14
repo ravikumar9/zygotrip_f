@@ -14,7 +14,7 @@ export interface PaymentGateway {
 
 export interface PaymentInitiateRequest {
   booking_uuid: string;
-  gateway: 'wallet' | 'cashfree' | 'stripe' | 'paytm_upi';
+  gateway: 'wallet' | 'cashfree' | 'stripe' | 'paytm_upi' | 'dev_simulate';
   idempotency_key?: string;
 }
 

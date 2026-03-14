@@ -1,0 +1,215 @@
+# ============================================================
+# ZygoTrip — Celery Beat Scheduler Deployment
+# ============================================================
+# Celery Beat is the periodic task scheduler — it reads the
+# django-celery-beat schedule from the database and enqueues
+# tasks at the configured intervals.
+#
+# CRITICAL: Run exactly ONE instance at all times.
+#   - replicas: 1 — never scale this to > 1.
+#     Multiple Beat instances would fire duplicate tasks,
+#     causing double settlements, double notifications, etc.
+#   - No HPA for this deployment.
+#   - PodDisruptionBudget should NOT enforce minAvailable > 0
+#     for Beat (brief gaps during node drain are acceptable).
+#
+# Scheduled tasks (from MEMORY.md):
+#   weekly-settlements         Monday 2 AM
+#   monthly-settlements        1st of month
+#   daily-refund-adjustments   Daily 1 AM
+#   competitor-price-scan      Every 3 hours
+#   adaptive-competitor-dispatch Every 15 minutes
+#   reindex-elasticsearch      Daily
+#   send-trip-reminders        Hourly
+#
+# Storage of beat schedule:
+#   django-celery-beat stores the schedule in PostgreSQL,
+#   so the pod needs DB access. The --pidfile flag writes to
+#   /tmp (covered by the emptyDir volume below).
+# ============================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-beat
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: celery-beat
+    app.kubernetes.io/component: scheduler
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "Celery Beat periodic task scheduler — MUST stay at 1 replica"
+    warning: "Do NOT scale replicas above 1 — duplicate task fire will occur"
+spec:
+  # !! DO NOT CHANGE THIS TO > 1 !!
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: celery-beat
+      app.kubernetes.io/component: scheduler
+
+  # Recreate strategy for Beat:
+  #   - Ensures old Beat is fully terminated before new one starts
+  #   - Prevents a brief overlap window where two Beat instances
+  #     simultaneously enqueue the same periodic task
+  strategy:
+    type: Recreate
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: celery-beat
+        app.kubernetes.io/component: scheduler
+        app.kubernetes.io/part-of: zygotrip-platform
+      annotations:
+        prometheus.io/scrape: "false"
+
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      serviceAccountName: zygotrip-celery
+
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis-service 6379; do
+                echo "Waiting for Redis..."; sleep 2;
+              done
+              echo "Redis ready."
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres-service 5432; do
+                echo "Waiting for PostgreSQL..."; sleep 2;
+              done
+              echo "PostgreSQL ready."
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+
+      containers:
+        - name: celery-beat
+          image: zygotrip/web:latest
+          imagePullPolicy: Always
+
+          command:
+            - celery
+            - -A
+            - zygotrip_project
+            - beat
+            - --loglevel=info
+            # PID file in /tmp (emptyDir mount)
+            - --pidfile=/tmp/celerybeat.pid
+            # Use django-celery-beat DatabaseScheduler (reads from DB)
+            - --scheduler=django_celery_beat.schedulers:DatabaseScheduler
+
+          # Beat is lightweight — it only dispatches tasks, does no work itself
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "384Mi"
+
+          envFrom:
+            - configMapRef:
+                name: zygotrip-config
+
+          env:
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: DJANGO_SECRET_KEY
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: POSTGRES_PASSWORD
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: SENTRY_DSN
+
+          # ── Liveness probe for Beat ────────────────────────────
+          # Check that the Beat PID file is still present and fresh.
+          # Beat updates the schedule file regularly; a stale/missing
+          # file indicates the process has crashed.
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  test -f /tmp/celerybeat.pid &&
+                  kill -0 $(cat /tmp/celerybeat.pid) 2>/dev/null
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+      # Beat can be gracefully stopped — in-progress period calculations
+      # are lightweight and can be safely interrupted
+      terminationGracePeriodSeconds: 30

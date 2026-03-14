@@ -43,11 +43,14 @@ logger = logging.getLogger('zygotrip.payments')
 # ===========================================================================
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 @throttle_classes([PaymentRateThrottle])
 def initiate_payment(request):
     """
     Initiate a payment for a booking.
+
+    Supports both authenticated users and guest bookings.
+    Guest bookings are identified by UUID alone (the UUID is the secret).
 
     Body:
       {
@@ -74,11 +77,16 @@ def initiate_payment(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Fetch booking
+    # Fetch booking — authenticated users must own it; guest bookings accessed by UUID
     try:
-        booking = Booking.objects.select_related('property').get(
-            uuid=booking_uuid, user=request.user,
-        )
+        if request.user and request.user.is_authenticated:
+            booking = Booking.objects.select_related('property').get(
+                uuid=booking_uuid, user=request.user,
+            )
+        else:
+            booking = Booking.objects.select_related('property').get(
+                uuid=booking_uuid, is_guest_booking=True,
+            )
     except Booking.DoesNotExist:
         return Response(
             {'success': False, 'error': {'code': 'not_found', 'message': 'Booking not found'}},
@@ -144,11 +152,12 @@ def initiate_payment(request):
 
         # Create PaymentTransaction
         txn_id = f'{gateway_name[:3].upper()}-{uuid.uuid4().hex[:12].upper()}'
+        txn_user = request.user if request.user and request.user.is_authenticated else None
         txn = PaymentTransaction.objects.create(
             transaction_id=txn_id,
             idempotency_key=idempotency_key,
             gateway=gateway_name,
-            user=request.user,
+            user=txn_user,
             booking=booking,
             booking_reference=str(booking.uuid),
             amount=amount,
@@ -161,10 +170,10 @@ def initiate_payment(request):
 
     # Initiate with gateway (outside atomic to allow external API calls)
     gateway = PaymentRouter.get_gateway(gateway_name)
-    result = gateway.initiate_payment(booking, amount, request.user, txn)
+    result = gateway.initiate_payment(booking, amount, txn_user, txn)
 
     if result.get('success'):
-        # Wallet payments are instant — confirm booking immediately
+        # Wallet and dev-simulate payments are instant — confirm booking immediately
         if result.get('instant'):
             with transaction.atomic():
                 booking.refresh_from_db()
@@ -172,15 +181,15 @@ def initiate_payment(request):
                     # Create Payment record
                     Payment.objects.create(
                         booking=booking,
-                        user=request.user,
+                        user=txn_user,
                         amount=amount,
-                        payment_method='wallet',
+                        payment_method=gateway_name,  # wallet, dev_simulate, etc.
                         transaction_id=txn_id,
                         status='success',
                     )
                     BookingStateMachine.transition(
                         booking, Booking.STATUS_CONFIRMED,
-                        note=f'Wallet payment confirmed: {txn_id}',
+                        note=f'{gateway_name} payment confirmed: {txn_id}',
                     )
 
         response_data = {
@@ -210,16 +219,22 @@ def initiate_payment(request):
 # ===========================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def payment_status(request, transaction_id):
     """
     Check status of a payment transaction.
+    Supports authenticated users (matched by user) and guest bookings (matched by txn ID alone).
     Optionally verifies with gateway if status is pending.
     """
     try:
-        txn = PaymentTransaction.objects.select_related('booking').get(
-            transaction_id=transaction_id, user=request.user,
-        )
+        if request.user and request.user.is_authenticated:
+            txn = PaymentTransaction.objects.select_related('booking').get(
+                transaction_id=transaction_id, user=request.user,
+            )
+        else:
+            txn = PaymentTransaction.objects.select_related('booking').get(
+                transaction_id=transaction_id, user__isnull=True,
+            )
     except PaymentTransaction.DoesNotExist:
         return Response(
             {'success': False, 'error': {'code': 'not_found', 'message': 'Transaction not found'}},
@@ -261,30 +276,50 @@ def payment_status(request, transaction_id):
 # ===========================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def available_gateways(request, booking_uuid):
     """
     Return available payment gateways for a booking.
-    Includes wallet balance if applicable.
+    Supports authenticated users and guest bookings.
+    Includes wallet balance if applicable (only for authenticated users).
     """
     try:
-        booking = Booking.objects.get(uuid=booking_uuid, user=request.user)
+        if request.user and request.user.is_authenticated:
+            booking = Booking.objects.get(uuid=booking_uuid, user=request.user)
+        else:
+            booking = Booking.objects.get(uuid=booking_uuid, is_guest_booking=True)
     except Booking.DoesNotExist:
         return Response(
             {'success': False, 'error': {'code': 'not_found', 'message': 'Booking not found'}},
             status=status.HTTP_404_NOT_FOUND,
         )
 
+    gw_user = request.user if request.user and request.user.is_authenticated else None
     gateways = PaymentRouter.get_available_gateways(
-        booking.total_amount, request.user,
+        booking.total_amount, gw_user,
     )
+
+    # Transform to match frontend PaymentGateway interface:
+    #   { name: gateway_key, display_name: human_label, available: bool, ... }
+    frontend_gateways = []
+    for gw in gateways:
+        fg = {
+            'name': gw['gateway'],           # gateway key: wallet, cashfree, dev_simulate, etc.
+            'display_name': gw['name'],       # human-readable label
+            'description': gw.get('description', ''),
+            'available': True,                # already filtered by get_available_gateways
+        }
+        if gw['gateway'] == 'wallet':
+            fg['wallet_balance'] = gw.get('balance', '0')
+            fg['sufficient_balance'] = True   # only included when balance is sufficient
+        frontend_gateways.append(fg)
 
     return Response({
         'success': True,
         'data': {
             'booking_uuid': str(booking.uuid),
             'amount': str(booking.total_amount),
-            'gateways': gateways,
+            'gateways': frontend_gateways,
         },
     })
 

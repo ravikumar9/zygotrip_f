@@ -11,11 +11,11 @@ import toast from 'react-hot-toast';
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type RoleType =
-  | 'customer'
+  | 'traveler'
   | 'property_owner'
-  | 'cab_operator'
+  | 'cab_owner'
   | 'bus_operator'
-  | 'tour_operator';
+  | 'package_provider';
 
 export interface RegisterFormProps {
   role: RoleType;

@@ -9,13 +9,13 @@ RateLimitMiddleware:
   3. Circuit breaker: if backend error rate > 50% in 60s, return 503
   4. Request deduplication (idempotency key enforcement on POST)
 """
-import hashlib
 import logging
 import time
 
-from django.conf import settings
 from django.core.cache import cache
 from django.http import JsonResponse
+
+from apps.core.gateway_registry import resolve_api_version, resolve_service_name
 
 logger = logging.getLogger('zygotrip.gateway')
 
@@ -40,6 +40,8 @@ class APIGatewayMiddleware:
     def __call__(self, request):
         # Skip for admin and static
         path = request.path
+        request.api_version = resolve_api_version(path)
+        request.gateway_service = resolve_service_name(path)
         if path.startswith('/admin/') or path.startswith('/static/'):
             return self.get_response(request)
 
@@ -47,7 +49,8 @@ class APIGatewayMiddleware:
         ip = self._get_ip(request)
         if self._is_blocked(ip):
             logger.warning("Blocked IP: %s path=%s", ip, path)
-            return JsonResponse(
+            return self._gateway_response(
+                request,
                 {'error': 'Access denied', 'code': 'IP_BLOCKED'},
                 status=403,
             )
@@ -59,7 +62,8 @@ class APIGatewayMiddleware:
                 size = int(content_length)
                 limit = MAX_UPLOAD_BYTES if 'upload' in path or 'image' in path else MAX_BODY_BYTES
                 if size > limit:
-                    return JsonResponse(
+                    return self._gateway_response(
+                        request,
                         {'error': f'Request body too large ({size} bytes, max {limit})',
                          'code': 'BODY_TOO_LARGE'},
                         status=413,
@@ -69,11 +73,13 @@ class APIGatewayMiddleware:
 
         # ── 3. Circuit breaker check ─────────────────────────────────────
         if self._circuit_open():
-            return JsonResponse(
+            return self._gateway_response(
+                request,
                 {'error': 'Service temporarily unavailable',
                  'code': 'CIRCUIT_OPEN',
                  'retry_after': CIRCUIT_WINDOW},
                 status=503,
+                extra_headers={'Retry-After': str(CIRCUIT_WINDOW)},
             )
 
         # ── 4. Process request ───────────────────────────────────────────
@@ -87,7 +93,7 @@ class APIGatewayMiddleware:
 
         # Add server timing header
         response['Server-Timing'] = f'total;dur={duration_ms}'
-        response['X-Request-ID'] = getattr(request, 'request_id', '')
+        self._attach_gateway_headers(request, response)
 
         return response
 
@@ -134,3 +140,21 @@ class APIGatewayMiddleware:
                 cache.set('gw:circuit:errors', pipe_errors + 1, CIRCUIT_WINDOW)
         except Exception:
             pass
+
+    @staticmethod
+    def _attach_gateway_headers(request, response):
+        """Attach gateway metadata for tracing and service discovery."""
+        request_id = getattr(request, 'request_id', '')
+        if request_id:
+            response['X-Request-ID'] = request_id
+        response['X-API-Version'] = getattr(request, 'api_version', 'web')
+        response['X-Service-Name'] = getattr(request, 'gateway_service', 'web')
+        return response
+
+    def _gateway_response(self, request, payload, status, extra_headers=None):
+        """Create a gateway-owned JSON response with standard metadata headers."""
+        response = JsonResponse(payload, status=status)
+        self._attach_gateway_headers(request, response)
+        for header, value in (extra_headers or {}).items():
+            response[header] = value
+        return response

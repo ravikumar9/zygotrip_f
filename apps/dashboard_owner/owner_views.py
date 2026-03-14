@@ -11,6 +11,7 @@ Views:
 """
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Q, Sum, Count
 from django.utils import timezone
@@ -26,7 +27,7 @@ from apps.hotels.models import Property
 
 
 @role_required('property_owner')
-def inventory_management(request, property_id):
+def inventory_management(request, property_id=None):
     """
     Bulk inventory update view.
     
@@ -36,7 +37,24 @@ def inventory_management(request, property_id):
     - Update daily price
     - Mark dates closed
     """
-    property_obj = get_object_or_404(Property, id=property_id, owner=request.user)
+    properties = Property.objects.filter(owner=request.user).order_by('name')
+    requested_property_id = property_id or request.GET.get('property') or request.POST.get('property')
+    property_obj = None
+    if requested_property_id:
+        property_obj = get_object_or_404(Property, id=requested_property_id, owner=request.user)
+    elif properties.exists():
+        property_obj = properties.first()
+    
+    if property_obj is None:
+        return render(request, 'dashboard_owner/inventory_management.html', {
+            'properties': properties,
+            'property': None,
+            'property_filter': '',
+            'room_types': [],
+            'inventories': [],
+            'start_date': '',
+            'end_date': '',
+        })
     
     if request.method == 'POST':
         start_date_str = request.POST.get('start_date')
@@ -55,8 +73,13 @@ def inventory_management(request, property_id):
         except (ValueError, RoomType.DoesNotExist):
             messages.error(request, 'Invalid input')
             return render(request, 'dashboard_owner/inventory_management.html', {
+                'properties': properties,
                 'property': property_obj,
+                'property_filter': str(property_obj.id),
                 'room_types': property_obj.room_types.all(),
+                'inventories': [],
+                'start_date': start_date_str,
+                'end_date': end_date_str,
             })
         
         # Update inventories in range
@@ -85,13 +108,38 @@ def inventory_management(request, property_id):
             current_date += timedelta(days=1)
         
         messages.success(request, f'Updated {updated_count} days')
-        return redirect('dashboard_owner:inventory_management', property_id=property_id)
+        if property_id:
+            return redirect('dashboard_owner:inventory_management', property_id=property_obj.id)
+        return redirect(f"{reverse('dashboard_owner:inventory_general')}?property={property_obj.id}")
     
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    inventories = RoomInventory.objects.filter(room_type__property__owner=request.user)
+    if property_obj:
+        inventories = inventories.filter(room_type__property=property_obj)
+    if start_date_str:
+        inventories = inventories.filter(date__gte=start_date_str)
+    if end_date_str:
+        inventories = inventories.filter(date__lte=end_date_str)
+    inventories = inventories.select_related('room_type', 'room_type__property').order_by('date', 'room_type__name')
     room_types = property_obj.room_types.all()
+    property_room_types = {
+        str(prop.id): [
+            {'id': room.id, 'name': room.name}
+            for room in prop.room_types.all().order_by('name')
+        ]
+        for prop in properties.prefetch_related('room_types')
+    }
     
     return render(request, 'dashboard_owner/inventory_management.html', {
+        'properties': properties,
         'property': property_obj,
+        'property_filter': str(property_obj.id),
         'room_types': room_types,
+        'property_room_types': property_room_types,
+        'inventories': inventories,
+        'start_date': start_date_str,
+        'end_date': end_date_str,
     })
 
 
@@ -141,7 +189,7 @@ def booking_list(request, property_id):
     bookings = bookings.order_by(sort_by)
     
     # Pagination
-    from django.paginate import Paginator
+    from django.core.paginator import Paginator
     paginator = Paginator(bookings, 25)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)

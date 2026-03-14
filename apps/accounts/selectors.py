@@ -3,10 +3,26 @@ from django.apps import apps
 from .models import Permission, RolePermission, UserRole
 
 
+ROLE_ALIASES = {
+    'bus_owner': 'bus_operator',
+    'bus_operator': 'bus_owner',
+    'cab_provider': 'cab_owner',
+    'cab_owner': 'cab_provider',
+}
+
+
 def user_has_role(user, role_code):
     if not hasattr(user, 'is_authenticated') or not user.is_authenticated:
         return False
-    return UserRole.objects.filter(user=user, role__code=role_code, is_active=True, role__is_active=True).exists()
+    candidate_roles = {role_code, ROLE_ALIASES.get(role_code)} - {None}
+    if getattr(user, 'role', None) in candidate_roles:
+        return True
+    return UserRole.objects.filter(
+        user=user,
+        role__code__in=candidate_roles,
+        is_active=True,
+        role__is_active=True,
+    ).exists()
 
 
 def user_has_permission(user, permission_code):

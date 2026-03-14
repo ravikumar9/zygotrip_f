@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Menu, X, User, Wallet, LogOut, ChevronDown, BookOpen } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
+import CurrencyPicker from '@/components/ui/CurrencyPicker';
 import toast from 'react-hot-toast';
 
 const NAV_LINKS = [
@@ -84,6 +85,7 @@ export default function Header() {
 
         {/* Desktop auth */}
         <div className="hidden md:flex items-center gap-3">
+          <CurrencyPicker />
           {isLoading ? (
             <div className="w-24 h-8 rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.1)' }} />
           ) : isAuthenticated && user ? (
@@ -119,9 +121,9 @@ export default function Header() {
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors">
                       <User size={15} className="text-neutral-400" /> My Account
                     </Link>
-                    <Link href="/account" onClick={() => setUserMenuOpen(false)}
+                    <Link href="/bookings" onClick={() => setUserMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors">
-                      <BookOpen size={15} className="text-neutral-400" /> My Bookings
+                      <BookOpen size={15} className="text-neutral-400" /> My Trips
                     </Link>
                     <Link href="/wallet" onClick={() => setUserMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors">
@@ -196,6 +198,9 @@ export default function Header() {
                 </div>
                 <Link href="/account" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 py-2.5 px-3 text-sm font-semibold rounded-xl transition-colors" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   <User size={15} /> My Account
+                </Link>
+                <Link href="/bookings" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 py-2.5 px-3 text-sm font-semibold rounded-xl transition-colors" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  <BookOpen size={15} /> My Trips
                 </Link>
                 <Link href="/wallet" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 py-2.5 px-3 text-sm font-semibold rounded-xl transition-colors" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   <Wallet size={15} /> Wallet

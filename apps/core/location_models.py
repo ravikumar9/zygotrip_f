@@ -53,6 +53,7 @@ class City(models.Model):
     display_name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=120, unique=True, blank=True, null=True, help_text="URL slug for routing")
     alternate_names = models.TextField(blank=True, help_text="Comma-separated aliases")
+    district = models.CharField(max_length=100, blank=True, help_text="District name for sub-city search")
     
     # Geo data for bounding box search
     latitude = models.DecimalField(max_digits=9, decimal_places=6)

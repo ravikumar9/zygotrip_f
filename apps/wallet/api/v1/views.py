@@ -113,6 +113,33 @@ def wallet_topup(request):
     note = serializer.validated_data.get('note', 'Wallet top-up')
     payment_reference = request.data.get('payment_reference', '')
 
+    # ── DEV MODE: Direct credit without payment gateway ──────────────
+    # In development (DEBUG=True), skip payment verification and credit directly.
+    # In production, require payment_reference from a completed gateway transaction.
+    from django.conf import settings as django_settings
+    if not payment_reference and getattr(django_settings, 'DEBUG', False):
+        wallet = get_or_create_wallet(request.user)
+        txn = wallet.credit(
+            amount=amount,
+            txn_type=WalletTransaction.TYPE_CREDIT,
+            reference=f'dev_topup_{request.user.id}_{amount}',
+            note=note or 'Wallet top-up (dev mode)',
+        )
+        cache.delete(f'wallet_balance_{request.user.id}')
+        logger.info('DEV wallet top-up: user=%s amount=%s', request.user.email, amount)
+        return Response(
+            {
+                'success': True,
+                'data': {
+                    'transaction_uid': str(txn.uid),
+                    'amount_credited': str(amount),
+                    'new_balance': str(wallet.balance),
+                    'currency': wallet.currency,
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     if not payment_reference:
         # No payment reference: return a pending status, instruct client to
         # complete payment via gateway then call back with reference.

@@ -3,9 +3,12 @@ import Image from 'next/image';
 import {
   Users, Check, BedDouble, Utensils, AlertCircle, ChevronRight, ChevronDown,
   Wifi, Wind, Tv, Coffee, UtensilsCrossed, Star, X, Layers,
+  Award, Flame, ShieldCheck, Zap,
 } from 'lucide-react';
 import type { RoomType, RoomMealPlan } from '@/types';
-import { useState } from 'react';
+import { MEAL_PLAN_META } from '@/lib/mealPlans';
+import { useState, useMemo } from 'react';
+import { useFormatPrice } from '@/hooks/useFormatPrice';
 
 interface RoomSelectorProps {
   rooms: RoomType[];
@@ -13,8 +16,6 @@ interface RoomSelectorProps {
   selectedMealPlanCode?: string;
   onSelect: (room: RoomType, mealPlan?: RoomMealPlan) => void;
 }
-
-import { formatPrice as fmt } from '@/lib/formatPrice';
 
 const AMENITY_ICON: Record<string, React.ReactNode> = {
   'free wi-fi': <Wifi size={11} />, 'wifi': <Wifi size={11} />, 'wi-fi': <Wifi size={11} />,
@@ -24,14 +25,7 @@ const AMENITY_ICON: Record<string, React.ReactNode> = {
   'room service': <UtensilsCrossed size={11} />,
 };
 
-/** Industry-standard short codes for meal plan badges */
-const MEAL_SHORT_CODE: Record<string, { short: string; color: string }> = {
-  room_only:     { short: 'EP',  color: 'text-neutral-700' },
-  breakfast:     { short: 'CP',  color: 'text-green-700' },
-  half_board:    { short: 'MAP', color: 'text-blue-700' },
-  full_board:    { short: 'AP',  color: 'text-purple-700' },
-  all_inclusive: { short: 'AI',  color: 'text-amber-700' },
-};
+/* Meal plan display meta comes from canonical lib/mealPlans.ts */
 
 /** Get up to 3 benefits from the meal plan description provided by the backend. */
 function getMealBenefits(mp: RoomMealPlan): string[] {
@@ -42,9 +36,18 @@ function getMealBenefits(mp: RoomMealPlan): string[] {
 }
 
 export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCode, onSelect }: RoomSelectorProps) {
+  const { formatPrice: fmt } = useFormatPrice();
   const [expandedRoom, setExpandedRoom] = useState<number | null>(null);
   const [galleryRoomId, setGalleryRoomId] = useState<number | null>(null);
   const galleryRoom = galleryRoomId != null ? rooms.find(r => r.id === galleryRoomId) : null;
+
+  // Determine cheapest available room for "Best Value" badge
+  const bestValueRoomId = useMemo(() => {
+    const available = rooms.filter(r => (r.inventory_remaining ?? r.available_count ?? 0) > 0);
+    if (available.length <= 1) return null;
+    const sorted = [...available].sort((a, b) => parseFloat(String(a.base_price)) - parseFloat(String(b.base_price)));
+    return sorted[0]?.id ?? null;
+  }, [rooms]);
 
   if (!rooms || rooms.length === 0) {
     return (
@@ -67,6 +70,7 @@ export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCo
         const basePrice = parseFloat(String(room.base_price));
         const isFree = room.cancellation_policy === 'free';
         const isExpanded = expandedRoom === room.id;
+        const isBestValue = bestValueRoomId === room.id;
 
         return (
           <div
@@ -108,8 +112,14 @@ export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCo
                   )}
                   {/* Scarcity badge */}
                   {availCount > 0 && availCount <= 5 && (
-                    <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">
-                      Only {availCount} left!
+                    <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded animate-pulse-soft flex items-center gap-1">
+                      <Flame size={10} /> Only {availCount} left!
+                    </div>
+                  )}
+                  {/* Best Value badge */}
+                  {isBestValue && availCount > 0 && (
+                    <div className="absolute top-2 right-2 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                      <Award size={10} /> Best Value
                     </div>
                   )}
                   {availCount === 0 && (
@@ -150,11 +160,30 @@ export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCo
                     View More Details <ChevronDown size={11} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   </button>
                   {isExpanded && (
-                    <div className="mt-2 text-[11px] text-neutral-500 bg-neutral-50 rounded-lg p-2 border border-neutral-100">
-                      <p className="font-semibold text-neutral-700 mb-1">Cancellation:</p>
-                      <p>{isFree ? '✅ Free cancellation until 24h before check-in' : '❌ Non-refundable'}</p>
+                    <div className="mt-2 text-[11px] text-neutral-500 bg-neutral-50 rounded-lg p-2 border border-neutral-100 space-y-1.5">
+                      <div>
+                        <p className="font-semibold text-neutral-700 mb-0.5">Cancellation:</p>
+                        <p>{isFree ? '✅ Free cancellation until 24h before check-in' : '❌ Non-refundable — lowest price guarantee'}</p>
+                      </div>
+                      {room.description && (
+                        <div>
+                          <p className="font-semibold text-neutral-700 mb-0.5">About this room:</p>
+                          <p className="text-neutral-500">{room.description}</p>
+                        </div>
+                      )}
                     </div>
                   )}
+                  {/* Inline trust signals */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {isFree && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-100 px-1.5 py-0.5 rounded-full">
+                        <ShieldCheck size={9} /> Free Cancellation
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full">
+                      <Zap size={9} /> Instant Confirm
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -205,9 +234,15 @@ export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCo
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-xs font-bold text-neutral-400">{idx + 1}.</span>
                           <p className="font-semibold text-neutral-800 text-sm">{mp.name}</p>
-                          {MEAL_SHORT_CODE[mp.code] && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-100 ${MEAL_SHORT_CODE[mp.code].color}`}>
-                              {MEAL_SHORT_CODE[mp.code].short}
+                          {MEAL_PLAN_META[mp.code] && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-100 ${MEAL_PLAN_META[mp.code].color}`}>
+                              {MEAL_PLAN_META[mp.code].short}
+                            </span>
+                          )}
+                          {/* Highlight breakfast inclusion */}
+                          {mp.code !== 'R' && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100 flex items-center gap-0.5">
+                              <Coffee size={8} /> Meals included
                             </span>
                           )}
                         </div>
@@ -219,24 +254,40 @@ export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCo
                             </li>
                           ))}
                         </ul>
-                        <div className="flex items-center gap-2 ml-5">
+                        <div className="flex items-center gap-2 ml-5 flex-wrap">
                           <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold ${
                             isFree ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-500 border border-red-100'
                           }`}>
                             {isFree
-                              ? <><Check size={8} strokeWidth={3} /> Free Cancellation</>
+                              ? <><ShieldCheck size={8} strokeWidth={3} /> Free Cancellation</>
                               : <><X size={8} /> Non-Refundable</>
                             }
                           </span>
+                          {/* Per-option scarcity */}
+                          {availCount > 0 && availCount <= 3 && (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold bg-red-50 text-red-600 border border-red-100 animate-pulse-soft">
+                              <Flame size={8} /> {availCount} left at this price
+                            </span>
+                          )}
                         </div>
                       </div>
 
                       {/* Price + CTA column */}
                       <div className="p-4 flex flex-col items-end justify-center gap-1">
+                        {/* Show base price strikethrough if modifier adds cost */}
+                        {modifier > 0 && (
+                          <p className="text-xs text-neutral-400 line-through">{fmt(basePrice)}</p>
+                        )}
                         <p className="text-xl font-black text-neutral-900 font-heading">
                           {fmt(totalPrice)}
                         </p>
                         <p className="text-[10px] text-neutral-400">+ taxes · per night</p>
+                        {/* Value comparison for plans with meal inclusion */}
+                        {modifier > 0 && (
+                          <p className="text-[10px] text-green-600 font-semibold">
+                            +{fmt(modifier)} for meals — saves time & money
+                          </p>
+                        )}
 
                         {isSelected ? (
                           <button

@@ -1,0 +1,142 @@
+# ============================================================
+# ZygoTrip — PodDisruptionBudgets
+# ============================================================
+# PodDisruptionBudgets (PDBs) prevent Kubernetes voluntary
+# disruptions (node drains, cluster upgrades, evictions) from
+# taking down too many pods simultaneously.
+#
+# Voluntary disruptions include:
+#   - kubectl drain (node maintenance)
+#   - Cluster upgrades (managed K8s rolling node replacement)
+#   - Cluster Autoscaler scale-down
+#
+# Involuntary disruptions (hardware failures, OOMKill) are NOT
+# controlled by PDBs.
+#
+# Each PDB specifies the minimum number of pods that must remain
+# Available during a voluntary disruption.
+#
+# Reference: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
+# ============================================================
+
+# ── Web (Django) PDB ─────────────────────────────────────────
+# With 3 replicas minimum (from web.yaml + web-hpa.yaml):
+#   minAvailable: 2 means at most 1 pod can be disrupted at a time.
+#   During a node drain, K8s will not evict the 2nd web pod until
+#   a replacement is scheduled and healthy.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web-pdb
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: web-pdb
+    app.kubernetes.io/component: availability
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "Ensures at least 2 Django web pods remain available during node drain"
+spec:
+  # At least 2 pods must be running and ready at all times.
+  # Allows only 1 voluntary disruption when running at min (3 replicas).
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web
+      app.kubernetes.io/component: backend
+
+---
+# ── Frontend (Next.js) PDB ───────────────────────────────────
+# With 2 replicas minimum, minAvailable: 1 allows 1 disruption.
+# The remaining pod continues to serve traffic while the evicted
+# pod is rescheduled on a healthy node.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: frontend-pdb
+    app.kubernetes.io/component: availability
+    app.kubernetes.io/part-of: zygotrip-platform
+  annotations:
+    description: "Ensures at least 1 Next.js frontend pod remains available during disruption"
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+      app.kubernetes.io/component: frontend
+
+---
+# ── Critical Celery Worker PDB ───────────────────────────────
+# With 2 replicas minimum, ensure 1 pod remains alive.
+# In-flight booking/payment tasks on the disrupted pod will be
+# re-queued (acks_late=true) and picked up by the surviving pod.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: celery-critical-pdb
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: celery-critical-pdb
+    app.kubernetes.io/component: availability
+    app.kubernetes.io/part-of: zygotrip-platform
+  annotations:
+    description: "Ensures at least 1 critical Celery worker remains available; tasks are re-queued via acks_late"
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: celery-critical
+      app.kubernetes.io/component: worker
+
+---
+# ── Standard Celery Worker PDB ───────────────────────────────
+# Notifications and search re-index tasks are more tolerant of
+# disruption. Allow 1 disruption out of 2 replicas.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: celery-standard-pdb
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: celery-standard-pdb
+    app.kubernetes.io/component: availability
+    app.kubernetes.io/part-of: zygotrip-platform
+  annotations:
+    description: "Ensures at least 1 standard Celery worker remains available"
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: celery-standard
+      app.kubernetes.io/component: worker
+
+---
+# ── Redis PDB ────────────────────────────────────────────────
+# Redis is a single-node StatefulSet in this configuration.
+# PDB with minAvailable: 1 prevents the scheduler from evicting
+# it during drains (at the cost of blocking the drain until Redis
+# is rescheduled).
+#
+# UPGRADE PATH: When migrating to Redis Cluster / Sentinel,
+# change minAvailable to reflect the quorum requirement
+# (e.g., minAvailable: 2 for a 3-node Sentinel setup).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-pdb
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: redis-pdb
+    app.kubernetes.io/component: availability
+    app.kubernetes.io/part-of: zygotrip-platform
+  annotations:
+    description: "Protects the single-node Redis pod from voluntary eviction"
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/component: cache

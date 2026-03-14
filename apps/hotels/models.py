@@ -9,7 +9,7 @@ from apps.core.models import TimeStampedModel
 
 # Import approval models
 from apps.hotels.approval_models import AutoApprovalSettings, PendingPropertyChange
-from apps.hotels.review_models import Review  # noqa: F401
+from apps.hotels.review_models import Review, ReviewPhoto, ReviewHelpfulness  # noqa: F401
 from apps.hotels.review_fraud import ReviewFraudFlag  # noqa: F401
 
 
@@ -75,6 +75,14 @@ class Property(TimeStampedModel):
 	# POLICY SIGNALS (filter criteria)
 	has_free_cancellation = models.BooleanField(default=True)
 	cancellation_hours = models.IntegerField(default=24, help_text="Free cancellation window")
+
+	# -- Check-in / Check-out -----------------------------------------------
+	check_in_time   = models.TimeField(null=True, blank=True, help_text='e.g. 14:00')
+	check_out_time  = models.TimeField(null=True, blank=True, help_text='e.g. 12:00')
+
+	# -- House Rules ----------------------------------------------------------
+	house_rules = models.TextField(blank=True, default='', help_text='Property rules for guests')
+
 	pay_at_hotel = models.BooleanField(
 		default=False,
 		help_text="Allow guests to pay at hotel (no upfront payment required)"
@@ -240,6 +248,11 @@ class RatingAggregate(TimeStampedModel):
 	value_for_money = models.DecimalField(max_digits=3, decimal_places=1, default=0)
 	total_reviews = models.IntegerField(default=0)
 
+	@builtins.property
+	def staff(self):
+		"""Alias: 'staff' maps to 'service' for API compatibility."""
+		return self.service
+
 	def clean(self):
 		"""Validate all ratings are between 0 and 5"""
 		rating_fields = ['cleanliness', 'service', 'location', 'amenities', 'value_for_money']
@@ -360,3 +373,7 @@ class RecentSearch(models.Model):
 	
 	def __str__(self):
 		return f"{self.search_text or 'Any'} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
+# Import models from rate_plan_engine for migration generation
+from .rate_plan_engine import RatePlan, CancellationPolicy as HotelCancellationPolicy, CancellationTier

@@ -10,6 +10,7 @@ import {
 import { useMyBookings } from '@/hooks/useBooking';
 import { updateProfile } from '@/services/auth';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFormatPrice } from '@/hooks/useFormatPrice';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 import type { BookingSummary } from '@/types';
@@ -207,6 +208,7 @@ export default function AccountPage() {
 }
 
 function BookingCard({ booking }: { booking: BookingSummary }) {
+  const { formatPrice } = useFormatPrice();
   const status = STATUS_CONFIG[booking.status] || {
     label: booking.status,
     color: 'text-neutral-600 bg-neutral-100',
@@ -247,7 +249,7 @@ function BookingCard({ booking }: { booking: BookingSummary }) {
 
       <div className="flex justify-between items-center">
         <p className="font-bold text-neutral-900">
-          ₹{parseFloat(booking.total_amount).toLocaleString('en-IN')}
+          {formatPrice(parseFloat(booking.total_amount))}
         </p>
         {['hold', 'payment_pending', 'confirmed'].includes(booking.status) && (
           <span className="text-xs text-neutral-400 bg-neutral-50 px-2.5 py-1 rounded-full">

@@ -1,0 +1,123 @@
+# ============================================================
+# ZygoTrip — Shared ConfigMap (non-sensitive environment)
+# ============================================================
+# Contains ALL non-secret configuration shared across the
+# Django web, Celery workers, and Celery Beat pods.
+#
+# RULE: Secrets (passwords, API keys, DSNs) go in secrets.yaml.
+#       Only public / non-sensitive values belong here.
+#
+# To update: edit this file and run:
+#   kubectl apply -f k8s/configmap.yaml
+# Rolling restarts of pods that consume this map are required
+# for changes to take effect (Deployments do NOT hot-reload).
+# ============================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zygotrip-config
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: zygotrip
+    app.kubernetes.io/component: config
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/managed-by: kubectl
+data:
+  # ── Django core ─────────────────────────────────────────────
+  DJANGO_SETTINGS_MODULE: "zygotrip_project.settings"
+  # DEBUG must be "False" in production — never "True"
+  DJANGO_DEBUG: "False"
+  # Comma-separated list of allowed hostnames served by Django
+  DJANGO_ALLOWED_HOSTS: "api.zygotrip.com,zygotrip.com,localhost"
+  # CSRF trusted origins for POST requests from the frontend
+  CSRF_TRUSTED_ORIGINS: "https://zygotrip.com,https://api.zygotrip.com"
+
+  # ── Database (non-secret connection params) ─────────────────
+  # Host resolves to the PostgreSQL Service in-cluster.
+  # If using an external managed DB (RDS, CloudSQL), replace with
+  # the endpoint hostname — no port change needed for port 5432.
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "zygotrip_db"
+
+  # ── Redis ───────────────────────────────────────────────────
+  # Points to the Redis Service (redis-service.zygotrip.svc)
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  # DB index 0 → Celery broker, 1 → Django cache, 2 → Celery results
+  CELERY_BROKER_URL: "redis://redis-service:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis-service:6379/2"
+  USE_REDIS_CACHE: "true"
+  CACHE_REDIS_URL: "redis://redis-service:6379/1"
+
+  # ── Elasticsearch ───────────────────────────────────────────
+  # Points to the Elasticsearch Service in-cluster.
+  # Falls back to PostgreSQL FTS if ES is unavailable (es_engine.py).
+  ELASTICSEARCH_HOST: "elasticsearch-service"
+  ELASTICSEARCH_PORT: "9200"
+
+  # ── Celery configuration ────────────────────────────────────
+  # Task serialisation (JSON is safer than pickle in multi-tenant envs)
+  CELERY_TASK_SERIALIZER: "json"
+  CELERY_RESULT_SERIALIZER: "json"
+  CELERY_ACCEPT_CONTENT: "json"
+  # Timezone for Celery Beat scheduled tasks (matches business TZ)
+  CELERY_TIMEZONE: "Asia/Kolkata"
+  # Ack tasks after execution to prevent message loss on worker crash
+  CELERY_TASK_ACKS_LATE: "true"
+  # Prefetch 1 task at a time — critical for fair queue draining
+  CELERYD_PREFETCH_MULTIPLIER: "1"
+
+  # ── Static / Media files ────────────────────────────────────
+  # WhiteNoise serves collected static files directly from gunicorn.
+  # For media (user uploads), use an external object store (S3/GCS)
+  # and set MEDIA_URL / DEFAULT_FILE_STORAGE in settings.py.
+  STATIC_ROOT: "/app/staticfiles"
+  MEDIA_ROOT: "/app/media"
+
+  # ── Gunicorn ────────────────────────────────────────────────
+  # Workers = 2 * CPU + 1 is standard; K8s pods are typically 2 CPU.
+  # These are read by deployment/gunicorn.conf.py
+  GUNICORN_WORKERS: "5"
+  GUNICORN_THREADS: "2"
+  GUNICORN_TIMEOUT: "120"
+  GUNICORN_BIND: "0.0.0.0:8000"
+
+  # ── Feature flags ───────────────────────────────────────────
+  # Controls whether Elasticsearch indexing is enabled at startup
+  ENABLE_ELASTICSEARCH: "true"
+  # Competitor price data is ADVISORY only — never auto-applied
+  COMPETITOR_PRICES_ADVISORY_ONLY: "true"
+  # Holiday demand multipliers are ADVISORY only
+  HOLIDAY_MULTIPLIERS_ADVISORY_ONLY: "true"
+
+  # ── GST / Financial constants ────────────────────────────────
+  # Slabs: 0% (<1000), 5% (1000-7500), 18% (>7500) per-night rate
+  GST_SLAB_LOW_THRESHOLD: "1000"
+  GST_SLAB_HIGH_THRESHOLD: "7500"
+  GST_RATE_ZERO: "0"
+  GST_RATE_LOW: "5"
+  GST_RATE_HIGH: "18"
+  SERVICE_FEE_PERCENT: "5"
+  SERVICE_FEE_MAX_INR: "500"
+  DEFAULT_OTA_COMMISSION_PERCENT: "15"
+
+  # ── Inventory hold timings ───────────────────────────────────
+  INVENTORY_HOLD_MINUTES: "30"
+  PRICE_LOCK_MINUTES: "15"
+
+  # ── Monitoring / Observability ───────────────────────────────
+  ADMIN_ALERT_EMAIL: "admin@zygotrip.com"
+  # Prometheus metrics endpoint is exposed at /metrics by django-prometheus
+  PROMETHEUS_METRICS_EXPORT_PORT: "8001"
+
+  # ── SMS provider ─────────────────────────────────────────────
+  SMS_PROVIDER: "msg91"
+
+  # ── Next.js frontend public variables ───────────────────────
+  # These are injected into the frontend Deployment (not Django).
+  NEXT_PUBLIC_API_URL: "https://api.zygotrip.com"
+  NEXT_PUBLIC_SITE_NAME: "ZygoTrip"
+  NEXT_PUBLIC_CURRENCY: "INR"
+  NODE_ENV: "production"

@@ -68,6 +68,12 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
         <div>
           <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+            {{ form.city.label }}
+          </label>
+          {{ form.city }}
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
             {{ form.property_type.label }}
           </label>
           {{ form.property_type }}
@@ -78,6 +84,28 @@
           </label>
           {{ form.star_category }}
         </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+            {{ form.area.label }}
+          </label>
+          {{ form.area }}
+        </div>
+        <div>
+          <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+            {{ form.landmark.label }}
+          </label>
+          {{ form.landmark }}
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+          {{ form.country.label }}
+        </label>
+        {{ form.country }}
       </div>
 
       <div style="margin-bottom: 24px;">
@@ -91,6 +119,23 @@
       </div>
 
       <!-- Amenities Section -->
+      <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 32px 0 20px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
+        Guest-facing Highlights
+      </h2>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+          {{ form.tags.label }}
+        </label>
+        {{ form.tags }}
+        <p style="color: #6b7280; font-size: 14px; margin-top: 8px;">
+          Add comma-separated tags such as Pool View, Spa Resort, Couple Friendly.
+        </p>
+        {% if form.tags.errors %}
+          <p style="color: #ef4444; font-size: 14px; margin-top: 4px;">{{ form.tags.errors }}</p>
+        {% endif %}
+      </div>
+
       <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 32px 0 20px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
         Property Amenities
       </h2>

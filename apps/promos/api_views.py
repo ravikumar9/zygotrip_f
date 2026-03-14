@@ -10,7 +10,7 @@ import logging
 from decimal import Decimal
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -23,7 +23,7 @@ logger = logging.getLogger('zygotrip.api.promos')
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def apply_promo(request):
     """
     POST /api/v1/promo/apply/
@@ -111,17 +111,19 @@ def apply_promo(request):
                 status=status.HTTP_200_OK,
             )
 
-    # Check per-user usage (one use per user)
-    already_used = PromoUsage.objects.filter(promo=promo, user=request.user).exists()
-    if already_used:
-        return Response(
-            {
-                'success': False,
-                'error': {'code': 'already_used', 'message': 'You have already used this promo code.'},
-                'data': {'valid': False},
-            },
-            status=status.HTTP_200_OK,
-        )
+    # Check per-user usage (one use per user) — only for authenticated users.
+    # Anonymous users can preview discounts without logging in (OTA standard).
+    if request.user.is_authenticated:
+        already_used = PromoUsage.objects.filter(promo=promo, user=request.user).exists()
+        if already_used:
+            return Response(
+                {
+                    'success': False,
+                    'error': {'code': 'already_used', 'message': 'You have already used this promo code.'},
+                    'data': {'valid': False},
+                },
+                status=status.HTTP_200_OK,
+            )
 
     # Calculate discount on base + meal
     subtotal = base_amount + meal_amount
@@ -141,7 +143,7 @@ def apply_promo(request):
 
     logger.info(
         'Promo applied: code=%s user=%s discount=%s',
-        promo_code, request.user.email, discount_amount
+        promo_code, getattr(request.user, 'email', 'anonymous'), discount_amount
     )
 
     return Response({

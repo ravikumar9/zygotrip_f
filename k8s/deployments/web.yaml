@@ -1,0 +1,443 @@
+# ============================================================
+# ZygoTrip — Django Web Deployment
+# ============================================================
+# Runs gunicorn serving the Django 5.1.5 + DRF application.
+#
+# Startup sequence (in the container command):
+#   1. python manage.py migrate        — idempotent, safe on rolling deploy
+#   2. python manage.py collectstatic  — writes to /app/staticfiles (emptyDir)
+#   3. gunicorn                        — starts HTTP server on port 8000
+#
+# Scaling notes:
+#   - 3 replicas minimum for HA across zones
+#   - HPA (web-hpa.yaml) scales to 20 max on CPU/memory pressure
+#   - Rolling update strategy: max 1 unavailable, max 1 surge
+#
+# Health checks:
+#   - readinessProbe: gate traffic — pod only receives requests when /health/ returns 200
+#   - livenessProbe:  restart trigger — kills the pod if /health/ fails repeatedly
+#   - startupProbe:   gives gunicorn + migrate time to complete before liveness kicks in
+# ============================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: zygotrip-platform
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    # kubectl rollout history will show this message
+    deployment.kubernetes.io/revision: "1"
+    description: "Django 5.1.5 + gunicorn API server"
+spec:
+  # Start with 3 replicas for HA; HPA takes over from here
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web
+      app.kubernetes.io/component: backend
+
+  # ── Rolling update strategy ───────────────────────────────────
+  # maxUnavailable=1 ensures at least 2 pods always serve traffic
+  # maxSurge=1 caps the temporary over-provisioning at 4 pods total
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: web
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/part-of: zygotrip-platform
+      annotations:
+        # Force pod restart when ConfigMap/Secret content changes.
+        # Update this hash via: kubectl rollout restart deployment/web
+        # Or wire into CI/CD pipeline with a checksum annotation.
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
+        prometheus.io/path: "/metrics"
+
+    spec:
+      # ── Security: run as non-root ─────────────────────────────
+      # uid/gid 1000 matches the Django image Dockerfile USER directive
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        # Prevent privilege escalation attacks
+        seccompProfile:
+          type: RuntimeDefault
+
+      # ── Service account ───────────────────────────────────────
+      # Minimal service account — no cloud IAM bindings unless
+      # IRSA (AWS) or Workload Identity (GCP) is needed for S3/GCS.
+      serviceAccountName: zygotrip-web
+
+      # ── Init container: wait for DB and Redis ─────────────────
+      # Prevents gunicorn from starting before dependencies are ready.
+      # Uses nc (netcat) which is present in alpine-based images.
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres-service 5432; do
+                echo "Waiting for PostgreSQL..."; sleep 2;
+              done
+              echo "PostgreSQL is ready."
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis-service 6379; do
+                echo "Waiting for Redis..."; sleep 2;
+              done
+              echo "Redis is ready."
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+
+      containers:
+        - name: web
+          image: zygotrip/web:latest
+          # Always pull so :latest tags are resolved on every rollout.
+          # Switch to IfNotPresent with immutable tags (e.g. :1.2.3) in CI/CD.
+          imagePullPolicy: Always
+
+          command:
+            - sh
+            - -c
+            - |
+              python manage.py migrate --noinput &&
+              python manage.py collectstatic --noinput &&
+              exec gunicorn zygotrip_project.wsgi:application \
+                --config deployment/gunicorn.conf.py
+
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            # Prometheus metrics port (django-prometheus)
+            - name: metrics
+              containerPort: 8001
+              protocol: TCP
+
+          # ── Resource requests and limits ───────────────────────
+          # Request: guaranteed allocation the scheduler uses for placement
+          # Limit: hard ceiling — container is OOMKilled if exceeded
+          resources:
+            requests:
+              cpu: "500m"       # 0.5 vCPU guaranteed
+              memory: "512Mi"   # 512 MiB guaranteed
+            limits:
+              cpu: "2000m"      # 2 vCPU max burst
+              memory: "2Gi"     # 2 GiB max — prevents OOM cascades
+
+          # ── Environment from ConfigMap (non-secret) ────────────
+          envFrom:
+            - configMapRef:
+                name: zygotrip-config
+
+          # ── Environment from Secret (sensitive values) ─────────
+          env:
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: DJANGO_SECRET_KEY
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: POSTGRES_PASSWORD
+            - name: CASHFREE_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: CASHFREE_APP_ID
+            - name: CASHFREE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: CASHFREE_SECRET_KEY
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: STRIPE_SECRET_KEY
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: STRIPE_WEBHOOK_SECRET
+            - name: PAYTM_MERCHANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: PAYTM_MERCHANT_ID
+            - name: PAYTM_MERCHANT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: PAYTM_MERCHANT_KEY
+            - name: FCM_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: FCM_PROJECT_ID
+            - name: FCM_SERVER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: FCM_SERVER_KEY
+            - name: WHATSAPP_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: WHATSAPP_ACCESS_TOKEN
+            - name: WHATSAPP_PHONE_NUMBER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: WHATSAPP_PHONE_NUMBER_ID
+            - name: MSG91_AUTH_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: MSG91_AUTH_KEY
+            - name: MSG91_TEMPLATE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: MSG91_TEMPLATE_ID
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: SENTRY_DSN
+            - name: SUPPLIER_HOTELBEDS_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: SUPPLIER_HOTELBEDS_WEBHOOK_SECRET
+            - name: SUPPLIER_STAAH_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: SUPPLIER_STAAH_WEBHOOK_SECRET
+            - name: EMAIL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: EMAIL_HOST
+            - name: EMAIL_HOST_USER
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: EMAIL_HOST_USER
+            - name: EMAIL_HOST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: EMAIL_HOST_PASSWORD
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: AWS_ACCESS_KEY_ID
+                  optional: true
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+                  optional: true
+            - name: AWS_STORAGE_BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: zygotrip-secrets
+                  key: AWS_STORAGE_BUCKET_NAME
+                  optional: true
+
+          # ── Startup probe ──────────────────────────────────────
+          # Allows up to 120s (24 checks × 5s) for initial migration +
+          # collectstatic to complete before liveness checks begin.
+          startupProbe:
+            httpGet:
+              path: /api/v1/health/
+              port: http
+              httpHeaders:
+                - name: X-Health-Check
+                  value: "startup"
+            failureThreshold: 24
+            periodSeconds: 5
+            timeoutSeconds: 5
+
+          # ── Readiness probe ────────────────────────────────────
+          # Pod is removed from Service endpoints if this fails.
+          # Checks every 10s; 3 consecutive failures = not ready.
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/
+              port: http
+              httpHeaders:
+                - name: X-Health-Check
+                  value: "readiness"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          # ── Liveness probe ─────────────────────────────────────
+          # Pod is restarted if this fails — catches deadlocks / hangs.
+          # More conservative than readiness (longer period, more retries)
+          # to avoid unnecessary restarts during load spikes.
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health/
+              port: http
+              httpHeaders:
+                - name: X-Health-Check
+                  value: "liveness"
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
+            successThreshold: 1
+
+          # ── Volume mounts ──────────────────────────────────────
+          volumeMounts:
+            # Writable tmp dir (required for gunicorn socket / temp files)
+            - name: tmp
+              mountPath: /tmp
+            # Static files collected at startup (served by WhiteNoise/nginx)
+            - name: static-files
+              mountPath: /app/staticfiles
+            # Media files — replace with PVC or S3 CSI driver for persistence
+            - name: media-files
+              mountPath: /app/media
+
+          # ── Container security context ─────────────────────────
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # gunicorn writes to /tmp
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+
+      # ── Volumes ───────────────────────────────────────────────
+      volumes:
+        # Ephemeral temp space — cleared on pod termination
+        - name: tmp
+          emptyDir: {}
+        # Ephemeral static file cache — repopulated by collectstatic on startup
+        - name: static-files
+          emptyDir: {}
+        # Ephemeral media storage — REPLACE with a PersistentVolumeClaim
+        # or S3 CSI driver (e.g., mountpoint-s3-csi-driver) for production.
+        - name: media-files
+          emptyDir: {}
+
+      # ── Pod topology spread ────────────────────────────────────
+      # Spread pods across availability zones (requires zone labels on nodes)
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: web
+              app.kubernetes.io/component: backend
+
+      # ── Termination grace period ───────────────────────────────
+      # Give gunicorn 60s to finish in-flight requests before SIGKILL.
+      # gunicorn.conf.py should set graceful_timeout to ~50s.
+      terminationGracePeriodSeconds: 60
+
+      # ── Node affinity ──────────────────────────────────────────
+      # Prefer nodes labelled for application workloads (not infra).
+      # Remove if cluster does not use dedicated node pools.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-role
+                    operator: In
+                    values:
+                      - app
+        # Anti-affinity: avoid scheduling two web pods on the same node
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: web
+                    app.kubernetes.io/component: backend
+                topologyKey: kubernetes.io/hostname
+
+---
+# ============================================================
+# ServiceAccount for the web Deployment
+# ============================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zygotrip-web
+  namespace: zygotrip
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: zygotrip-platform
+  annotations:
+    # Uncomment and populate for AWS IRSA (S3, SES, etc.):
+    # eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/zygotrip-web-role
+    # Uncomment for GCP Workload Identity:
+    # iam.gke.io/gcp-service-account: zygotrip-web@PROJECT.iam.gserviceaccount.com
+automountServiceAccountToken: false

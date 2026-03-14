@@ -609,18 +609,58 @@ def autosuggest_api(request):
         return Response({'success': True, 'results': [], 'query': query})
 
     raw = AutosuggestService.get_suggestions(query, limit)
-    results = []
+
+    # Build separate arrays per type, then interleave for balanced results
+    city_items = []
+    bus_items = []
+    cab_items = []
+    area_items = []
+    prop_items = []
+    landmark_items = []
 
     # Cities
     for city in raw.get('cities', []):
         count = city.get('count', 0)
         state = city.get('state', '')
-        sublabel = f"{state} · {count} {'property' if count == 1 else 'properties'}" if state else f"{count} properties"
-        results.append({
+        district = city.get('district', '')
+        # Build sublabel like Goibibo: "Anantapur District, Andhra Pradesh · 2 properties"
+        parts = []
+        if district and district.lower() != city['name'].lower():
+            parts.append(f"{district} District")
+        if state:
+            parts.append(state)
+        location_text = ', '.join(parts)
+        if count > 0:
+            sublabel = f"{location_text} · {count} {'property' if count == 1 else 'properties'}" if location_text else f"{count} properties"
+        else:
+            sublabel = location_text or ''
+        city_items.append({
             'type': 'city',
             'label': city['name'],
             'sublabel': sublabel,
             'count': count,
+            'slug': None,
+            'id': None,
+        })
+
+    # Bus route cities
+    for bc in raw.get('bus_cities', []):
+        bus_items.append({
+            'type': 'bus_city',
+            'label': bc['name'],
+            'sublabel': f"{bc.get('route_count', 0)} bus routes available",
+            'count': bc.get('route_count', 0),
+            'slug': None,
+            'id': None,
+        })
+
+    # Cab cities
+    for cc in raw.get('cab_cities', []):
+        cab_items.append({
+            'type': 'cab_city',
+            'label': cc['name'],
+            'sublabel': f"{cc.get('cab_count', 0)} cabs available",
+            'count': cc.get('cab_count', 0),
             'slug': None,
             'id': None,
         })
@@ -632,7 +672,7 @@ def autosuggest_api(request):
         state = area.get('state', '')
         sublabel_parts = [p for p in [city_name, state] if p]
         sublabel = (', '.join(sublabel_parts) + f' · {count} properties') if sublabel_parts else f'{count} properties'
-        results.append({
+        area_items.append({
             'type': 'area',
             'label': area['name'],
             'sublabel': sublabel,
@@ -647,7 +687,7 @@ def autosuggest_api(request):
         state = prop.get('state', '')
         sublabel_parts = [p for p in [city_name, state] if p]
         sublabel = ', '.join(sublabel_parts)
-        results.append({
+        prop_items.append({
             'type': 'property',
             'label': prop['name'],
             'sublabel': sublabel,
@@ -655,6 +695,50 @@ def autosuggest_api(request):
             'slug': prop.get('slug'),
             'id': None,
         })
+
+    # Landmarks
+    for lm in raw.get('landmarks', []):
+        locality = lm.get('locality', '')
+        city_name = lm.get('city', '')
+        sublabel_parts = [p for p in [locality, city_name] if p]
+        sublabel = ', '.join(sublabel_parts)
+        landmark_items.append({
+            'type': 'landmark',
+            'label': lm['name'],
+            'sublabel': sublabel,
+            'count': None,
+            'slug': None,
+            'id': None,
+        })
+
+    # Interleave: cities first, then bus/cab (transport), then areas, properties, landmarks
+    # This ensures bus/cab results are visible even when there are many hotel results
+    results = city_items + bus_items + cab_items + area_items + prop_items + landmark_items
+
+    # If local DB returned very few results, supplement with Google Places
+    if len(results) < 3:
+        try:
+            from apps.core.google_places import is_enabled, autocomplete, normalize_to_location_type
+
+            if is_enabled():
+                predictions = autocomplete(query=query, types="(cities)", language="en")
+                for p in predictions:
+                    g_label = p.get("structured_formatting", {}).get("main_text", "")
+                    g_sublabel = p.get("structured_formatting", {}).get("secondary_text", "")
+                    g_types = p.get("types", [])
+                    if g_label:
+                        results.append({
+                            "type": normalize_to_location_type(g_types),
+                            "label": g_label,
+                            "sublabel": g_sublabel,
+                            "count": None,
+                            "slug": None,
+                            "id": None,
+                            "place_id": p.get("place_id", ""),
+                            "source": "google",
+                        })
+        except Exception as e:
+            logger.warning("Google Places autosuggest supplement failed: %s", e)
 
     # Deduplicate by (type, normalised label) — prevents duplicate cities from multiple DB rows
     seen: set = set()
@@ -957,40 +1041,27 @@ def price_calendar_api(request, property_id):
 
     Returns 30-day nightly price calendar.
     """
-    from apps.search.engine.booking_search import BookingSearchEngine
-    from apps.hotels.selectors import get_property_detail
+    from apps.pricing.calendar_api import get_price_calendar_payload
 
-    property_obj = get_property_detail(property_id)
-    if not property_obj:
+    payload, status_code = get_price_calendar_payload(property_id, request.GET)
+    if status_code != status.HTTP_200_OK:
+        message = payload.get('error', 'Price calendar request failed.')
+        error_code = 'not_found' if status_code == status.HTTP_404_NOT_FOUND else 'invalid_request'
         return Response(
-            {'success': False, 'error': {'code': 'not_found', 'message': 'Property not found.'}},
-            status=status.HTTP_404_NOT_FOUND,
+            {'success': False, 'error': {'code': error_code, 'message': message}},
+            status=status_code,
         )
-
-    start_str = request.GET.get('start')
-    days = min(int(request.GET.get('days', 30)), 90)
-
-    start_date = None
-    if start_str:
-        from datetime import datetime
-        try:
-            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-
-    calendar = BookingSearchEngine.price_calendar(
-        property_id=property_obj.id,
-        start_date=start_date,
-        days=days,
-    )
 
     return Response({
         'success': True,
         'data': {
-            'property_id': property_obj.id,
-            'property_name': property_obj.name,
-            'days': days,
-            'calendar': calendar,
+            'property_id': payload['property_id'],
+            'property_name': payload['property_name'],
+            'days': payload['days'],
+            'start_date': payload['start_date'],
+            'end_date': payload['end_date'],
+            'cached': payload['cached'],
+            'calendar': payload['dates'],
         },
     })
 

@@ -165,6 +165,106 @@ def _register_ota_models():
     from . import security_hardening  # noqa: F401
     # S15: Performance models
     from . import performance  # noqa: F401
+    # A/B testing engine
+    from . import ab_testing  # noqa: F401
 
 
 _register_ota_models()
+
+# ============================================================================
+# HOLIDAY CALENDAR — Festival/Event Intelligence Engine (System 2)
+# ============================================================================
+
+class HolidayCalendar(models.Model):
+    """
+    National holidays, regional festivals, tourism peaks, and major events.
+    Used by pricing recommendations and owner dashboards to advise on pricing.
+
+    RULES:
+    - demand_multiplier suggests what multiple of normal demand is expected.
+    - Do NOT auto-modify hotel prices — only surface recommendations to owners.
+    - One row per (date, country/state/city combination, holiday_name).
+    """
+    HOLIDAY_NATIONAL = 'national'
+    HOLIDAY_REGIONAL = 'regional'
+    HOLIDAY_FESTIVAL = 'festival'
+    HOLIDAY_TOURISM_PEAK = 'tourism_peak'
+    HOLIDAY_SCHOOL = 'school_holiday'
+    HOLIDAY_MAJOR_EVENT = 'major_event'
+    HOLIDAY_LONG_WEEKEND = 'long_weekend'
+
+    HOLIDAY_TYPE_CHOICES = [
+        (HOLIDAY_NATIONAL, 'National Holiday'),
+        (HOLIDAY_REGIONAL, 'Regional Holiday'),
+        (HOLIDAY_FESTIVAL, 'Religious / Cultural Festival'),
+        (HOLIDAY_TOURISM_PEAK, 'Tourism Peak Season'),
+        (HOLIDAY_SCHOOL, 'School Holiday'),
+        (HOLIDAY_MAJOR_EVENT, 'Major Event'),
+        (HOLIDAY_LONG_WEEKEND, 'Long Weekend'),
+    ]
+
+    holiday_name = models.CharField(max_length=200)
+    country = models.CharField(max_length=50, default='IN', db_index=True)
+    state = models.CharField(
+        max_length=100, blank=True,
+        help_text='State code (e.g. MH, DL). Blank = nationwide.'
+    )
+    city = models.ForeignKey(
+        'core.City', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='holidays',
+        help_text='City-specific holiday/event. Null = state or nationwide.'
+    )
+    date = models.DateField(db_index=True)
+    holiday_type = models.CharField(max_length=30, choices=HOLIDAY_TYPE_CHOICES)
+    demand_multiplier = models.DecimalField(
+        max_digits=4, decimal_places=2, default=1.0,
+        help_text='Expected demand multiple (1.5 = 50% above normal, 0.8 = 20% below)'
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'core'
+        ordering = ['date', 'country']
+        indexes = [
+            models.Index(fields=['date', 'country', 'is_active']),
+            models.Index(fields=['country', 'state', 'date']),
+            models.Index(fields=['holiday_type', 'date']),
+        ]
+        verbose_name = 'Holiday Calendar Entry'
+        verbose_name_plural = 'Holiday Calendar'
+
+    def __str__(self):
+        scope = self.state or self.country
+        return f"{self.holiday_name} ({scope}) — {self.date}"
+
+    @classmethod
+    def get_holidays_for_range(cls, start_date, end_date, country='IN', state='', city_id=None):
+        """
+        Return active holidays in a date range, scoped to country/state/city.
+        Returns queryset ordered by date.
+        """
+        qs = cls.objects.filter(
+            date__range=(start_date, end_date),
+            country=country,
+            is_active=True,
+        )
+        if state:
+            qs = qs.filter(models.Q(state='') | models.Q(state=state))
+        if city_id:
+            qs = qs.filter(models.Q(city__isnull=True) | models.Q(city_id=city_id))
+        return qs.order_by('date')
+
+    @classmethod
+    def get_multiplier_for_date(cls, target_date, country='IN', state='', city_id=None):
+        """
+        Get the highest demand multiplier for a given date.
+        Returns Decimal — 1.0 if no holiday found.
+        """
+        from decimal import Decimal
+        holidays = cls.get_holidays_for_range(target_date, target_date, country, state, city_id)
+        if not holidays.exists():
+            return Decimal('1.0')
+        return max(h.demand_multiplier for h in holidays)

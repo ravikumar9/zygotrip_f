@@ -27,14 +27,18 @@ from django.utils import timezone
 
 logger = logging.getLogger('zygotrip.search.ranking_v2')
 
-# Weight configuration — maps to mandated formula
+# Weight configuration — OTA-style multi-signal production formula
 RANKING_V2_WEIGHTS = {
-    'review_score': 0.20,
-    'conversion_rate': 0.15,
-    'price_competitiveness': 0.20,
-    'margin': 0.10,
-    'location': 0.15,
-    'personalization': 0.20,
+    'review_score': 0.15,
+    'conversion_rate': 0.12,
+    'price_competitiveness': 0.18,
+    'margin': 0.07,
+    'booking_velocity': 0.10,
+    'distance_relevance': 0.10,
+    'location': 0.08,
+    'personalization': 0.10,
+    'cancellation_rate': 0.05,
+    'availability_reliability': 0.05,
 }
 
 
@@ -83,16 +87,24 @@ class SearchRankingV2:
             c = self._conversion_score(item)
             p = self._price_competitiveness(item, prices[idx], min_price, max_price, competitor_data)
             m = self._margin_score(item)
+            v = self._booking_velocity_score(item)
+            d = self._distance_relevance_score(item, user_context)
             l = self._location_score(item, user_context)
             per = self._personalization_score(item, user_context, user_history)
+            canc = self._cancellation_score(item)
+            avail = self._availability_reliability_score(item)
 
             score = (
                 r * self.weights['review_score']
                 + c * self.weights['conversion_rate']
                 + p * self.weights['price_competitiveness']
                 + m * self.weights['margin']
+                + v * self.weights['booking_velocity']
+                + d * self.weights['distance_relevance']
                 + l * self.weights['location']
                 + per * self.weights['personalization']
+                + canc * self.weights['cancellation_rate']
+                + avail * self.weights['availability_reliability']
             ) * 100
 
             item.ranking_score = round(score, 4)
@@ -101,8 +113,12 @@ class SearchRankingV2:
                 'conversion': round(c, 4),
                 'price_comp': round(p, 4),
                 'margin': round(m, 4),
+                'booking_velocity': round(v, 4),
+                'distance_relevance': round(d, 4),
                 'location': round(l, 4),
                 'personalization': round(per, 4),
+                'cancellation': round(canc, 4),
+                'availability': round(avail, 4),
             }
 
         items.sort(key=lambda x: x.ranking_score, reverse=True)
@@ -202,15 +218,33 @@ class SearchRankingV2:
         return min(1.0, max(0.0, (commission - 5) / 15.0))
 
     @staticmethod
-    def _location_score(item, user_context):
+    def _booking_velocity_score(item):
         """
-        Location score based on:
-          1. Distance to user (if lat/lng available)
-          2. Locality popularity
-          3. City popularity
-        """
-        score = 0.5  # default
+        Booking velocity signal for OTA-style popularity ranking.
 
+        Uses recent bookings first, then same-day bookings, then total bookings
+        as progressively weaker proxies.
+        """
+        recent = float(getattr(item, 'recent_bookings', 0) or 0)
+        today = float(getattr(item, 'bookings_today', 0) or 0)
+        total = float(getattr(item, 'total_bookings', 0) or 0)
+
+        if recent > 0:
+            return min(1.0, recent / 12.0)
+        if today > 0:
+            return min(0.95, today / 8.0)
+        if total > 0:
+            return min(0.75, total / 40.0)
+        return 0.2
+
+    @staticmethod
+    def _distance_relevance_score(item, user_context):
+        """
+        Distance relevance as a direct ranking factor.
+
+        If user coordinates are available, use haversine distance.
+        Otherwise fall back to precomputed distance_km where present.
+        """
         user_lat = user_context.get('user_lat')
         user_lng = user_context.get('user_lng')
 
@@ -219,13 +253,32 @@ class SearchRankingV2:
             lng = float(getattr(item, 'longitude', 0) or getattr(item, 'lng', 0) or 0)
             if lat and lng:
                 dist = _haversine(user_lat, user_lng, lat, lng)
-                # Closer = better. Exponential decay: ~5km = 0.6, ~1km = 0.9
-                score = math.exp(-dist / 10.0)
+                return max(0.0, min(1.0, math.exp(-dist / 8.0)))
+
+        known_distance = float(getattr(item, 'distance_km', 0) or 0)
+        if known_distance > 0:
+            return max(0.0, min(1.0, 1.0 - (known_distance / 25.0)))
+
+        return 0.5
+
+    @staticmethod
+    def _location_score(item, user_context):
+        """
+        Location score based on:
+          1. Locality popularity
+          2. City-centre distance proxy
+        """
+        score = 0.5  # default baseline
 
         # Boost popular localities
         locality_pop = float(getattr(item, 'locality_popularity', 0) or 0)
         if locality_pop > 0:
             score = score * 0.7 + min(1.0, locality_pop / 100.0) * 0.3
+
+        distance_km = float(getattr(item, 'distance_km', 0) or 0)
+        if distance_km > 0:
+            center_proximity = max(0.0, min(1.0, 1.0 - (distance_km / 30.0)))
+            score = score * 0.6 + center_proximity * 0.4
 
         return min(1.0, score)
 
@@ -280,6 +333,29 @@ class SearchRankingV2:
         score += sum(boosts)
         return min(1.0, score)
 
+    # ── New signal scorers ─────────────────────────────────────────
+
+    @staticmethod
+    def _cancellation_score(item):
+        """
+        Cancellation rate signal: lower cancellation rate = higher score.
+        Hotels with high clicks but low bookings (frequent cancellations)
+        get ranking decrease. Inverse mapping: 0% cancel = 1.0, 50%+ = 0.0
+        """
+        rate = float(getattr(item, 'cancellation_rate', 0) or 0)
+        # rate is 0-1 where 0 = no cancellations, 1 = 100% cancelled
+        return max(0.0, min(1.0, 1.0 - (rate * 2.0)))
+
+    @staticmethod
+    def _availability_reliability_score(item):
+        """
+        Availability reliability: how often rooms are actually available
+        when listed. Penalizes properties with frequent overbooking or
+        inventory errors. 1.0 = perfectly reliable, 0.0 = always wrong.
+        """
+        reliability = float(getattr(item, 'availability_reliability', 1) or 1)
+        return max(0.0, min(1.0, reliability))
+
     # ── Helpers ────────────────────────────────────────────────────────
 
     @staticmethod
@@ -318,9 +394,24 @@ class SearchRankingV2:
 
     @staticmethod
     def _load_user_history(user_id):
-        """Load user booking/search history for personalization."""
+        """Load user booking/search history for personalization.
+
+        Uses cached UserSearchProfile when available (fast path).
+        Falls back to direct DB aggregation (slow path, first-time users).
+        """
         if not user_id:
             return {}
+
+        # Fast path: cached profile
+        try:
+            from apps.search.personalization import get_user_profile_for_ranking
+            profile = get_user_profile_for_ranking(user_id)
+            if profile:
+                return profile
+        except Exception:
+            pass
+
+        # Slow path: direct aggregation (fallback)
         try:
             from apps.booking.models import Booking
             from django.db.models import Avg

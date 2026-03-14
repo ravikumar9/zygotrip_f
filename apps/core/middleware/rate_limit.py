@@ -91,7 +91,7 @@ class RateLimitMiddleware(MiddlewareMixin):
                         "current_count": current_count,
                     },
                 )
-                return JsonResponse(
+                response = JsonResponse(
                     {
                         "error": "Rate limit exceeded",
                         "message": f"Maximum {limit} requests per minute allowed",
@@ -99,6 +99,18 @@ class RateLimitMiddleware(MiddlewareMixin):
                     },
                     status=429,
                 )
+                response['Retry-After'] = str(window_size)
+                response['X-RateLimit-Limit'] = str(limit)
+                response['X-RateLimit-Remaining'] = '0'
+                response['X-RateLimit-Reset'] = str(window_size)
+                return response
+
+            # Store limit info on request for response headers
+            request._rate_limit_info = {
+                'limit': limit,
+                'remaining': max(0, limit - current_count),
+                'reset': window_size,
+            }
 
         except Exception as exc:
             logger.warning(
@@ -107,3 +119,12 @@ class RateLimitMiddleware(MiddlewareMixin):
             )
 
         return None
+
+    def process_response(self, request, response):
+        """Attach X-RateLimit-* headers to every response."""
+        info = getattr(request, '_rate_limit_info', None)
+        if info:
+            response['X-RateLimit-Limit'] = str(info['limit'])
+            response['X-RateLimit-Remaining'] = str(info['remaining'])
+            response['X-RateLimit-Reset'] = str(info['reset'])
+        return response

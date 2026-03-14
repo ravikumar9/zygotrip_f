@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.urls import reverse
 from django.shortcuts import redirect, render
 from apps.accounts.permissions import role_required, provider_required
 from apps.hotels.services import create_property, submit_property_for_approval
@@ -32,6 +33,9 @@ def edit_property_features(request, property_id):
 	from .forms_property_features import PropertyFeaturesForm
 	
 	property_obj = get_property_or_404(property_id, request.user)
+	amenities_list = '\n'.join(
+		PropertyAmenity.objects.filter(property=property_obj).values_list('name', flat=True)
+	)
 	
 	if request.method == 'POST':
 		form = PropertyFeaturesForm(request.POST, instance=property_obj)
@@ -53,10 +57,6 @@ def edit_property_features(request, property_id):
 			return redirect('dashboard_owner:dashboard')
 	else:
 		form = PropertyFeaturesForm(instance=property_obj)
-		# Get existing amenities as text list
-		amenities_list = '\n'.join(
-			PropertyAmenity.objects.filter(property=property_obj).values_list('name', flat=True)
-		)
 	
 	return render(request, 'dashboard_owner/edit_property_features.html', {
 		'form': form,
@@ -72,7 +72,7 @@ def add_property(request):
 		property_obj = create_property(request.user, **form.cleaned_data)
 		image_url = request.POST.get('image_url', '').strip()
 		create_property_image(property_obj, image_url)
-		messages.success(request, 'Property created.')
+		messages.success(request, 'Property created. Continue with gallery, rooms, and inventory to complete setup.')
 		return redirect('dashboard_owner:dashboard')
 	return render(request, 'dashboard_owner/add_property.html', {'form': form})
 
