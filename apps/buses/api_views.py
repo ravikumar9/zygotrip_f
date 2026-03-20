@@ -13,13 +13,24 @@ Endpoints:
 """
 import logging
 from datetime import datetime, date
+from decimal import Decimal
 from django.db.models import Q, Count, Min
 from django.db import transaction
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Bus, BusSeat, BusType, BoardingPoint, DroppingPoint
+from .models import (
+    Bus,
+    BusSeat,
+    BusType,
+    BoardingPoint,
+    DroppingPoint,
+    BusBooking,
+    BusBookingPassenger,
+    BusPriceBreakdown,
+)
+from apps.core.service_guard import require_service_enabled
 
 logger = logging.getLogger('zygotrip.buses')
 
@@ -72,6 +83,7 @@ def _serialize_seat(seat):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('buses')
 def search_buses(request):
     """
     GET /api/v1/buses/search/?from=Delhi&to=Mumbai&date=2026-03-15&bus_type=ac&sort=price
@@ -143,6 +155,7 @@ def search_buses(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('buses')
 def bus_detail(request, bus_id):
     """GET /api/v1/buses/<id>/"""
     try:
@@ -166,6 +179,7 @@ def bus_detail(request, bus_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('buses')
 def bus_seats(request, bus_id):
     """GET /api/v1/buses/<id>/seats/"""
     try:
@@ -186,6 +200,7 @@ def bus_seats(request, bus_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('buses')
 def popular_routes(request):
     """GET /api/v1/buses/routes/ — Popular bus routes."""
     routes = (
@@ -213,6 +228,7 @@ def popular_routes(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('buses')
 def seat_map_layout(request, bus_id):
     """GET /api/v1/buses/<id>/seat-map/
 
@@ -323,6 +339,7 @@ def seat_map_layout(request, bus_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('buses')
 def boarding_dropping_points(request, bus_id):
     """GET /api/v1/buses/<id>/points/
 
@@ -375,6 +392,7 @@ def boarding_dropping_points(request, bus_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('buses')
 def lock_seats(request, bus_id):
     """POST /api/v1/buses/<id>/lock-seats/
 
@@ -447,6 +465,7 @@ def lock_seats(request, bus_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('buses')
 def release_seats(request, bus_id):
     """POST /api/v1/buses/<id>/release-seats/
 
@@ -471,3 +490,197 @@ def release_seats(request, bus_id):
         'success': True,
         'data': {'released_count': count},
     })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_service_enabled('buses')
+def create_booking(request, bus_id):
+    seat_ids = request.data.get('seat_ids') or []
+    passengers = request.data.get('passengers') or []
+
+    if not seat_ids:
+        return Response({'success': False, 'error': 'seat_ids is required'}, status=status.HTTP_400_BAD_REQUEST)
+    if passengers and len(passengers) != len(seat_ids):
+        return Response({'success': False, 'error': 'passengers count must match seat_ids count'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        bus = Bus.objects.get(id=bus_id, is_active=True)
+    except Bus.DoesNotExist:
+        return Response({'success': False, 'error': 'Bus not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    journey_date = request.data.get('journey_date')
+    if not journey_date:
+        journey_date = bus.journey_date or date.today()
+
+    with transaction.atomic():
+        seats = list(BusSeat.objects.select_for_update().filter(bus=bus, id__in=seat_ids))
+        if len(seats) != len(seat_ids):
+            return Response({'success': False, 'error': 'Invalid seats selected'}, status=status.HTTP_400_BAD_REQUEST)
+
+        for seat in seats:
+            if seat.state == BusSeat.BOOKED:
+                return Response({'success': False, 'error': f'Seat {seat.seat_number} already booked'}, status=status.HTTP_409_CONFLICT)
+            if seat.state == BusSeat.LOCKED and seat.locked_by_id != request.user.id and not seat.is_lock_expired:
+                return Response({'success': False, 'error': f'Seat {seat.seat_number} is locked by another user'}, status=status.HTTP_409_CONFLICT)
+            if seat.state in (BusSeat.AVAILABLE, BusSeat.LADIES) or seat.is_lock_expired:
+                if not seat.acquire_lock(request.user, session_ref=f'bus-booking-{request.user.id}'):
+                    return Response({'success': False, 'error': f'Unable to lock seat {seat.seat_number}'}, status=status.HTTP_409_CONFLICT)
+
+        base_amount = Decimal(str(bus.price_per_seat)) * Decimal(len(seats))
+        service_fee = (base_amount * Decimal('0.05')).quantize(Decimal('0.01'))
+        gst = ((base_amount + service_fee) * Decimal('0.05')).quantize(Decimal('0.01'))
+        total = (base_amount + service_fee + gst).quantize(Decimal('0.01'))
+
+        booking = BusBooking.objects.create(
+            user=request.user,
+            bus=bus,
+            journey_date=journey_date,
+            contact_email=request.data.get('contact_email') or getattr(request.user, 'email', ''),
+            contact_phone=request.data.get('contact_phone') or getattr(request.user, 'phone', ''),
+            boarding_point_id=request.data.get('boarding_point_id') or None,
+            dropping_point_id=request.data.get('dropping_point_id') or None,
+            status=BusBooking.STATUS_CONFIRMED,
+            total_amount=total,
+            promo_code=request.data.get('promo_code') or '',
+        )
+
+        for idx, seat in enumerate(seats):
+            passenger = passengers[idx] if idx < len(passengers) else {}
+            BusBookingPassenger.objects.create(
+                booking=booking,
+                seat=seat,
+                full_name=passenger.get('full_name') or f'Passenger {idx + 1}',
+                age=passenger.get('age') or 30,
+                gender=passenger.get('gender') or BusBookingPassenger.MALE,
+                phone=passenger.get('phone') or '',
+                id_proof_type=passenger.get('id_proof_type') or '',
+                id_proof_number=passenger.get('id_proof_number') or '',
+            )
+            seat.confirm_booking()
+
+        BusPriceBreakdown.objects.create(
+            booking=booking,
+            base_amount=base_amount,
+            service_fee=service_fee,
+            gst=gst,
+            promo_discount=Decimal('0.00'),
+            total_amount=total,
+        )
+
+    return Response(
+        {
+            'success': True,
+            'data': {
+                'booking_uuid': str(booking.uuid),
+                'public_booking_id': booking.public_booking_id,
+                'pnr': booking.pnr,
+                'status': booking.status,
+                'total_amount': str(booking.total_amount),
+                'seat_numbers': [seat.seat_number for seat in seats],
+            },
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_service_enabled('buses')
+def booking_detail(request, booking_uuid):
+    try:
+        booking = BusBooking.objects.select_related('bus', 'boarding_point', 'dropping_point').prefetch_related('passengers__seat').get(uuid=booking_uuid)
+    except BusBooking.DoesNotExist:
+        return Response({'success': False, 'error': 'Booking not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if booking.user_id != request.user.id and not (request.user.is_staff or request.user.is_superuser):
+        return Response({'success': False, 'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+    breakdown = getattr(booking, 'price_breakdown', None)
+    return Response(
+        {
+            'success': True,
+            'data': {
+                'booking_uuid': str(booking.uuid),
+                'public_booking_id': booking.public_booking_id,
+                'pnr': booking.pnr,
+                'status': booking.status,
+                'journey_date': str(booking.journey_date),
+                'bus': _serialize_bus(booking.bus, booking.journey_date),
+                'boarding_point': booking.boarding_point.name if booking.boarding_point else '',
+                'dropping_point': booking.dropping_point.name if booking.dropping_point else '',
+                'passengers': [
+                    {
+                        'full_name': p.full_name,
+                        'age': p.age,
+                        'gender': p.gender,
+                        'seat_number': p.seat.seat_number,
+                    }
+                    for p in booking.passengers.all()
+                ],
+                'price_breakdown': {
+                    'base_amount': str(breakdown.base_amount) if breakdown else str(booking.total_amount),
+                    'service_fee': str(breakdown.service_fee) if breakdown else '0.00',
+                    'gst': str(breakdown.gst) if breakdown else '0.00',
+                    'promo_discount': str(breakdown.promo_discount) if breakdown else '0.00',
+                    'total_amount': str(breakdown.total_amount) if breakdown else str(booking.total_amount),
+                },
+            },
+        }
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@require_service_enabled('buses')
+def booking_tracking(request, booking_uuid):
+    try:
+        booking = BusBooking.objects.select_related('bus').get(uuid=booking_uuid)
+    except BusBooking.DoesNotExist:
+        return Response({'success': False, 'error': 'Booking not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if booking.user_id != request.user.id and not (request.user.is_staff or request.user.is_superuser):
+        return Response({'success': False, 'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+    timeline = list(
+        booking.history.order_by('created_at').values('from_status', 'to_status', 'note', 'created_at')
+    )
+    return Response(
+        {
+            'success': True,
+            'data': {
+                'booking_uuid': str(booking.uuid),
+                'status': booking.status,
+                'pnr': booking.pnr,
+                'from_city': booking.bus.from_city,
+                'to_city': booking.bus.to_city,
+                'departure_time': booking.bus.departure_time.strftime('%H:%M'),
+                'arrival_time': booking.bus.arrival_time.strftime('%H:%M'),
+                'timeline': timeline,
+            },
+        }
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_service_enabled('buses')
+def cancel_booking(request, booking_uuid):
+    try:
+        booking = BusBooking.objects.prefetch_related('passengers__seat').get(uuid=booking_uuid)
+    except BusBooking.DoesNotExist:
+        return Response({'success': False, 'error': 'Booking not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if booking.user_id != request.user.id and not (request.user.is_staff or request.user.is_superuser):
+        return Response({'success': False, 'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+    if booking.status not in [BusBooking.STATUS_PENDING, BusBooking.STATUS_REVIEW, BusBooking.STATUS_PAYMENT, BusBooking.STATUS_CONFIRMED]:
+        return Response({'success': False, 'error': 'Booking cannot be cancelled in current status'}, status=status.HTTP_400_BAD_REQUEST)
+
+    booking.status = BusBooking.STATUS_CANCELLED
+    booking.save(update_fields=['status', 'updated_at'])
+    for passenger in booking.passengers.all():
+        seat = passenger.seat
+        seat.release_lock()
+
+    return Response({'success': True, 'data': {'booking_uuid': str(booking.uuid), 'status': booking.status}})

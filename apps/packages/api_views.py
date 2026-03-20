@@ -14,6 +14,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from apps.core.service_guard import require_service_enabled
 from .models import (
     Package, PackageCategory, PackageImage, PackageItinerary,
     PackageAddon, PackageSeasonalPrice, PackageDeparture, PackageBundleCalculator,
@@ -90,6 +91,7 @@ def _serialize_package(pkg, detail=False):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('packages')
 def search_packages(request):
     """
     GET /api/v1/packages/search/?destination=Goa&duration=3-5&budget=5000-15000&category=adventure&sort=price
@@ -170,6 +172,7 @@ def search_packages(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('packages')
 def package_detail(request, slug):
     """GET /api/v1/packages/<slug>/"""
     try:
@@ -220,6 +223,7 @@ def package_detail(request, slug):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('packages')
 def package_availability(request, package_id):
     """GET /api/v1/packages/<id>/availability/?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD"""
     from datetime import datetime
@@ -261,6 +265,7 @@ def package_availability(request, package_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@require_service_enabled('packages')
 def package_book(request):
     """POST /api/v1/packages/book/"""
     if not request.user.is_authenticated:
@@ -301,6 +306,7 @@ def package_book(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@require_service_enabled('packages')
 def bundle_pricing(request, slug):
     """POST /api/v1/packages/<slug>/bundle-pricing/
 
@@ -351,6 +357,7 @@ def bundle_pricing(request, slug):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('packages')
 def popular_destinations(request):
     """GET /api/v1/packages/destinations/"""
     destinations = (
@@ -378,6 +385,7 @@ def popular_destinations(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('packages')
 def package_categories(request):
     """GET /api/v1/packages/categories/"""
     cats = PackageCategory.objects.filter(is_active=True).order_by('name')
@@ -388,3 +396,111 @@ def package_categories(request):
             for c in cats
         ],
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@require_service_enabled('packages')
+def booking_list(request):
+    if not request.user.is_authenticated:
+        return Response({'success': False, 'error': 'Authentication required'}, status=status.HTTP_403_FORBIDDEN)
+
+    rows = PackageBooking.objects.filter(user=request.user).select_related('package').order_by('-created_at')
+    data = [
+        {
+            'booking_uuid': str(row.uuid),
+            'public_booking_id': row.public_booking_id,
+            'status': row.status,
+            'package_name': row.package.name,
+            'destination': row.package.destination,
+            'adults': row.adults,
+            'children': row.children,
+            'total_amount': float(row.total_amount),
+            'created_at': row.created_at,
+        }
+        for row in rows
+    ]
+    return Response({'success': True, 'data': data})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@require_service_enabled('packages')
+def booking_detail(request, booking_uuid):
+    if not request.user.is_authenticated:
+        return Response({'success': False, 'error': 'Authentication required'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        booking = PackageBooking.objects.select_related('package', 'departure').prefetch_related('travelers', 'booking_addons__addon').get(uuid=booking_uuid, user=request.user)
+    except PackageBooking.DoesNotExist:
+        return Response({'success': False, 'error': 'Booking not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(
+        {
+            'success': True,
+            'data': {
+                'booking_uuid': str(booking.uuid),
+                'public_booking_id': booking.public_booking_id,
+                'status': booking.status,
+                'package': {
+                    'id': booking.package.id,
+                    'slug': booking.package.slug,
+                    'name': booking.package.name,
+                    'destination': booking.package.destination,
+                },
+                'departure_date': str(booking.departure.departure_date) if booking.departure else None,
+                'travellers': {
+                    'adults': booking.adults,
+                    'children': booking.children,
+                    'details': [
+                        {
+                            'full_name': t.full_name,
+                            'age': t.age,
+                            'traveler_type': t.traveler_type,
+                        }
+                        for t in booking.travelers.all()
+                    ],
+                },
+                'addons': [
+                    {
+                        'name': ba.addon.name,
+                        'quantity': ba.quantity,
+                        'total_price': float(ba.total_price),
+                    }
+                    for ba in booking.booking_addons.all()
+                ],
+                'pricing': {
+                    'subtotal': float(booking.subtotal),
+                    'group_discount': float(booking.group_discount),
+                    'promo_discount': float(booking.promo_discount),
+                    'gst': float(booking.gst),
+                    'total_amount': float(booking.total_amount),
+                },
+            },
+        }
+    )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@require_service_enabled('packages')
+def booking_cancel(request, booking_uuid):
+    if not request.user.is_authenticated:
+        return Response({'success': False, 'error': 'Authentication required'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        booking = PackageBooking.objects.select_related('departure').get(uuid=booking_uuid, user=request.user)
+    except PackageBooking.DoesNotExist:
+        return Response({'success': False, 'error': 'Booking not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if booking.status in ['cancelled', 'refunded']:
+        return Response({'success': False, 'error': 'Booking already cancelled/refunded'}, status=status.HTTP_400_BAD_REQUEST)
+
+    booking.status = 'cancelled'
+    booking.save(update_fields=['status', 'updated_at'])
+
+    if booking.departure:
+        booking.departure.booked_slots = max(0, booking.departure.booked_slots - (booking.adults + booking.children))
+        booking.departure.save(update_fields=['booked_slots', 'updated_at'])
+
+    return Response({'success': True, 'data': {'booking_uuid': str(booking.uuid), 'status': booking.status}})

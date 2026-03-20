@@ -22,6 +22,11 @@ from apps.core.health import health_check, health_check_detailed
 from apps.core.health_checks import HealthCheckView, DetailedHealthCheckView, MetricsView
 from apps.inventory.supplier_sync_api import supplier_webhook, trigger_supplier_sync, supplier_sync_status
 from apps.hotels.rate_plan_api import rate_plans_api
+from apps.pricing.views import price_quote
+
+admin.site.site_header = 'ZygoTrip Control Center'
+admin.site.site_title = 'ZygoTrip Admin'
+admin.site.index_title = 'Platform Operations'
 
 urlpatterns = [
     # ── Health checks (no auth, no middleware overhead) ─────────────────
@@ -38,19 +43,29 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
     # ── REST API v1 (highest priority) ─────────────────────────────────
+    path('api/v1/pricing/quote/', price_quote, name='pricing_quote'),
     path('api/v1/', include('apps.hotels.api.v1.urls')),
     path('api/v1/', include('apps.accounts.api.v1.urls')),
+    path('api/v1/', include('apps.referrals.api.v1.urls')),
     path('api/v1/booking/', include('apps.booking.api.v1.urls')),
     path('api/v1/wallet/', include('apps.wallet.api.v1.urls')),
     path('api/v1/payment/', include('apps.payments.api.v1.urls')),
     path('api/v1/checkout/', include('apps.checkout.api.v1.urls')),
+    path('api/v1/ai/', include('apps.ai.api.v1.urls')),
+    path('api/v1/loyalty/', include('apps.loyalty.api.v1.urls')),
+    path('api/v1/notifications/', include('apps.notifications.api.v1.urls')),
     path('api/v1/buses/', include('apps.buses.api_urls')),
     path('api/v1/cabs/', include('apps.cabs.api_urls')),
     path('api/v1/packages/', include('apps.packages.api_urls')),
     path('api/v1/flights/', include('apps.flights.api_urls')),
     path('api/v1/activities/', include('apps.activities.api_urls')),
+    path('api/v1/support/', include('apps.support.api_urls')),
     path('api/v1/seo/', include('apps.search.seo_urls')),
     path('api/v1/dashboard/owner/', include('apps.dashboard_owner.api_urls')),
+    path('api/v1/dashboard/owner-api/', include('apps.dashboard_owner.owner_api_urls')),
+    path('api/v1/dashboard/bus-operator/', include('apps.buses.bus_operator_api_urls')),
+    path('api/v1/dashboard/cab-owner/', include('apps.cabs.cab_owner_api_urls')),
+    path('api/v1/dashboard/package-provider/', include('apps.packages.package_provider_api_urls')),
     path('api/v1/', include('apps.core.api_v1_urls')),
     path('api/v1/promo/apply/', apply_promo, name='api_promo_apply'),
     path('api/v1/offers/featured/', featured_offers, name='api_offers_featured'),

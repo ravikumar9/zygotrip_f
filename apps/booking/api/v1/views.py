@@ -17,7 +17,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.db import transaction
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
@@ -43,6 +43,7 @@ from .serializers import (
     BookingDetailSerializer,
     BookingListSerializer,
 )
+from apps.core.throttles import BookingCreateThrottle
 
 logger = logging.getLogger('zygotrip.api.booking')
 
@@ -377,6 +378,7 @@ def apply_promo_to_context(request, context_uuid):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([BookingCreateThrottle])
 def create_booking_view(request):
     """
     POST /api/v1/booking/
@@ -421,12 +423,10 @@ def create_booking_view(request):
         if data.get('context_uuid'):
             context = BookingContext.objects.select_related('property', 'room_type').get(
                 uuid=data['context_uuid'],
-                context_status=BookingContext.STATUS_ACTIVE,
             )
         else:
             context = BookingContext.objects.select_related('property', 'room_type').get(
                 id=data['context_id'],
-                context_status=BookingContext.STATUS_ACTIVE,
             )
     except BookingContext.DoesNotExist:
         return Response(
@@ -455,6 +455,12 @@ def create_booking_view(request):
         except Booking.DoesNotExist:
             pass
 
+    if context.context_status != BookingContext.STATUS_ACTIVE:
+        return Response(
+            {'success': False, 'error': {'code': 'invalid_context', 'message': 'Invalid or expired booking context.'}},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     if not context.room_type:
         return Response(
             {'success': False, 'error': {'code': 'missing_room', 'message': 'A room type must be selected to confirm booking.'}},
@@ -463,6 +469,7 @@ def create_booking_view(request):
 
     # ── Wallet balance check (before creating booking) ────────────────
     payment_method = data.get('payment_method', 'wallet')
+    payment_split = data.get('payment_split') or {}
     if payment_method == 'wallet' and is_authenticated:
         try:
             from apps.wallet.services import check_wallet_balance
@@ -478,8 +485,21 @@ def create_booking_view(request):
         except Exception as wb_err:
             logger.warning('Wallet balance check failed (non-blocking): %s', wb_err)
 
+    if payment_method == 'split':
+        if not is_authenticated:
+            return Response(
+                {'success': False, 'error': {'code': 'auth_required', 'message': 'Split payment requires login.'}},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if not isinstance(payment_split, dict):
+            return Response(
+                {'success': False, 'error': {'code': 'validation_error', 'message': 'payment_split must be an object.'}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     # Determine booking user
     booking_user = request.user if is_authenticated else None
+    booking_idempotency_key = data.get('idempotency_key') or f'ctx-{context.uuid}'
 
     try:
         booking = create_booking(
@@ -496,7 +516,9 @@ def create_booking_view(request):
                 'age': data.get('guest_age', 0),
             }],
             promo_code=context.promo_code,
+            idempotency_key=booking_idempotency_key,
             locked_price=context.locked_price if context.price_locked else None,
+            booking_context=context,
         )
     except InventoryUnavailableException as e:
         return Response(
@@ -608,10 +630,56 @@ def create_booking_view(request):
             )
             # Don't fail the entire booking — just return it in HOLD status
 
+    split_result = None
+    if payment_method == 'split' and is_authenticated:
+        try:
+            from apps.booking.split_payment_service import SplitPaymentService
+
+            split_result = SplitPaymentService().initiate_split(
+                booking=booking,
+                wallet_amount=payment_split.get('wallet_amount', 0),
+                gateway_amount=payment_split.get('gateway_amount', 0),
+                gateway=payment_split.get('gateway', 'cashfree'),
+                user=request.user,
+            )
+        except Exception as split_exc:
+            logger.exception('Split payment initiation failed: %s', split_exc)
+            return Response(
+                {'success': False, 'error': {'code': 'split_payment_failed', 'message': str(split_exc)}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     booking_detail = Booking.objects.prefetch_related('rooms__room_type').select_related('property').get(pk=booking.pk)
+    payload = BookingDetailSerializer(booking_detail).data
+    if split_result:
+        payload['split_payment'] = split_result
     return Response(
-        {'success': True, 'data': BookingDetailSerializer(booking_detail).data},
+        {'success': True, 'data': payload},
         status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def payment_options(request, context_id):
+    try:
+        context = BookingContext.objects.get(id=context_id)
+    except BookingContext.DoesNotExist:
+        return Response({'error': 'Booking context not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    from apps.wallet.services import get_wallet_balance
+
+    wallet_balance = Decimal(str(get_wallet_balance(request.user)))
+    booking_total = Decimal(str(context.locked_price or context.final_price or 0))
+    wallet_applicable_amount = min(wallet_balance, booking_total)
+    return Response(
+        {
+            'wallet_balance': float(wallet_balance),
+            'booking_total': float(booking_total),
+            'can_use_wallet': wallet_balance > 0,
+            'wallet_applicable_amount': float(wallet_applicable_amount),
+            'gateways': ['cashfree', 'stripe', 'paytm_upi'],
+        }
     )
 
 
@@ -855,23 +923,36 @@ def refund_preview(request, booking_uuid):
         else:
             booking = Booking.objects.select_related('property').get(uuid=booking_uuid)
     except Booking.DoesNotExist:
-        return Response({'error': 'Booking not found'}, status=404)
+        return Response(
+            {'success': False, 'error': {'code': 'not_found', 'message': 'Booking not found'}},
+            status=404,
+        )
 
     # Not cancellable statuses
     if booking.status not in ('hold', 'payment_pending', 'confirmed'):
-        return Response({
-            'amount': 0,
-            'tier': 'not_cancellable',
-            'note': f'Booking is {booking.status} and cannot be cancelled.',
-        })
+        return Response(
+            {
+                'success': True,
+                'data': {
+                    'amount': 0,
+                    'tier': 'not_cancellable',
+                    'note': f'Booking is {booking.status} and cannot be cancelled.',
+                },
+            }
+        )
 
     # If booking was unpaid (HOLD/PAYMENT_PENDING) → full refund trivially
     if booking.status in ('hold', 'payment_pending'):
-        return Response({
-            'amount': 0,          # No money was charged
-            'tier': 'free',
-            'note': 'No charge — booking was not yet paid.',
-        })
+        return Response(
+            {
+                'success': True,
+                'data': {
+                    'amount': 0,          # No money was charged
+                    'tier': 'free',
+                    'note': 'No charge — booking was not yet paid.',
+                },
+            }
+        )
 
     # For confirmed bookings: apply CancellationPolicy tiers
     try:
@@ -886,11 +967,16 @@ def refund_preview(request, booking_uuid):
                 refund_data = RefundCalculator.calculate(
                     booking, policy, cancelled_at=timezone.now()
                 )
-                return Response({
-                    'amount': float(refund_data.get('refund_amount', 0)),
-                    'tier':   refund_data.get('tier', 'custom'),
-                    'note':   refund_data.get('note', ''),
-                })
+                return Response(
+                    {
+                        'success': True,
+                        'data': {
+                            'amount': float(refund_data.get('refund_amount', 0)),
+                            'tier': refund_data.get('tier', 'custom'),
+                            'note': refund_data.get('note', ''),
+                        },
+                    }
+                )
             except ImportError:
                 pass
 
@@ -903,22 +989,37 @@ def refund_preview(request, booking_uuid):
         hours_until_checkin = (check_in_dt - now).total_seconds() / 3600
 
         if hours_until_checkin >= cancellation_hours:
-            return Response({
-                'amount': float(booking.gross_amount or 0),
-                'tier':   'free',
-                'note':   f'Free cancellation — more than {cancellation_hours}h before check-in.',
-            })
+            return Response(
+                {
+                    'success': True,
+                    'data': {
+                        'amount': float(booking.gross_amount or 0),
+                        'tier': 'free',
+                        'note': f'Free cancellation — more than {cancellation_hours}h before check-in.',
+                    },
+                }
+            )
         else:
-            return Response({
-                'amount': 0,
-                'tier':   'non_refundable',
-                'note':   f'Non-refundable — less than {cancellation_hours}h before check-in.',
-            })
+            return Response(
+                {
+                    'success': True,
+                    'data': {
+                        'amount': 0,
+                        'tier': 'non_refundable',
+                        'note': f'Non-refundable — less than {cancellation_hours}h before check-in.',
+                    },
+                }
+            )
 
     except Exception as exc:
         logger.warning('refund_preview error booking=%s: %s', booking_uuid, exc)
-        return Response({
-            'amount': float(booking.gross_amount or 0),
-            'tier':   'unknown',
-            'note':   'Refund amount to be confirmed after cancellation.',
-        })
+        return Response(
+            {
+                'success': True,
+                'data': {
+                    'amount': float(booking.gross_amount or 0),
+                    'tier': 'unknown',
+                    'note': 'Refund amount to be confirmed after cancellation.',
+                },
+            }
+        )

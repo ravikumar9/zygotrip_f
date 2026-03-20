@@ -7,6 +7,7 @@ Handles:
 3. Gateway refund API call
 4. Marking as REFUNDED on success
 """
+import logging
 from decimal import Decimal
 from datetime import timedelta
 from django.db import transaction
@@ -15,6 +16,8 @@ from django.conf import settings
 from .models import Booking
 from .state_machine import BookingStateMachine
 from .exceptions import RefundCalculationError
+
+logger = logging.getLogger('zygotrip.booking.refund')
 
 
 def calculate_refund_amount(booking, cancel_time=None):
@@ -227,6 +230,44 @@ def _call_gateway_refund(booking, amount):
             txn.initiate_refund(amount)
             txn.refund_gateway_id = result.get('refund_id', '')
             txn.save(update_fields=['refund_gateway_id', 'updated_at'])
+
+            # Email notification
+            try:
+                from apps.core.email_service import send_refund_initiated
+                _email = (
+                    getattr(booking, 'guest_email', None)
+                    or (booking.user.email if booking.user else '')
+                )
+                _name = (
+                    getattr(booking, 'guest_name', None)
+                    or (booking.user.full_name if booking.user else 'Guest')
+                )
+                if _email:
+                    send_refund_initiated(
+                        to_email=_email,
+                        booking_ref=str(booking.public_booking_id),
+                        guest_name=_name,
+                        refund_amount=f'₹{amount:,.0f}',
+                        days=5,
+                    )
+            except Exception as _e:
+                logger.warning('Refund email failed (non-fatal): %s', _e)
+
+            # FCM refund notification
+            try:
+                from apps.notifications.fcm_service import FCMService
+                if booking.user:
+                    FCMService().send_to_user(
+                        user=booking.user,
+                        title='Refund Initiated',
+                        body=f'Your refund for booking {booking.public_booking_id} has been initiated.',
+                        data={
+                            'type': 'refund_initiated',
+                            'booking_uuid': str(booking.public_booking_id),
+                        },
+                    )
+            except Exception as _e:
+                logger.warning('Refund FCM failed (non-fatal): %s', _e)
 
             return {
                 'success': True,

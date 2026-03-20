@@ -5,7 +5,9 @@ app_name = 'cabs_api'
 
 urlpatterns = [
     path('book/', api_views.book_cab, name='book'),
+    path('bookings/<uuid:booking_uuid>/', api_views.booking_detail, name='booking-detail'),
     path('bookings/<uuid:booking_uuid>/tracking/', api_views.booking_tracking, name='tracking'),
+    path('bookings/<uuid:booking_uuid>/cancel/', api_views.cancel_booking, name='booking-cancel'),
     path('search/', api_views.search_cabs, name='search'),
     path('cities/', api_views.available_cities, name='cities'),
     path('<int:cab_id>/', api_views.cab_detail, name='detail'),

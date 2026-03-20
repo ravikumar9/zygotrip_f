@@ -73,6 +73,18 @@ export const checkoutService = {
     return unwrap<CheckoutPaymentResult>(data);
   },
 
+  /** Initiate payment (payload variant) */
+  async initiatePayment(
+    sessionId: string,
+    payload: CheckoutPayRequest,
+  ): Promise<CheckoutPaymentResult> {
+    return this.pay(
+      sessionId,
+      payload.gateway,
+      payload.idempotency_key,
+    );
+  },
+
   /** Payment callback (after external gateway redirect) */
   async paymentCallback(
     sessionId: string,

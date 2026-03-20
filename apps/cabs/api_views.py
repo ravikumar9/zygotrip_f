@@ -16,6 +16,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status as http_status
 from .models import Cab, CabImage, CabAvailability, CabType, CITY_CHOICES, CabBooking, CabTrip
+from apps.core.service_guard import require_service_enabled
 
 logger = logging.getLogger('zygotrip.cabs')
 
@@ -67,6 +68,7 @@ def _serialize_cab(cab):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('cabs')
 def search_cabs(request):
     """
     GET /api/v1/cabs/search/?city=bangalore&date=2026-03-15&category=sedan&sort=price
@@ -135,6 +137,7 @@ def search_cabs(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('cabs')
 def cab_detail(request, cab_id):
     """GET /api/v1/cabs/<id>/"""
     try:
@@ -155,6 +158,7 @@ def cab_detail(request, cab_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('cabs')
 def cab_availability(request, cab_id):
     """GET /api/v1/cabs/<id>/availability/?month=2026-03"""
     try:
@@ -182,6 +186,7 @@ def cab_availability(request, cab_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('cabs')
 def available_cities(request):
     """GET /api/v1/cabs/cities/"""
     cities = (
@@ -201,6 +206,7 @@ def available_cities(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@require_service_enabled('cabs')
 def book_cab(request):
     """POST /api/v1/cabs/book/"""
     if not request.user.is_authenticated:
@@ -257,6 +263,7 @@ def book_cab(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('cabs')
 def booking_tracking(request, booking_uuid):
     """GET /api/v1/cabs/bookings/<uuid>/tracking/"""
     try:
@@ -296,3 +303,59 @@ def booking_tracking(request, booking_uuid):
         })
 
     return Response({'status': 'searching'})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@require_service_enabled('cabs')
+def booking_detail(request, booking_uuid):
+    try:
+        booking = CabBooking.objects.select_related('cab', 'driver').get(uuid=booking_uuid)
+    except CabBooking.DoesNotExist:
+        return Response({'success': False, 'error': 'Booking not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+    if booking.user_id != getattr(request.user, 'id', None) and not getattr(request.user, 'is_staff', False):
+        return Response({'success': False, 'error': 'Forbidden'}, status=http_status.HTTP_403_FORBIDDEN)
+
+    return Response(
+        {
+            'success': True,
+            'data': {
+                'booking_uuid': str(booking.uuid),
+                'public_booking_id': booking.public_booking_id,
+                'status': booking.status,
+                'booking_date': str(booking.booking_date),
+                'pickup_address': booking.pickup_address,
+                'drop_address': booking.drop_address,
+                'distance_km': float(booking.distance_km),
+                'final_price': float(booking.final_price),
+                'cab': _serialize_cab(booking.cab),
+                'driver_id': booking.driver_id,
+            },
+        }
+    )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@require_service_enabled('cabs')
+def cancel_booking(request, booking_uuid):
+    try:
+        booking = CabBooking.objects.get(uuid=booking_uuid)
+    except CabBooking.DoesNotExist:
+        return Response({'success': False, 'error': 'Booking not found'}, status=http_status.HTTP_404_NOT_FOUND)
+
+    if booking.user_id != getattr(request.user, 'id', None) and not getattr(request.user, 'is_staff', False):
+        return Response({'success': False, 'error': 'Forbidden'}, status=http_status.HTTP_403_FORBIDDEN)
+
+    if booking.status in ['completed', 'cancelled']:
+        return Response({'success': False, 'error': 'Booking cannot be cancelled'}, status=http_status.HTTP_400_BAD_REQUEST)
+
+    booking.status = 'cancelled'
+    booking.save(update_fields=['status', 'updated_at'])
+
+    avail, _ = CabAvailability.objects.get_or_create(cab=booking.cab, date=booking.booking_date)
+    avail.is_available = True
+    avail.save(update_fields=['is_available', 'updated_at'])
+
+    return Response({'success': True, 'data': {'booking_uuid': str(booking.uuid), 'status': booking.status}})

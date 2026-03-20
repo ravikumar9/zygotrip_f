@@ -6,6 +6,7 @@ is validated server-side. Frontend must NEVER be trusted for prices.
 """
 from datetime import date, timedelta
 from decimal import Decimal
+import re
 from rest_framework import serializers
 from apps.booking.models import Booking, BookingContext, BookingPriceBreakdown, BookingRoom, BookingGuest
 
@@ -108,6 +109,7 @@ class BookingContextSerializer(serializers.ModelSerializer):
     gst_amount = serializers.DecimalField(source='tax', max_digits=12, decimal_places=2, read_only=True)
     gst_percentage = serializers.SerializerMethodField()
     total_price = serializers.DecimalField(source='final_price', max_digits=12, decimal_places=2, read_only=True)
+    payment_split = serializers.SerializerMethodField()
 
     class Meta:
         model = BookingContext
@@ -123,6 +125,7 @@ class BookingContextSerializer(serializers.ModelSerializer):
             'rate_plan_id', 'supplier_id',
             # Phase 5 additions
             'gst_amount', 'gst_percentage', 'total_price',
+            'payment_split',
             'promo_code', 'context_status', 'expires_at',
             'created_at',
         ]
@@ -149,6 +152,9 @@ class BookingContextSerializer(serializers.ModelSerializer):
             pass
         return '18'  # safe default
 
+    def get_payment_split(self, obj):
+        return None
+
 
 class BookingCreateSerializer(serializers.Serializer):
     """
@@ -166,20 +172,23 @@ class BookingCreateSerializer(serializers.Serializer):
     # Legacy integer ID (kept for backward compat)
     context_id = serializers.IntegerField(required=False, allow_null=True, default=None)
 
-    guest_name = serializers.CharField(max_length=120, min_length=2)
-    guest_email = serializers.EmailField()
+    guest_name = serializers.CharField(max_length=120, min_length=2, required=False, allow_blank=True)
+    guest_email = serializers.EmailField(required=False)
     guest_phone = serializers.RegexField(
         regex=r'^\+?[1-9]\d{6,14}$',
         max_length=20,
+        required=False,
         error_messages={'invalid': 'Enter a valid phone number (7-15 digits, optional + prefix).'},
     )
     guest_age = serializers.IntegerField(min_value=0, max_value=150, required=False, default=0)
+    guests = serializers.ListField(child=serializers.DictField(), required=False, allow_empty=False)
     # Phase 5: payment method and idempotency support
     payment_method = serializers.ChoiceField(
-        choices=['wallet', 'gateway', 'cod', 'pay_at_hotel'],
+        choices=['wallet', 'gateway', 'split', 'cod', 'pay_at_hotel'],
         default='wallet',
         required=False,
     )
+    payment_split = serializers.JSONField(required=False)
     idempotency_key = serializers.CharField(max_length=64, required=False, allow_blank=True)
 
     def validate(self, data):
@@ -187,6 +196,23 @@ class BookingCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'Either context_uuid or context_id must be provided.'
             )
+
+        # Backward compatibility: accept guests[0] payload used by Flutter/web.
+        if (not data.get('guest_name') or not data.get('guest_email') or not data.get('guest_phone')) and data.get('guests'):
+            first_guest = data['guests'][0] if data['guests'] else {}
+            data['guest_name'] = (first_guest.get('name') or first_guest.get('full_name') or '').strip()
+            data['guest_email'] = (first_guest.get('email') or '').strip()
+            data['guest_phone'] = (first_guest.get('phone') or '').strip()
+
+        if not data.get('guest_name'):
+            raise serializers.ValidationError({'guest_name': 'This field is required.'})
+        if not data.get('guest_email'):
+            raise serializers.ValidationError({'guest_email': 'This field is required.'})
+        if not data.get('guest_phone'):
+            raise serializers.ValidationError({'guest_phone': 'This field is required.'})
+        if not re.match(r'^\+?[1-9]\d{6,14}$', str(data['guest_phone'])):
+            raise serializers.ValidationError({'guest_phone': 'Enter a valid phone number (7-15 digits, optional + prefix).'})
+
         return data
 
 

@@ -10,8 +10,8 @@ Background job runs every 2 minutes to:
 from django.db import transaction
 from django.utils import timezone
 from apps.rooms.models import RoomInventory
-from .models import Booking, BookingStatusHistory
-from .exceptions import InventoryUnavailableException
+from .models import Booking
+from .state_machine import BookingStateMachine
 from datetime import timedelta
 
 
@@ -76,20 +76,19 @@ def _release_hold_transaction(booking):
                 date=current_date,
             )
             for inventory in inventories:
+                inventory.available_rooms += quantity
                 inventory.available_count += quantity
-                inventory.save(update_fields=['available_count', 'updated_at'])
+                current_booked = inventory.booked_count or 0
+                inventory.booked_count = max(0, current_booked - quantity)
+                inventory.save(update_fields=['available_rooms', 'available_count', 'booked_count', 'updated_at'])
             
             current_date += td(days=1)
     
     # Mark booking as FAILED
-    booking.status = Booking.STATUS_FAILED
-    booking.save(update_fields=['status', 'updated_at'])
-    
-    # Record status history
-    BookingStatusHistory.objects.create(
+    BookingStateMachine.transition(
         booking=booking,
-        status=Booking.STATUS_FAILED,
+        new_status=Booking.STATUS_FAILED,
         note='Hold expired - inventory released',
     )
-    
+
     return 1

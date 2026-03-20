@@ -39,6 +39,8 @@ class User(TimeStampedModel, AbstractBaseUser, PermissionsMixin):
 	full_name = models.CharField(max_length=120)
 	phone = models.CharField(max_length=20, blank=True, null=True, unique=True,
 		help_text="Phone number must be unique. Blank stored as NULL for uniqueness.")
+	google_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+	apple_sub = models.CharField(max_length=255, blank=True, null=True, db_index=True)
 	is_staff = models.BooleanField(default=False)
 	
 	# ==========================================

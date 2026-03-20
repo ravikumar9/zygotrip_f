@@ -341,3 +341,21 @@ class OccupancyPricing(TimeStampedModel):
             f"base={self.base_occupancy}, max={self.max_occupancy}, "
             f"extra_adult=₹{self.extra_adult_charge}/night"
         )
+
+
+class DynamicPriceCache(TimeStampedModel):
+    property = models.ForeignKey('hotels.Property', on_delete=models.CASCADE, related_name='dynamic_price_caches')
+    room_type = models.ForeignKey('rooms.RoomType', on_delete=models.CASCADE, related_name='dynamic_price_caches')
+    date = models.DateField(db_index=True)
+    multiplier = models.DecimalField(max_digits=6, decimal_places=3)
+    base_price = models.DecimalField(max_digits=12, decimal_places=2)
+    dynamic_price = models.DecimalField(max_digits=12, decimal_places=2)
+    calculated_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        app_label = 'pricing'
+        unique_together = ('property', 'room_type', 'date')
+        indexes = [models.Index(fields=['property', 'room_type', 'date'])]
+
+    def __str__(self):
+        return f"DynamicPriceCache({self.property_id}:{self.room_type_id} {self.date})"

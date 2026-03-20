@@ -8,8 +8,10 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.db.models import Q
 
 from apps.core.models import TimeStampedModel
+from .state_machine import PaymentStateMachine
 
 
 class Payment(TimeStampedModel):
@@ -62,6 +64,7 @@ class PaymentTransaction(TimeStampedModel):
 
     STATUS_INITIATED = 'initiated'
     STATUS_PENDING = 'pending'
+    STATUS_LOCKED = 'locked'
     STATUS_SUCCESS = 'success'
     STATUS_FAILED = 'failed'
     STATUS_CANCELLED = 'cancelled'
@@ -70,6 +73,7 @@ class PaymentTransaction(TimeStampedModel):
     STATUS_CHOICES = [
         (STATUS_INITIATED, 'Initiated'),
         (STATUS_PENDING, 'Pending'),
+        (STATUS_LOCKED, 'Locked'),
         (STATUS_SUCCESS, 'Success'),
         (STATUS_FAILED, 'Failed'),
         (STATUS_CANCELLED, 'Cancelled'),
@@ -90,6 +94,14 @@ class PaymentTransaction(TimeStampedModel):
     gateway_transaction_id = models.CharField(
         max_length=200, blank=True, db_index=True,
         help_text="Gateway's transaction/order ID",
+    )
+    provider_order_id = models.CharField(
+        max_length=200, null=True, blank=True, db_index=True,
+        help_text='Gateway order identifier from webhook payload',
+    )
+    provider_payment_id = models.CharField(
+        max_length=200, null=True, blank=True, db_index=True,
+        help_text='Gateway payment identifier from webhook payload',
     )
 
     gateway = models.CharField(max_length=20, choices=GATEWAY_CHOICES)
@@ -142,6 +154,18 @@ class PaymentTransaction(TimeStampedModel):
                 name='ptxn_gw_txn_idx',
             ),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['provider_order_id'],
+                condition=Q(provider_order_id__isnull=False) & ~Q(provider_order_id=''),
+                name='uniq_ptxn_provider_order_id_not_blank',
+            ),
+            models.UniqueConstraint(
+                fields=['provider_payment_id'],
+                condition=Q(provider_payment_id__isnull=False) & ~Q(provider_payment_id=''),
+                name='uniq_ptxn_provider_payment_id_not_blank',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.transaction_id} — {self.gateway} ₹{self.amount} ({self.status})"
@@ -149,33 +173,28 @@ class PaymentTransaction(TimeStampedModel):
     # --- State helpers ---
 
     def mark_pending(self, gateway_txn_id='', gateway_response=None):
-        self.status = self.STATUS_PENDING
-        if gateway_txn_id:
-            self.gateway_transaction_id = gateway_txn_id
-        if gateway_response:
-            self.gateway_response = gateway_response
-        self.save(update_fields=[
-            'status', 'gateway_transaction_id', 'gateway_response', 'updated_at',
-        ])
+        PaymentStateMachine.transition(
+            self,
+            self.STATUS_PENDING,
+            gateway_txn_id=gateway_txn_id,
+            gateway_response=gateway_response,
+        )
 
     def mark_success(self, gateway_txn_id='', gateway_response=None):
-        self.status = self.STATUS_SUCCESS
-        if gateway_txn_id:
-            self.gateway_transaction_id = gateway_txn_id
-        if gateway_response:
-            self.gateway_response = gateway_response
-        self.save(update_fields=[
-            'status', 'gateway_transaction_id', 'gateway_response', 'updated_at',
-        ])
+        PaymentStateMachine.transition(
+            self,
+            self.STATUS_SUCCESS,
+            gateway_txn_id=gateway_txn_id,
+            gateway_response=gateway_response,
+        )
 
     def mark_failed(self, reason='', gateway_response=None):
-        self.status = self.STATUS_FAILED
-        self.failure_reason = reason
-        if gateway_response:
-            self.gateway_response = gateway_response
-        self.save(update_fields=[
-            'status', 'failure_reason', 'gateway_response', 'updated_at',
-        ])
+        PaymentStateMachine.transition(
+            self,
+            self.STATUS_FAILED,
+            reason=reason,
+            gateway_response=gateway_response,
+        )
 
     def record_webhook(self, data):
         self.webhook_received = True
@@ -193,9 +212,9 @@ class PaymentTransaction(TimeStampedModel):
             raise ValueError('Refund amount cannot exceed transaction amount')
         self.refund_amount = refund_amount
         self.refund_initiated_at = timezone.now()
-        self.status = self.STATUS_REFUNDED
+        PaymentStateMachine.transition(self, self.STATUS_REFUNDED)
         self.save(update_fields=[
-            'refund_amount', 'refund_initiated_at', 'status', 'updated_at',
+            'refund_amount', 'refund_initiated_at', 'updated_at',
         ])
 
 

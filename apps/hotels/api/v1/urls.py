@@ -58,9 +58,6 @@ urlpatterns = [
     path('reviews/', review_views.submit_review, name='submit_review'),
     path('reviews/my/', review_views.my_reviews, name='my_reviews'),
 
-    # Pricing quote
-    path('pricing/quote/', views.pricing_quote_api, name='pricing_quote'),
-
     # Price intelligence (competitor benchmarking)
     path('pricing/intelligence/<uuid:property_uuid>/', views.pricing_intelligence_api, name='pricing_intelligence'),
 

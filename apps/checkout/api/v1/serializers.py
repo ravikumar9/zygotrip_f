@@ -29,7 +29,8 @@ class StartCheckoutSerializer(serializers.Serializer):
     promo_code = serializers.CharField(required=False, default='', allow_blank=True)
 
     def validate_check_in(self, value):
-        if value < date.today():
+        yesterday = date.today() - timedelta(days=1)
+        if value <= yesterday:
             raise serializers.ValidationError("check_in cannot be in the past")
         return value
 

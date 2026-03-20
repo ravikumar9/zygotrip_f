@@ -64,76 +64,123 @@ class OperationLog(TimeStampedModel):
 # PHASE 5: PLATFORM SETTINGS FOR COMMISSIONS (NEW)
 # ==========================================
 class PlatformSettings(TimeStampedModel):
-	"""
-	Admin-configurable platform settings for commissions and policies
-	This model should have at most one instance (enforced via migrations)
-	"""
-	
-	# Default commission percentages for each vendor type
-	default_property_commission = models.DecimalField(
-		max_digits=5,
-		decimal_places=2,
-		default=10.00,
-		help_text="Default commission % for hotel/property owners"
-	)
-	
-	default_cab_commission = models.DecimalField(
-		max_digits=5,
-		decimal_places=2,
-		default=15.00,
-		help_text="Default commission % for cab owners"
-	)
-	
-	default_bus_commission = models.DecimalField(
-		max_digits=5,
-		decimal_places=2,
-		default=12.00,
-		help_text="Default commission % for bus operators"
-	)
-	
-	default_package_commission = models.DecimalField(
-		max_digits=5,
-		decimal_places=2,
-		default=20.00,
-		help_text="Default commission % for package providers"
-	)
-	
-	# Global settings
-	require_agreement_signature = models.BooleanField(
-		default=True,
-		help_text="Require vendor to sign agreement before listing is public"
-	)
-	
-	platform_name = models.CharField(
-		max_length=100,
-		default='Zygotrip',
-		help_text="Platform name for agreements and communications"
-	)
-	
-	support_email = models.EmailField(
-		default='support@zygotrip.com',
-		help_text="Support email for vendor communications"
-	)
-	
-	# Platform fees
-	service_fee_percent = models.DecimalField(
-		max_digits=5,
-		decimal_places=2,
-		default=10.00,
-		help_text="Service fee % applied to bookings (e.g., 10.00 for 10%)"
-	)
-	
-	class Meta:
-		verbose_name_plural = "Platform Settings"
-	
-	def __str__(self):
-		return f"{self.platform_name} Settings"
-	
-	@classmethod
-	def get_settings(cls):
-		"""Get or create the singleton settings instance"""
-		settings, _ = cls.objects.get_or_create(pk=1)
-		return settings
+    """
+    Admin-configurable platform settings for commissions and policies.
+    This model should have at most one instance (enforced via migrations).
+    """
+
+    # Default commission percentages for each vendor type
+    default_property_commission = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=10.00,
+        help_text="Default commission % for hotel/property owners",
+    )
+
+    default_cab_commission = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=15.00,
+        help_text="Default commission % for cab owners",
+    )
+
+    default_bus_commission = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=12.00,
+        help_text="Default commission % for bus operators",
+    )
+
+    default_package_commission = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=20.00,
+        help_text="Default commission % for package providers",
+    )
+
+    # Global settings
+    require_agreement_signature = models.BooleanField(
+        default=True,
+        help_text="Require vendor to sign agreement before listing is public",
+    )
+
+    platform_name = models.CharField(
+        max_length=100,
+        default='Zygotrip',
+        help_text="Platform name for agreements and communications",
+    )
+
+    support_email = models.EmailField(
+        default='support@zygotrip.com',
+        help_text="Support email for vendor communications",
+    )
+
+    # Platform fees
+    service_fee_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=10.00,
+        help_text="Service fee % applied to bookings (e.g., 10.00 for 10%)",
+    )
+
+    # Founder control center: service toggles
+    hotels_enabled = models.BooleanField(default=True)
+    buses_enabled = models.BooleanField(default=True)
+    cabs_enabled = models.BooleanField(default=True)
+    packages_enabled = models.BooleanField(default=True)
+    flights_enabled = models.BooleanField(default=False)
+    activities_enabled = models.BooleanField(default=True)
+    ai_assistant_enabled = models.BooleanField(default=True)
+    loyalty_enabled = models.BooleanField(default=True)
+    promos_enabled = models.BooleanField(default=True)
+
+    # Platform-wide operational controls
+    maintenance_mode = models.BooleanField(
+        default=False,
+        help_text="If enabled, non-admin traffic can be gated by middleware/UI",
+    )
+    bookings_enabled = models.BooleanField(
+        default=True,
+        help_text="Master booking switch for all verticals",
+    )
+    payments_enabled = models.BooleanField(
+        default=True,
+        help_text="Master payment switch for checkout/payment APIs",
+    )
+    max_coupon_discount_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=50.00,
+        help_text="Global cap for promo percentage discounts",
+    )
+    default_currency = models.CharField(max_length=10, default='INR')
+    support_phone = models.CharField(max_length=20, blank=True, default='')
+    system_notice = models.CharField(max_length=255, blank=True, default='')
+    maintenance_message = models.CharField(
+        max_length=255,
+        blank=True,
+        default='Platform is under maintenance. Please try again shortly.',
+    )
+    min_app_version_android = models.CharField(max_length=32, blank=True, default='')
+    min_app_version_ios = models.CharField(max_length=32, blank=True, default='')
+
+    class Meta:
+        verbose_name_plural = "Platform Settings"
+
+    def __str__(self):
+        return f"{self.platform_name} Settings"
+
+    def save(self, *args, **kwargs):
+        # Hard enforce singleton semantics at model level.
+        if not self.pk:
+            self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        """Get or create the singleton settings instance."""
+        settings, _ = cls.objects.get_or_create(pk=1)
+        return settings
 
 
 # Import observability models for migration generation

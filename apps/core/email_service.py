@@ -206,3 +206,72 @@ def _send_template_email(
     except Exception as e:
         logger.error("Failed to send email to %s: %s", to_email, e)
         return False
+
+
+def send_refund_initiated(
+    to_email: str,
+    booking_ref: str,
+    guest_name: str,
+    refund_amount: str,
+    days: int = 5,
+) -> bool:
+    """Send refund initiated notification."""
+    subject = f'Refund of {refund_amount} Initiated — ZygoTrip'
+    body = (
+        f'Hi {guest_name},\n\n'
+        f'Your refund of {refund_amount} for booking {booking_ref} has been initiated.\n'
+        f'Expected processing time: {days} business days.\n\n'
+        f'The amount will be credited to your original payment method.\n\n'
+        f'Questions? Reply to this email or visit zygotrip.com/support\n\n'
+        f'Team ZygoTrip'
+    )
+    try:
+        send_mail(subject, body, _from_email(), [to_email], fail_silently=True)
+        return True
+    except Exception as exc:
+        logger.exception('send_refund_initiated failed: %s', exc)
+        return False
+
+
+def send_booking_cancellation(
+    to_email: str,
+    booking_ref: str,
+    guest_name: str,
+    hotel_name: str,
+    refund_amount: str = '',
+    cancellation_reason: str = '',
+) -> bool:
+    """Send booking cancellation confirmation."""
+    subject = f'Booking Cancelled — {booking_ref} | ZygoTrip'
+    body = (
+        f'Hi {guest_name},\n\n'
+        f'Your booking {booking_ref} at {hotel_name} has been cancelled.\n'
+    )
+    if refund_amount:
+        body += f'Refund amount: {refund_amount} (processed in 3-5 business days)\n'
+    if cancellation_reason:
+        body += f'Reason: {cancellation_reason}\n'
+    body += '\nTeam ZygoTrip'
+    try:
+        send_mail(subject, body, _from_email(), [to_email], fail_silently=True)
+        return True
+    except Exception as exc:
+        logger.exception('send_booking_cancellation failed: %s', exc)
+        return False
+
+
+def send_welcome_email(to_email: str, full_name: str) -> bool:
+    """Send welcome email to new user."""
+    subject = 'Welcome to ZygoTrip! 🎉'
+    body = (
+        f'Hi {full_name},\n\n'
+        f'Welcome to ZygoTrip! Discover amazing hotels, flights and buses across India.\n\n'
+        f'Start exploring: https://zygotrip.com\n\n'
+        f'Happy travels!\nTeam ZygoTrip'
+    )
+    try:
+        send_mail(subject, body, _from_email(), [to_email], fail_silently=True)
+        return True
+    except Exception as exc:
+        logger.exception('send_welcome_email failed: %s', exc)
+        return False

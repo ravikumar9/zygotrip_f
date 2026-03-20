@@ -147,6 +147,7 @@ class WalletGateway(PaymentGateway):
                 reference=str(booking.uuid),
                 note=f'Payment for booking {booking.public_booking_id}',
             )
+            txn.mark_pending(gateway_txn_id=txn.transaction_id)
             txn.mark_success(gateway_txn_id=txn.transaction_id)
 
             return {
@@ -321,7 +322,7 @@ class CashfreeGateway(PaymentGateway):
         """
         import time as _time
 
-        secret = getattr(settings, 'CASHFREE_SECRET_KEY', '')
+        secret = getattr(settings, 'CASHFREE_WEBHOOK_SECRET', '') or getattr(settings, 'CASHFREE_SECRET_KEY', '')
         if not secret:
             return False, {}
 
@@ -665,6 +666,7 @@ class DevSimulateGateway(PaymentGateway):
             return {'success': False, 'error': 'Dev gateway not available in production'}
 
         try:
+            txn.mark_pending(gateway_txn_id=f'DEV-SIM-{txn.transaction_id}')
             txn.mark_success(
                 gateway_txn_id=f'DEV-SIM-{txn.transaction_id}',
                 gateway_response={'simulated': True, 'mode': 'dev'},

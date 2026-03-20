@@ -61,6 +61,20 @@ def register_view(request):
         )
 
     user = serializer.save()
+    referral_code = getattr(user, '_raw_referral_code', '')
+    if referral_code:
+        try:
+            from apps.referrals.services import process_signup_referral
+            process_signup_referral(new_user=user, referral_code=referral_code)
+        except Exception:
+            logger.exception('Referral processing failed for user=%s', user.id)
+
+    try:
+        from apps.core.email_service import send_welcome_email
+        send_welcome_email(user.email, getattr(user, 'full_name', '') or 'Traveler')
+    except Exception:
+        pass
+
     tokens = _token_response(user)
     logger.info('New user registered: %s (role=%s)', user.email, user.role)
 

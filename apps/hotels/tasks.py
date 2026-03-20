@@ -157,3 +157,28 @@ def notify_pending_changes():
 		)
 	
 	return {'status': 'success', 'pending_count': pending_changes.count()}
+
+
+@shared_task(name='hotels.rebuild_hotel_embeddings')
+def rebuild_hotel_embeddings(limit=0):
+	"""Recompute embeddings for approved hotels."""
+	from apps.hotels.models import Property
+	from apps.hotels.semantic_search import upsert_hotel_embedding
+
+	qs = Property.objects.filter(status='approved', agreement_signed=True).order_by('id')
+	if int(limit or 0) > 0:
+		qs = qs[:int(limit)]
+
+	processed = 0
+	skipped = 0
+	for property_obj in qs:
+		if upsert_hotel_embedding(property_obj):
+			processed += 1
+		else:
+			skipped += 1
+
+	return {
+		'status': 'success',
+		'processed': processed,
+		'skipped': skipped,
+	}

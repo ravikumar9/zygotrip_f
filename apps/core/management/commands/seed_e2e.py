@@ -2,7 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 from django.apps import apps
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils import timezone
 from datetime import time
 
@@ -13,6 +13,7 @@ User = apps.get_model('accounts', 'User')
 UserRole = apps.get_model('accounts', 'UserRole')
 PropertyApproval = apps.get_model('dashboard_admin', 'PropertyApproval')
 Property = apps.get_model('hotels', 'Property')
+City = apps.get_model('core', 'City')
 MealPlan = apps.get_model('meals', 'MealPlan')
 Promo = apps.get_model('promos', 'Promo')
 RoomInventory = apps.get_model('rooms', 'RoomInventory')
@@ -31,6 +32,9 @@ class Command(BaseCommand):
     help = 'Seed data for e2e tests'
 
     def handle(self, *args, **options):
+        with connection.cursor() as cursor:
+            cursor.execute('SET statement_timeout TO 0')
+
         with transaction.atomic():
             roles = {
                 'product_owner': 'Product Owner',
@@ -169,17 +173,28 @@ class Command(BaseCommand):
                 ('full_board', 'Full Board (All Meals)', Decimal('1800.00'), '🥘'),
                 ('all_inclusive', 'All Inclusive (Meals + Drinks)', Decimal('2300.00'), '🍷'),
             ]
+            meal_code_map = {
+                'breakfast': 'R+B',
+                'half_board': 'R+B+L/D',
+                'full_board': 'R+A',
+                'all_inclusive': 'R+A',
+            }
             
             for hotel in hotel_data:
                 room_name = hotel.pop('room_name')
                 room_price = hotel.pop('room_price')
                 bed_type = hotel.pop('bed_type')
                 room_size = hotel.pop('room_size')
+                hotel.pop('base_price', None)
+                city_name = hotel.pop('city')
+                city_obj = City.objects.filter(name=city_name).first()
+                if city_obj is None:
+                    city_obj = City.objects.create(name=city_name, is_active=True)
                 
                 property_obj, _ = Property.objects.get_or_create(
                     name=hotel['name'],
                     owner=owner,
-                    defaults=hotel,
+                    defaults={**hotel, 'city': city_obj},
                 )
                 approval, _ = PropertyApproval.objects.get_or_create(property=property_obj)
                 approval.status = PropertyApproval.STATUS_APPROVED
@@ -216,14 +231,15 @@ class Command(BaseCommand):
                 
                 # Create 4 meal plans per property
                 for meal_type, meal_name, meal_price, icon in meal_templates:
+                    meal_code = meal_code_map.get(meal_type, 'R')
                     MealPlan.objects.get_or_create(
-                        property=property_obj,
-                        meal_type=meal_type,
+                        code=meal_code,
                         defaults={
                             'name': meal_name,
-                            'price': meal_price,
+                            'display_name': meal_name,
                             'icon': icon,
                             'description': f'{meal_name} included in your stay',
+                            'is_active': True,
                         },
                     )
 
@@ -236,7 +252,7 @@ class Command(BaseCommand):
                     )
                     if inventory.available_count != 50:
                         inventory.available_count = 50
-                        inventory.save(update_fields=['available_count', 'updated_at'])
+                        inventory.save(update_fields=['available_count'])
 
             # Normalize inventory for all room types (legacy and new)
             today = timezone.now().date()
@@ -249,7 +265,7 @@ class Command(BaseCommand):
                     )
                     if inventory.available_count != 50:
                         inventory.available_count = 50
-                        inventory.save(update_fields=['available_count', 'updated_at'])
+                        inventory.save(update_fields=['available_count'])
 
             Promo.objects.get_or_create(
                 code='WELCOME10',
@@ -418,6 +434,16 @@ class Command(BaseCommand):
                             meals_included='BLD',
                             accommodation='Hotel' if day < package.duration_days else 'Check-out',
                         )
+
+            # Initialize InventoryCalendar for checkout flow reliability
+            from apps.inventory.services import init_calendar
+            start_cal = timezone.now().date()
+            end_cal = start_cal + timedelta(days=30)
+            all_room_types = RoomType.objects.order_by('id')[:20]
+            for rt in all_room_types:
+                total_rooms_count = getattr(rt, 'available_count', 10) or 10
+                init_calendar(rt, start_cal, end_cal, total_rooms=total_rooms_count)
+                self.stdout.write(f'  InventoryCalendar initialized: {rt.name}')
 
         # Print seeded credentials
         self.stdout.write(self.style.SUCCESS('\n' + '='*80))

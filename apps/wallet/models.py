@@ -82,6 +82,9 @@ class Wallet(TimeStampedModel):
             note=f"Locked for booking {reference}",
         )
 
+    def lock_balance(self, amount, reference=''):
+        return self.lock(amount, reference=reference)
+
     def unlock(self, amount, reference=''):
         """Release locked funds back to available (booking released/cancelled)."""
         amount = Decimal(str(amount))
@@ -92,6 +95,21 @@ class Wallet(TimeStampedModel):
             wallet=self, txn_type=WalletTransaction.TYPE_UNLOCK, amount=amount,
             balance_after=self.balance, reference=reference,
             note=f"Released lock for {reference}",
+        )
+
+    def capture_locked(self, amount, reference=''):
+        amount = Decimal(str(amount))
+        if self.locked_balance < amount:
+            raise ValueError(f"Cannot capture Rs.{amount}: locked balance is Rs.{self.locked_balance}")
+        self.locked_balance -= amount
+        self.save(update_fields=['locked_balance', 'updated_at'])
+        return WalletTransaction.objects.create(
+            wallet=self,
+            txn_type=WalletTransaction.TYPE_PAYMENT,
+            amount=-amount,
+            balance_after=self.balance,
+            reference=reference,
+            note=f"Captured locked amount for {reference}",
         )
 
 

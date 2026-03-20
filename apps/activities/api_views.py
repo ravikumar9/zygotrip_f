@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from apps.core.service_guard import require_service_enabled
 
 from .models import Activity, ActivityCategory, ActivityReview, ActivityBooking
 from .serializers import (
@@ -22,6 +23,7 @@ logger = logging.getLogger('zygotrip.activities')
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('activities')
 def activity_search(request):
     """Search activities by city with optional filters."""
     ser = ActivitySearchInputSerializer(data=request.query_params)
@@ -37,6 +39,7 @@ def activity_search(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('activities')
 def activity_detail(request, slug):
     """Get full activity detail with images."""
     try:
@@ -49,6 +52,7 @@ def activity_detail(request, slug):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('activities')
 def activity_slots(request, pk):
     """Get available time slots for an activity on a date."""
     date = request.query_params.get('date')
@@ -67,6 +71,7 @@ def activity_slots(request, pk):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('activities')
 def activity_reviews(request, pk):
     """Get reviews for an activity."""
     reviews = ActivityReview.objects.filter(
@@ -79,6 +84,7 @@ def activity_reviews(request, pk):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('activities')
 def activity_categories(request):
     """List all activity categories."""
     cats = ActivityCategory.objects.filter(is_active=True).order_by('sort_order')
@@ -89,6 +95,7 @@ def activity_categories(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('activities')
 def activity_book(request):
     """Create an activity booking."""
     ser = ActivityBookingInputSerializer(data=request.data)
@@ -117,6 +124,7 @@ def activity_book(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('activities')
 def activity_booking_detail(request, ref):
     """Get booking detail by reference."""
     try:
@@ -130,6 +138,7 @@ def activity_booking_detail(request, ref):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('activities')
 def activity_my_bookings(request):
     """List user's activity bookings."""
     bookings = ActivityBooking.objects.filter(
@@ -142,6 +151,7 @@ def activity_my_bookings(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('activities')
 def activity_cancel(request, ref):
     """Cancel an activity booking."""
     try:

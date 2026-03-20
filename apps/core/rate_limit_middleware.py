@@ -11,6 +11,9 @@ Limits:
   default     → 100 req/min
 
 Returns HTTP 429 Too Many Requests when limit exceeded with a Retry-After header.
+
+Also provides RateLimitHeadersMiddleware which injects X-RateLimit-* headers
+from DRF throttle state stored on the request object.
 """
 import logging
 import time

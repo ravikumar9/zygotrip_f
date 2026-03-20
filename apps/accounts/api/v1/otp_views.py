@@ -17,7 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.accounts.models import User
 from apps.accounts.otp_models import OTP
 from apps.accounts.sms_service import send_otp
-from apps.core.throttles import OTPRateThrottle
+from apps.core.throttles import OTPRequestThrottle
 
 logger = logging.getLogger('zygotrip.api.auth')
 
@@ -36,7 +36,7 @@ def _sanitize_phone(phone: str) -> str:
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@throttle_classes([OTPRateThrottle])
+@throttle_classes([OTPRequestThrottle])
 def otp_send(request):
     """
     POST /api/v1/auth/otp/send/
@@ -92,7 +92,7 @@ def otp_send(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@throttle_classes([OTPRateThrottle])
+@throttle_classes([OTPRequestThrottle])
 def otp_verify(request):
     """
     POST /api/v1/auth/otp/verify/

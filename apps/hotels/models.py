@@ -56,6 +56,7 @@ class Property(TimeStampedModel):
 		max_length=500, blank=True,
 		help_text="Full formatted address string from Google Places API"
 	)
+	image_variants = models.JSONField(default=dict, blank=True)
 	
 	# PRICING: Moved to RoomType model (domain-driven design)
 	# Property pricing is now COMPUTED from room types, not stored
@@ -377,3 +378,21 @@ class RecentSearch(models.Model):
 
 # Import models from rate_plan_engine for migration generation
 from .rate_plan_engine import RatePlan, CancellationPolicy as HotelCancellationPolicy, CancellationTier
+
+
+class HotelEmbedding(TimeStampedModel):
+	"""Vectorized representation of a property used for semantic search."""
+	property = models.OneToOneField(Property, on_delete=models.CASCADE, related_name='semantic_embedding')
+	embedding = models.JSONField(default=list)
+	embedding_model = models.CharField(max_length=120, default='text-embedding-3-small')
+	content_hash = models.CharField(max_length=64, db_index=True)
+	content_text = models.TextField(blank=True)
+
+	class Meta:
+		indexes = [
+			models.Index(fields=['embedding_model'], name='hotel_embed_model_idx'),
+			models.Index(fields=['updated_at'], name='hotel_embed_updated_idx'),
+		]
+
+	def __str__(self):
+		return f"Embedding<{self.property_id}:{self.embedding_model}>"

@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 import time
 from decimal import Decimal
@@ -17,6 +18,7 @@ from .financial_services import set_booking_financials
 from .distributed_locks import acquire_booking_lock
 
 _IDEMPOTENCY_COLUMN_AVAILABLE = None
+logger = logging.getLogger('zygotrip.booking')
 
 
 def _has_idempotency_column():
@@ -384,5 +386,54 @@ def transition_booking_status(booking, new_status, note=''):
             status=new_status,
             note=note,
         )
+
+    if new_status == Booking.STATUS_CONFIRMED and booking.user_id:
+        # FCM push notification
+        try:
+            from apps.notifications.fcm_service import FCMService
+            FCMService().booking_confirmed(booking)
+        except Exception as exc:
+            logger.exception('Booking confirmation FCM failed (non-fatal): %s', exc)
+
+        # Loyalty points
+        try:
+            from apps.loyalty.services import earn_points_for_booking
+            earn_points_for_booking(booking)
+        except Exception as exc:
+            logger.exception('Loyalty earn failed (non-fatal): %s', exc)
+
+        # Transactional email
+        try:
+            from apps.core.email_service import send_booking_confirmation
+            _email = (
+                getattr(booking, 'guest_email', None)
+                or (booking.user.email if booking.user else '')
+            )
+            _name = (
+                getattr(booking, 'guest_name', None)
+                or (booking.user.full_name if booking.user else 'Guest')
+            )
+            if _email:
+                send_booking_confirmation(
+                    to_email=_email,
+                    booking_ref=str(booking.public_booking_id),
+                    guest_name=_name,
+                    hotel_name=booking.property.name,
+                    check_in=booking.check_in.strftime('%d %b %Y'),
+                    check_out=booking.check_out.strftime('%d %b %Y'),
+                    total_amount=f'₹{booking.total_amount:,.0f}',
+                    room_type=str(getattr(booking, 'room_type', '')),
+                    guests=getattr(booking, 'num_guests', 1) or 1,
+                )
+        except Exception as exc:
+            logger.exception('Booking confirmation email failed (non-fatal): %s', exc)
+
+        # WhatsApp confirmation
+        try:
+            from apps.core.whatsapp_notifications import send_booking_confirmation_whatsapp
+            if booking.user and getattr(booking.user, 'phone', None):
+                send_booking_confirmation_whatsapp(booking)
+        except Exception as exc:
+            logger.exception('Booking confirmation WhatsApp failed (non-fatal): %s', exc)
     
     return booking

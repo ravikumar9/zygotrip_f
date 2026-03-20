@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from . import views
 from . import otp_views
+from .social_auth_views import GoogleAuthView, AppleAuthView
 
 urlpatterns = [
     # Auth — email/password
@@ -15,6 +16,8 @@ urlpatterns = [
     # Auth — OTP (phone-based)
     path('auth/otp/send/', otp_views.otp_send, name='api_auth_otp_send'),
     path('auth/otp/verify/', otp_views.otp_verify, name='api_auth_otp_verify'),
+    path('auth/google/', GoogleAuthView.as_view(), name='api_auth_google'),
+    path('auth/apple/', AppleAuthView.as_view(), name='api_auth_apple'),
 
     # User profile
     path('users/me/', views.me_view, name='api_users_me'),

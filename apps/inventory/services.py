@@ -208,8 +208,21 @@ def create_hold(room_type, check_in, check_out, quantity, booking_context=None):
     hold_expires = timezone.now() + timedelta(minutes=InventoryHold.HOLD_TTL_MINUTES)
 
     while current < check_out:
-        cal = InventoryCalendar.objects.select_for_update().get(
-            room_type=room_type, date=current,
+        total_rooms = (
+            getattr(room_type, 'available_count', None)
+            or getattr(room_type, 'total_rooms', None)
+            or 10
+        )
+        cal, _ = InventoryCalendar.objects.select_for_update().get_or_create(
+            room_type=room_type,
+            date=current,
+            defaults={
+                'total_rooms': total_rooms,
+                'available_rooms': total_rooms,
+                'booked_rooms': 0,
+                'blocked_rooms': 0,
+                'held_rooms': 0,
+            },
         )
         if cal.is_closed or cal.available_rooms < quantity:
             raise ValueError(

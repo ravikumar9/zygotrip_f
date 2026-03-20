@@ -9,10 +9,15 @@ from apps.accounts.models import User, ROLE_CHOICES
 class UserSerializer(serializers.ModelSerializer):
     """Public user profile (safe to return in API responses)."""
 
+    name = serializers.SerializerMethodField()
+
+    def get_name(self, obj):
+        return obj.full_name or ''
+
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'full_name', 'phone',
+            'id', 'email', 'name', 'full_name', 'phone',
             'role', 'is_verified_vendor',
             'created_at',
         ]
@@ -31,6 +36,7 @@ class RegisterSerializer(serializers.Serializer):
         default='traveler',
         required=False,
     )
+    referral_code = serializers.CharField(max_length=16, required=False, allow_blank=True, write_only=True)
 
     def validate_email(self, value):
         if User.objects.filter(email=value.lower()).exists():
@@ -38,6 +44,7 @@ class RegisterSerializer(serializers.Serializer):
         return value.lower()
 
     def create(self, validated_data):
+        referral_code = (validated_data.pop('referral_code', '') or '').strip()
         user = User.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
@@ -45,6 +52,7 @@ class RegisterSerializer(serializers.Serializer):
             phone=validated_data.get('phone', ''),
             role=validated_data.get('role', 'traveler'),
         )
+        user._raw_referral_code = referral_code
         return user
 
 

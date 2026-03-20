@@ -4,6 +4,7 @@ Includes: Push Notifications, Holiday Calendar, Admin Monitoring.
 """
 from django.urls import path
 from . import api_v1_views
+from .platform_config_api import platform_config_view
 
 # Lazy imports to avoid circular imports at startup
 def _fcm_register(request, *args, **kwargs):
@@ -67,6 +68,7 @@ def _analytics_property(request, *args, **kwargs):
 app_name = "core_api_v1"
 
 urlpatterns = [
+    path('platform/config/', platform_config_view, name='platform_config'),
     # ── Gateway Discovery ───────────────────────────────────────────────
     path("gateway/services/", api_v1_views.gateway_services, name="gateway_services"),
 

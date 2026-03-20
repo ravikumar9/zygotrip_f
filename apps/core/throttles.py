@@ -1,18 +1,8 @@
-"""
-Scoped DRF throttle classes for sensitive endpoints.
-Phase 7: Platform Hardening — rate-limit OTP, payment, and auth APIs
-independently of the global anon/user rates.
-"""
-
+"""Custom DRF throttle classes for ZygoTrip APIs."""
 from rest_framework.throttling import SimpleRateThrottle
 
 
-class OTPRateThrottle(SimpleRateThrottle):
-    """
-    Limit OTP send/verify to 30 requests per hour per phone number.
-    Falls back to IP-based keying if phone not in request body.
-    Prevents OTP brute-force and SMS-pump attacks.
-    """
+class OTPRequestThrottle(SimpleRateThrottle):
     scope = 'otp'
 
     def get_cache_key(self, request, view):
@@ -31,12 +21,14 @@ class OTPRateThrottle(SimpleRateThrottle):
         return self.cache_format % {'scope': self.scope, 'ident': ident}
 
 
-class PaymentRateThrottle(SimpleRateThrottle):
-    """
-    Limit payment initiation to 10 requests per minute per user.
-    Prevents duplicate payment spam.
-    """
-    scope = 'payment'
+class SearchThrottle(SimpleRateThrottle):
+    scope = 'search'
+
+    def get_rate(self):
+        request = getattr(self, 'request', None)
+        if request and request.user and request.user.is_authenticated:
+            return '120/min'
+        return '30/min'
 
     def get_cache_key(self, request, view):
         if request.user and request.user.is_authenticated:
@@ -46,23 +38,40 @@ class PaymentRateThrottle(SimpleRateThrottle):
         return self.cache_format % {'scope': self.scope, 'ident': ident}
 
 
-class AuthRateThrottle(SimpleRateThrottle):
-    """
-    Limit login/register/token endpoints to 20 requests per minute per IP.
-    Prevents credential-stuffing attacks.
-    """
-    scope = 'auth'
+class BookingCreateThrottle(SimpleRateThrottle):
+    scope = 'booking_create'
 
     def get_cache_key(self, request, view):
-        ident = self.get_ident(request)
+        if request.user and request.user.is_authenticated:
+            ident = request.user.pk
+        else:
+            ident = self.get_ident(request)
         return self.cache_format % {'scope': self.scope, 'ident': ident}
 
 
+class PaymentInitThrottle(SimpleRateThrottle):
+    scope = 'payment_init'
+
+    def get_cache_key(self, request, view):
+        if request.user and request.user.is_authenticated:
+            ident = request.user.pk
+        else:
+            ident = self.get_ident(request)
+        return self.cache_format % {'scope': self.scope, 'ident': ident}
+
+
+class PaymentRateThrottle(PaymentInitThrottle):
+    pass
+
+
+class AuthRateThrottle(SimpleRateThrottle):
+    scope = 'auth'
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {'scope': self.scope, 'ident': self.get_ident(request)}
+
+
 class LoginBruteForceThrottle(SimpleRateThrottle):
-    """
-    Strict login brute-force protection: 5 attempts per 15 minutes per
-    (IP + username). Progressive lockout via short rate window.
-    """
     scope = 'login_bruteforce'
 
     def get_cache_key(self, request, view):
@@ -74,27 +83,12 @@ class LoginBruteForceThrottle(SimpleRateThrottle):
 
 
 class WebhookRateThrottle(SimpleRateThrottle):
-    """
-    Limit webhook endpoints to 60 requests per minute per IP.
-    High enough for legitimate gateway callbacks, low enough to block abuse.
-    """
     scope = 'webhook'
 
     def get_cache_key(self, request, view):
-        ident = self.get_ident(request)
-        return self.cache_format % {'scope': self.scope, 'ident': ident}
+        return self.cache_format % {'scope': self.scope, 'ident': self.get_ident(request)}
 
 
-class SearchRateThrottle(SimpleRateThrottle):
-    """
-    Limit search endpoints to 30 requests per minute per IP.
-    Prevents scraping and excessive load on search queries.
-    """
-    scope = 'search'
-
-    def get_cache_key(self, request, view):
-        if request.user and request.user.is_authenticated:
-            ident = request.user.pk
-        else:
-            ident = self.get_ident(request)
-        return self.cache_format % {'scope': self.scope, 'ident': ident}
+# Backward-compatible aliases
+OTPRateThrottle = OTPRequestThrottle
+SearchRateThrottle = SearchThrottle

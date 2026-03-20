@@ -30,6 +30,9 @@ from apps.hotels.ota_selectors import (
     get_popular_areas,
 )
 from apps.hotels.selectors import get_property_detail
+from apps.core.throttles import SearchThrottle
+from apps.core.service_guard import require_service_enabled
+from rest_framework.decorators import throttle_classes
 from .serializers import PropertyCardSerializer, PropertyDetailSerializer
 
 logger = logging.getLogger('zygotrip.api.hotels')
@@ -142,6 +145,8 @@ def _base_queryset():
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@throttle_classes([SearchThrottle])
+@require_service_enabled('hotels')
 def property_list_api(request):
     """
     GET /api/v1/properties/
@@ -186,6 +191,8 @@ def property_list_api(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@throttle_classes([SearchThrottle])
+@require_service_enabled('hotels')
 def property_search_api(request):
     """
     GET /api/v1/search/
@@ -224,6 +231,7 @@ def property_search_api(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('hotels')
 def property_detail_api(request, property_id):
     """
     GET /api/v1/properties/<id>/
@@ -275,6 +283,7 @@ def property_detail_api(request, property_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('hotels')
 def property_availability_api(request, property_id):
     """
     GET /api/v1/properties/<id>/availability/
@@ -477,6 +486,7 @@ def property_availability_api(request, property_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@require_service_enabled('hotels')
 def pricing_quote_api(request):
     """
     POST /api/v1/pricing/quote/

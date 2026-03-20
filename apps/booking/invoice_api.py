@@ -28,31 +28,55 @@ def booking_invoice_api(request, booking_uuid):
             'property__owner', 'user', 'property__city'
         ).get(uuid=booking_uuid)
     except Booking.DoesNotExist:
-        return Response({'error': 'Booking not found'}, status=404)
+        return Response(
+            {'success': False, 'error': {'code': 'not_found', 'message': 'Booking not found'}},
+            status=404,
+        )
 
     # Authorization: owner of the booking or admin
     if not (request.user.is_staff or booking.user == request.user):
-        return Response({'error': 'Access denied'}, status=403)
+        return Response(
+            {'success': False, 'error': {'code': 'access_denied', 'message': 'Access denied'}},
+            status=403,
+        )
 
     if request.method == 'GET':
         try:
             invoice = booking.invoice
             from apps.booking.invoice_service import get_invoice_summary
-            return Response(get_invoice_summary(invoice))
+            return Response({'success': True, 'data': get_invoice_summary(invoice)})
         except Exception:
-            return Response({'error': 'Invoice not yet generated for this booking'}, status=404)
+            return Response(
+                {
+                    'success': False,
+                    'error': {
+                        'code': 'invoice_not_ready',
+                        'message': 'Invoice not yet generated for this booking',
+                    },
+                },
+                status=404,
+            )
 
     # POST — generate or regenerate
     if booking.status not in ('confirmed', 'checked_in', 'checked_out', 'settled', 'settlement_pending'):
         return Response(
-            {'error': f'Cannot generate invoice for booking in status: {booking.status}'},
+            {
+                'success': False,
+                'error': {
+                    'code': 'invalid_status',
+                    'message': f'Cannot generate invoice for booking in status: {booking.status}',
+                },
+            },
             status=400,
         )
 
     try:
         from apps.booking.invoice_service import generate_invoice, get_invoice_summary
         invoice = generate_invoice(booking)
-        return Response(get_invoice_summary(invoice), status=201)
+        return Response({'success': True, 'data': get_invoice_summary(invoice)}, status=201)
     except Exception as exc:
         logger.error('invoice generation failed for %s: %s', booking_uuid, exc, exc_info=True)
-        return Response({'error': 'Failed to generate invoice'}, status=500)
+        return Response(
+            {'success': False, 'error': {'code': 'invoice_generation_failed', 'message': 'Failed to generate invoice'}},
+            status=500,
+        )

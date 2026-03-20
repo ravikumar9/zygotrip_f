@@ -58,6 +58,29 @@ export async function getHotel(idOrSlug: string | number): Promise<PropertyDetai
   return data;
 }
 
+export const getPropertyDetail = async (
+  slug: string,
+  checkin?: string,
+  checkout?: string,
+  rooms?: number,
+): Promise<Property> => {
+  const params: Record<string, string> = {};
+  if (checkin) params.checkin = checkin;
+  if (checkout) params.checkout = checkout;
+  if (rooms) params.rooms = String(rooms);
+
+  const { data } = await api.get(`/properties/${slug}/`, { params });
+  const unwrapped = data && 'success' in data
+    ? (data.success ? data.data : null)
+    : data;
+
+  if (!unwrapped) {
+    throw new Error('Hotel not found');
+  }
+
+  return (unwrapped.data ?? unwrapped) as Property;
+};
+
 export async function checkAvailability(
   propertyId: number,
   checkin: string,

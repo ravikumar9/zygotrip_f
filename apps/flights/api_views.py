@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from apps.core.service_guard import require_service_enabled
 
 from .serializers import (
     FlightSearchInputSerializer, FlightBookingInputSerializer,
@@ -22,6 +23,7 @@ logger = logging.getLogger('zygotrip.flights')
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('flights')
 def flight_search(request):
     """Search flights by route & date. Supports oneway and roundtrip."""
     ser = FlightSearchInputSerializer(data=request.query_params)
@@ -45,6 +47,7 @@ def flight_search(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('flights')
 def flight_fare_calendar(request):
     """Get cheapest fares across a date range for flexible date selection."""
     origin = request.query_params.get('origin', '').strip()
@@ -67,6 +70,7 @@ def flight_fare_calendar(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@require_service_enabled('flights')
 def airport_search(request):
     """Search airports by city or IATA code."""
     from django.db.models import Q
@@ -86,6 +90,7 @@ def airport_search(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('flights')
 def flight_book(request):
     """Create a flight booking with passenger details."""
     ser = FlightBookingInputSerializer(data=request.data)
@@ -114,6 +119,7 @@ def flight_book(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('flights')
 def flight_booking_detail(request, pnr):
     """Get flight booking by PNR."""
     try:
@@ -126,6 +132,7 @@ def flight_booking_detail(request, pnr):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('flights')
 def flight_my_bookings(request):
     """List authenticated user's flight bookings."""
     bookings = FlightBooking.objects.filter(
@@ -142,6 +149,7 @@ def flight_my_bookings(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@require_service_enabled('flights')
 def flight_cancel(request, pnr):
     """Cancel a flight booking."""
     try:

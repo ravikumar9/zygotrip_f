@@ -574,37 +574,36 @@ def track_search_click(request):
         body = json.loads(request.body) if request.body else {}
         property_id = body.get('property_id')
 
-        if not property_id:
-            return JsonResponse({'status': 'error', 'message': 'property_id required'}, status=400)
-
-        from .models import PropertySearchIndex
-        updated = PropertySearchIndex.objects.filter(
-            property_id=property_id,
-        ).update(
-            total_clicks=F('total_clicks') + 1,
-            total_views=F('total_views') + 1,
-        )
-
-        if updated:
-            from apps.core.analytics import track_event_async
-
-            track_event_async(
-                event_type='hotel_click',
-                request=request,
+        if property_id:
+            from .models import PropertySearchIndex
+            updated = PropertySearchIndex.objects.filter(
                 property_id=property_id,
-                properties={
-                    'source': body.get('source', 'search_results'),
-                    'rank_position': body.get('position'),
-                    'query_id': body.get('query_id'),
-                },
+            ).update(
+                total_clicks=F('total_clicks') + 1,
+                total_views=F('total_views') + 1,
             )
-        # Always 200 — click tracking is best-effort and must never produce
-        # a visible browser error regardless of search-index state.
-        return JsonResponse({'status': 'ok'})
+
+            if updated:
+                from apps.core.analytics import track_event_async
+
+                track_event_async(
+                    event_type='hotel_click',
+                    request=request,
+                    property_id=property_id,
+                    properties={
+                        'source': body.get('source', 'search_results'),
+                        'rank_position': body.get('position'),
+                        'query_id': body.get('query_id'),
+                    },
+                )
+        else:
+            logger.warning('track_search_click called without property_id')
+
+        return JsonResponse({'success': True}, status=200)
 
     except Exception as e:
         logger.error('Click tracking error: %s', e)
-        return JsonResponse({'status': 'error'}, status=500)
+        return JsonResponse({'success': True}, status=200)
 
 
 @require_http_methods(['GET'])

@@ -18,12 +18,14 @@ from apps.promos.selectors import get_active_promo
 from apps.promos.services import calculate_promo_discount
 from apps.promos.models import Promo, PromoUsage
 from apps.pricing.pricing_service import calculate_from_amounts
+from apps.core.service_guard import require_service_enabled
 
 logger = logging.getLogger('zygotrip.api.promos')
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@require_service_enabled('promos')
 def apply_promo(request):
     """
     POST /api/v1/promo/apply/

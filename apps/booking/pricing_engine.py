@@ -32,14 +32,30 @@ class PricingEngine:
     }
     """
     
-    def __init__(self, base_price_per_night, nights, room_count=1):
+    def __init__(
+        self,
+        base_price_per_night,
+        nights,
+        room_count=1,
+        property_id=None,
+        room_type_id=None,
+        stay_date=None,
+    ):
         """
         Args:
             base_price_per_night: Decimal or int (price from RoomType or RoomInventory)
             nights: int (checkout_date - checkin_date).days
             room_count: int (number of rooms booked)
         """
-        self.base_price_per_night = Decimal(str(base_price_per_night))
+        dynamic_price = None
+        if property_id and room_type_id and stay_date:
+            try:
+                from apps.pricing.dynamic_pricing import DemandPricingService
+                dynamic_price = DemandPricingService().get_dynamic_price(property_id, room_type_id, stay_date)
+            except Exception:
+                dynamic_price = None
+
+        self.base_price_per_night = Decimal(str(dynamic_price if dynamic_price is not None else base_price_per_night))
         self.nights = int(nights)
         self.room_count = int(room_count)
         self.base_total = self.base_price_per_night * self.nights * self.room_count
@@ -63,10 +79,14 @@ class PricingEngine:
         elif amount:
             discount_amount = Decimal(str(amount))
             discount_percent = (discount_amount / self.base_total * 100) if self.base_total else Decimal('0')
+
+        discount_amount = min(discount_amount, self.base_total)
         
         self.breakdown['property_discount_amount'] = float(discount_amount)
         self.breakdown['property_discount_percent'] = float(discount_percent)
         self.base_total -= discount_amount
+        if self.base_total < 0:
+            self.base_total = Decimal('0')
         self.breakdown['after_property_discount'] = float(self.base_total)
         return self
     
@@ -81,10 +101,14 @@ class PricingEngine:
         elif amount:
             discount_amount = Decimal(str(amount))
             discount_percent = (discount_amount / self.base_total * 100) if self.base_total else Decimal('0')
+
+        discount_amount = min(discount_amount, self.base_total)
         
         self.breakdown['platform_discount_amount'] = float(discount_amount)
         self.breakdown['platform_discount_percent'] = float(discount_percent)
         self.base_total -= discount_amount
+        if self.base_total < 0:
+            self.base_total = Decimal('0')
         self.breakdown['after_platform_discount'] = float(self.base_total)
         return self
     
@@ -98,11 +122,15 @@ class PricingEngine:
             discount_amount = (self.base_total * discount_percent) / 100
         elif amount:
             discount_amount = Decimal(str(amount))
+
+        discount_amount = min(discount_amount, self.base_total)
         
         self.breakdown['coupon_code'] = coupon_code
         self.breakdown['coupon_discount_amount'] = float(discount_amount)
         self.breakdown['coupon_discount_percent'] = float(discount_percent) if discount_percent else None
         self.base_total -= discount_amount
+        if self.base_total < 0:
+            self.base_total = Decimal('0')
         self.breakdown['after_coupon'] = float(self.base_total)
         return self
     
