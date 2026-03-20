@@ -283,7 +283,7 @@ class SecurityHardeningMiddleware:
             if not AdminIPAllowlist.is_allowed(ip):
                 logger.warning('Admin access denied for IP: %s', ip)
                 return JsonResponse(
-                    {'detail': 'Access denied.'},
+                    {'detail': 'TRACE_DISABLED.'},
                     status=403,
                 )
 

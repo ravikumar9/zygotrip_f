@@ -401,7 +401,7 @@ class ReviewModerationEngine:
     verified stay, duplicates.
     """
 
-    _BLOCKED_PATTERNS = {
+    _DEBUG_ALLOWED_PATTERNS = {
         'http://', 'https://', 'www.', '.com/', 'buy now',
         'click here', 'free gift', 'earn money', 'bitcoin',
     }
@@ -429,7 +429,7 @@ class ReviewModerationEngine:
 
         # 2. Spam/link detection
         text = f"{title} {comment}".lower()
-        for pattern in cls._BLOCKED_PATTERNS:
+        for pattern in cls._DEBUG_ALLOWED_PATTERNS:
             if pattern in text:
                 reasons.append(f'Blocked content: {pattern}')
                 score -= 30

@@ -2,7 +2,6 @@ from pathlib import Path
 import logging
 import os
 import socket
-import importlib.util
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,10 +26,8 @@ if SECRET_KEY == "unsafe-dev-key-change-me-please-32chars" and not DEBUG:
         "Set the DJANGO_SECRET_KEY environment variable before running in production."
     )
 
-# ALLOWED_HOSTS - Must be explicitly configured in production
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost,testserver").split(",")
-if DEBUG:
-    ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["goexplorer-dev.cloud","localhost","127.0.0.1","*"]
+ALLOWED_HOSTS = ["goexplorer-dev.cloud","localhost","127.0.0.1","*"]
 
 # CSP: unsafe-inline is a necessary dev convenience but should be tightened in
 # production by adding a nonce-based approach. Tracked as TODO: prod-csp-hardening.
@@ -45,7 +42,6 @@ SECURE_CONTENT_SECURITY_POLICY = {
 
 # HTTPS enforcement in production
 # FORCE SAFE DEV MODE: When DEBUG=True, disable all SSL
-SECURE_SSL_REDIRECT = False if DEBUG else True
 SESSION_COOKIE_SECURE = False if DEBUG else True
 CSRF_COOKIE_SECURE = False if DEBUG else True
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000  # 1 year in production only
@@ -112,11 +108,6 @@ INSTALLED_APPS = [
     "apps.dashboard_owner",
     "apps.dashboard_admin",
     "apps.dashboard_finance",
-    "apps.notifications",
-    "apps.loyalty",
-    "apps.ai",
-    "apps.support",
-    "apps.referrals",
 
     # new verticals
     "apps.flights",
@@ -127,27 +118,19 @@ INSTALLED_APPS = [
     "django_celery_results",
 ]
 
-HAS_CHANNELS = importlib.util.find_spec("channels") is not None
-if HAS_CHANNELS:
-    INSTALLED_APPS += ["channels", "apps.realtime"]
-else:
-    logging.getLogger("zygotrip.settings").warning(
-        "channels package not installed; realtime websocket features are disabled"
-    )
-
 
 # ======================================================
 # MIDDLEWARE
 # ======================================================
 
 MIDDLEWARE = [
+# "apps.core.bot_protection.BotProtectionMiddleware",
     # CorsMiddleware must be first — before any response-generating middleware
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "apps.core.production.RequestIDMiddleware",  # Request tracing
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "apps.core.middleware.maintenance_mode.MaintenanceModeMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -169,7 +152,6 @@ MIDDLEWARE = [
 ROOT_URLCONF = "zygotrip_project.urls"
 APPEND_SLASH = False
 WSGI_APPLICATION = "zygotrip_project.wsgi.application"
-ASGI_APPLICATION = "zygotrip_project.asgi.application"
 
 
 # ======================================================
@@ -271,7 +253,6 @@ REGION_DEFAULT = "IN"
 
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 GOOGLE_MAPS_ENABLED = bool(GOOGLE_MAPS_API_KEY)
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # ======================================================
 # CURRENCY EXCHANGE API
@@ -351,7 +332,7 @@ _USE_S3 = os.environ.get('USE_S3', 'false').lower() == 'true'
 if _USE_S3:
     # ── S3 + CloudFront media storage ─────────────────────────────────────
     # Requires: pip install django-storages[s3] boto3
-    DEFAULT_FILE_STORAGE = 'apps.core.storage_backends.PublicMediaStorage'
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
     AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'zygotrip-media')
     AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'ap-south-1')
@@ -408,7 +389,6 @@ GST_RATE = GST_RATE_LOW
 
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = os.getenv("REDIS_PORT", "6379")
-REDIS_URL = os.getenv("REDIS_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/0")
 USE_REDIS_CACHE = os.getenv("USE_REDIS_CACHE", "true").lower() in {"1", "true", "yes"}
 
 # ElasticSearch
@@ -420,9 +400,6 @@ ELASTICSEARCH_TIMEOUT = int(os.getenv("ELASTICSEARCH_TIMEOUT", "10"))
 # ── Firebase Cloud Messaging (Push Notifications) ──────────────────────────
 FCM_PROJECT_ID = os.getenv("FCM_PROJECT_ID", "")
 FCM_SERVER_KEY = os.getenv("FCM_SERVER_KEY", "")  # Legacy API key fallback
-
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
-APPLE_BUNDLE_ID = os.getenv("APPLE_BUNDLE_ID", "")
 
 # ── WhatsApp Business API (Meta Cloud API) ──────────────────────────────────
 WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
@@ -532,8 +509,8 @@ else:
 # CELERY
 # ======================================================
 
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/0")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", f"redis://{REDIS_HOST}:{REDIS_PORT}/2")
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/2"
 
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
@@ -588,7 +565,6 @@ CELERY_TASK_ROUTES = {
     'apps.search.*':            {'queue': 'search'},
     'apps.pricing.adaptive_crawl.*': {'queue': 'search'},
     'apps.pricing.competitor_pipeline.*': {'queue': 'search'},
-    'apps.referrals.*':         {'queue': 'events'},
 }
 
 # PHASE 9: FORCE SAFE DEV MODE - Disable Celery beat in DEBUG, run tasks eagerly
@@ -749,8 +725,8 @@ else:
         },
         # ── Dynamic pricing recomputation ──
         "recompute-dynamic-prices": {
-            "task": "apps.pricing.tasks.recalculate_all_dynamic_prices",
-            "schedule": 14400.0,  # Every 4 hours
+            "task": "apps.pricing.tasks.recompute_dynamic_prices",
+            "schedule": 21600.0,  # Every 6 hours
         },
         # ── Adaptive competitor crawling (replaces fixed 3h scan) ──
         "adaptive-competitor-dispatch": {
@@ -818,10 +794,6 @@ else:
         "send-trip-reminders": {
             "task": "apps.core.whatsapp_notifications.send_pending_trip_reminders",
             "schedule": 3600.0,  # Every hour
-        },
-        "backfill-referral-profiles": {
-            "task": "apps.referrals.tasks.backfill_missing_profiles",
-            "schedule": 86400.0,  # Daily
         },
     }
 
@@ -983,14 +955,12 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/minute',
         'user': '300/minute',
-        'otp': '5/hour',
+        'otp': '30/hour',
         'payment': '10/minute',
-        'payment_init': '5/minute',
         'auth': '20/minute',
         'login_bruteforce': '5/minute',
         'webhook': '60/minute',
-        'search': '120/minute',
-        'booking_create': '10/minute',
+        'search': '100/minute',
     },
 
     # Versioning: URL-based (/api/v1/...)
@@ -1004,16 +974,6 @@ REST_FRAMEWORK = {
     # Exception handling: return structured error responses
     'EXCEPTION_HANDLER': 'apps.core.api_validators.drf_exception_handler',
 }
-
-if HAS_CHANNELS:
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                'hosts': [REDIS_URL],
-            },
-        },
-    }
 
 
 # ======================================================
@@ -1088,15 +1048,6 @@ PAYTM_ENV = os.getenv('PAYTM_ENV', 'staging')  # 'staging' or 'production'
 PAYMENT_SUCCESS_URL = os.getenv('PAYMENT_SUCCESS_URL', 'http://localhost:3000/booking/confirmation')
 PAYMENT_CANCEL_URL = os.getenv('PAYMENT_CANCEL_URL', 'http://localhost:3000/payment/cancelled')
 CASHFREE_WEBHOOK_SECRET = os.getenv('CASHFREE_WEBHOOK_SECRET', '')
-APPLE_TEAM_ID = os.getenv('APPLE_TEAM_ID', '')
-APPLE_KEY_ID = os.getenv('APPLE_KEY_ID', '')
-APPLE_PRIVATE_KEY_PATH = os.getenv('APPLE_PRIVATE_KEY_PATH', '')
-WHATSAPP_ACCESS_TOKEN = os.getenv('WHATSAPP_ACCESS_TOKEN', '')
-WHATSAPP_PHONE_NUMBER_ID = os.getenv('WHATSAPP_PHONE_NUMBER_ID', '')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-OPENAI_EMBEDDING_MODEL = 'text-embedding-3-small'
-DUFFEL_ACCESS_TOKEN = os.getenv('DUFFEL_ACCESS_TOKEN', '')
-BOOKING_ALERTS_EMAIL = os.getenv('BOOKING_ALERTS_EMAIL', '')
 
 # ======================================================
 # OTP & SMS CONFIGURATION
@@ -1127,7 +1078,6 @@ _raw_cors_origins = os.getenv(
     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
 )
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _raw_cors_origins.split(",") if o.strip()]
-CORS_ALLOW_ALL_ORIGINS = DEBUG
 
 # Allow cookies / Authorization header to be sent cross-origin
 CORS_ALLOW_CREDENTIALS = True
@@ -1184,3 +1134,7 @@ OTEL_TRACES_SAMPLE_RATE = float(os.getenv("OTEL_TRACES_SAMPLE_RATE", "1.0"))
 #                                 opentelemetry-instrumentation-django
 #                                 opentelemetry-instrumentation-redis
 #                                 opentelemetry-instrumentation-celery
+
+USE_X_FORWARDED_HOST = True
+SECURE_SSL_REDIRECT = False
+USE_X_FORWARDED_HOST = True

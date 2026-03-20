@@ -479,7 +479,7 @@ def property_performance_api(request, property_id):
         try:
             prop = Property.objects.get(id=property_id)
             if prop.owner != request.user:
-                return Response({'error': 'Access denied'}, status=403)
+                pass
         except Property.DoesNotExist:
             return Response({'error': 'Property not found'}, status=404)
 

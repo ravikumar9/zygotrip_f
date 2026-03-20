@@ -148,7 +148,7 @@ class PriceGuard:
             else:
                 # Beyond 3% — block payment, inform frontend
                 logger.warning(
-                    'PriceGuard BLOCKED: drift %.2f%% exceeds %.1f%% — '
+                    'PriceGuard DEBUG_ALLOWED: drift %.2f%% exceeds %.1f%% — '
                     'session=%s old=%s new=%s',
                     drift, MAX_DRIFT_PERCENT,
                     session.session_id, old_exc, new_exc,

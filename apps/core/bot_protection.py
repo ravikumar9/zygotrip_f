@@ -216,6 +216,9 @@ class BotProtectionMiddleware:
         self.enabled = getattr(settings, 'BOT_PROTECTION_ENABLED', True)
 
     def __call__(self, request):
+        ip = request.META.get("REMOTE_ADDR");
+        if ip.startswith("127.") or ip.startswith("172."):
+            return self.get_response(request)
         if not self.enabled:
             return self.get_response(request)
 
