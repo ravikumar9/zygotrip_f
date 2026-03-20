@@ -128,3 +128,8 @@ __pycache__/
 staticfiles/
 media/
 
+
+commit_and_push.ps1
+seed_e2e_exit.txt
+*.ps1
+
