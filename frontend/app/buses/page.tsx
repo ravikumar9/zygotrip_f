@@ -8,7 +8,7 @@ const BusSearchClient = dynamic(() => import('./BusSearchClient'), {
       <div className="h-12 bg-neutral-100 rounded-2xl animate-pulse mb-6" />
       <div className="space-y-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-neutral-100 p-5 animate-pulse">
+          <div key={i} className="bg-white/80 rounded-2xl border border-neutral-100 p-5 animate-pulse">
             <div className="h-4 bg-neutral-100 rounded w-1/3 mb-3" />
             <div className="h-5 bg-neutral-100 rounded w-2/3 mb-3" />
             <div className="h-3 bg-neutral-100 rounded w-1/4" />

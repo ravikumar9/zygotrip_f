@@ -145,7 +145,7 @@ function SeatMap({
             )}
 
             {/* Bus frame visual */}
-            <div className="relative bg-neutral-50 rounded-2xl border-2 border-neutral-200 p-4 pt-10">
+            <div className="relative bg-page rounded-2xl border-2 border-neutral-200 p-4 pt-10">
               {/* Steering indicator */}
               <div className="absolute top-2 right-4 flex items-center gap-1.5 text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
                 <div className="w-6 h-6 rounded-full border-2 border-neutral-300 flex items-center justify-center text-neutral-300">
@@ -274,7 +274,7 @@ export default function BusDetailClient() {
   if (error || !bus) {
     return (
       <div className="min-h-screen page-listing-bg flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
+        <div className="bg-white/80 rounded-2xl shadow-lg p-8 max-w-md text-center">
           <div className="text-5xl mb-4">🚌</div>
           <h2 className="text-xl font-bold text-neutral-900 mb-2">Bus Not Found</h2>
           <p className="text-neutral-500 text-sm mb-6">{error || 'This bus is no longer available.'}</p>
@@ -296,7 +296,7 @@ export default function BusDetailClient() {
   return (
     <div className="min-h-screen page-listing-bg">
       {/* ── Top bar ──────────────────────────────────────────────── */}
-      <div className="bg-white border-b sticky top-0 z-40">
+      <div className="bg-white/80 border-b sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-4">
           <Link
             href="/buses"
@@ -317,7 +317,7 @@ export default function BusDetailClient() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* ── Route Summary ────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5 mb-6">
+        <div className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm p-5 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             {/* Operator */}
             <div className="flex items-center gap-3 shrink-0">
@@ -405,7 +405,7 @@ export default function BusDetailClient() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Seat Map */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5">
+            <div className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-neutral-900 font-heading">Select Your Seats</h3>
                 <span className={`text-xs font-bold ${availableCount <= 5 ? 'text-orange-500' : 'text-green-600'}`}>
@@ -447,7 +447,7 @@ export default function BusDetailClient() {
             </div>
 
             {/* Cancellation info */}
-            <div className="mt-4 bg-white rounded-2xl border border-neutral-100 shadow-sm p-5">
+            <div className="mt-4 bg-white/80 rounded-2xl border border-neutral-100 shadow-sm p-5">
               <h4 className="font-bold text-neutral-900 text-sm mb-2">Cancellation Policy</h4>
               <div className="space-y-2 text-xs text-neutral-500">
                 <div className="flex items-start gap-2">
@@ -468,7 +468,7 @@ export default function BusDetailClient() {
 
           {/* Booking Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl border border-neutral-100 shadow-card p-5 sticky top-20">
+            <div className="bg-white/80 rounded-2xl border border-neutral-100 shadow-card p-5 sticky top-20">
               <h3 className="font-bold text-neutral-900 mb-1 font-heading">Booking Summary</h3>
               <p className="text-xs text-neutral-400 mb-4">
                 {bus.from_city} → {bus.to_city} · {bus.journey_date}

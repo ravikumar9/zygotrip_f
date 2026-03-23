@@ -145,44 +145,60 @@ def generate_daily_reports(self):
 
 @shared_task(bind=True, max_retries=2)
 def send_booking_confirmation_email(self, booking_id):
-    """
-    Send booking confirmation email asynchronously.
-    Called after successful booking payment.
-    """
+    """Send booking confirmation email after successful payment."""
     try:
-        from django.core.mail import send_mail
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
         from django.conf import settings
-
         Booking = apps.get_model('booking', 'Booking')
-        
-        booking = Booking.objects.get(id=booking_id)
-        
-        email_content = f"""
-        Your booking has been confirmed!
-        
-        Booking ID: {booking.id}
-        Property: {booking.property.name if hasattr(booking, 'property') else 'N/A'}
-        Total Price: ₹{booking.total_price}
-        Status: {booking.status}
-        
-        Check your dashboard for more details.
-        """
-        
-        send_mail(
-            subject=f'Booking Confirmed - {booking.id}',
-            message=email_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[booking.user.email],
-            fail_silently=False,
-        )
-        
-        logger.info(f"Confirmation email sent for booking {booking_id}")
+        booking = Booking.objects.select_related('user', 'property').get(id=booking_id)
+        property_name = booking.property.name if booking.property else 'N/A'
+        booking_ref = getattr(booking, 'public_booking_id', str(booking.uuid))
+        recipient = booking.user.email if booking.user else getattr(booking, 'guest_email', None)
+        if not recipient:
+            logger.warning(f"No email recipient for booking {booking_id}")
+            return {'status': 'skipped', 'reason': 'no_email'}
+        user_name = booking.user.full_name if booking.user else 'Traveller'
+        body = f"""Dear {user_name},
+
+Your booking is CONFIRMED! 🎉
+
+Booking Reference: {booking_ref}
+Property: {property_name}
+Check-in: {booking.check_in}
+Check-out: {booking.check_out}
+Total Amount: Rs {booking.total_amount}
+Status: Confirmed
+
+Thank you for choosing ZygoTrip!
+For support: support@zygotrip.com
+
+Happy Travels,
+ZygoTrip Team
+"""
+        msg = MIMEMultipart()
+        msg['Subject'] = f'Booking Confirmed - {booking_ref} | ZygoTrip'
+        msg['From'] = 'ZygoTrip Bookings <bookings@zygotrip.com>'
+        msg['To'] = recipient
+        msg.attach(MIMEText(body, 'plain'))
+
+        smtp_host = settings.EMAIL_HOST
+        smtp_user = settings.EMAIL_HOST_USER
+        smtp_pass = settings.EMAIL_HOST_PASSWORD
+
+        server = smtplib.SMTP(smtp_host, 587, timeout=30)
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+        server.login(smtp_user, smtp_pass)
+        server.sendmail('bookings@zygotrip.com', [recipient], msg.as_string())
+        server.quit()
+        logger.info(f"Confirmation email sent for booking {booking_id} to {recipient}")
         return {'status': 'email_sent', 'booking_id': booking_id}
-    
     except Exception as exc:
         logger.error(f"Error sending confirmation email for {booking_id}: {str(exc)}")
         raise self.retry(exc=exc, countdown=60)
-
 
 @shared_task
 def update_search_cache(query_params):
@@ -1328,3 +1344,12 @@ def refresh_loyalty_tiers():
     except Exception as exc:
         logger.error('refresh_loyalty_tiers failed: %s', exc)
         return {'error': str(exc)}
+
+
+# Register notification tasks (not auto-discovered because file is not named tasks.py)
+from apps.core.notification_tasks import (  # noqa: F401, E402
+    send_booking_confirmation_notification,
+    send_payment_notification,
+    send_cancellation_notification,
+    send_owner_payout_notification,
+)

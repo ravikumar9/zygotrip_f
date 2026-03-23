@@ -10,6 +10,7 @@ Supports:
 All gateways are idempotent: duplicate calls with the same
 PaymentTransaction return the existing result.
 """
+import base64
 import hashlib
 import hmac
 import json
@@ -344,11 +345,11 @@ class CashfreeGateway(PaymentGateway):
 
         raw_body = request.body.decode('utf-8')
         sign_data = timestamp + raw_body
-        expected = hmac.new(
+        expected = base64.b64encode(hmac.new(
             secret.encode('utf-8'),
             sign_data.encode('utf-8'),
             hashlib.sha256,
-        ).hexdigest()
+        ).digest()).decode('utf-8')
 
         if not hmac.compare_digest(expected, signature):
             logger.warning('Cashfree webhook signature mismatch')

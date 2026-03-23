@@ -130,53 +130,25 @@ def resolve_meal_plan_price(room_type, meal_plan_code):
 
 # ── Intelligence helpers (safe — never crash pricing) ────────────────────────
 def _demand_adjustment(property_obj, checkin_date, subtotal):
-    """Occupancy-based surge aligned to OTA demand rules."""
-    if not property_obj or not checkin_date:
-        return Decimal('0'), None
-    try:
-        from apps.core.intelligence import DemandForecast
-        fc = DemandForecast.objects.filter(property=property_obj, date=checkin_date).first()
-        if fc and fc.predicted_occupancy:
-            occ = float(fc.predicted_occupancy)
-            if occ >= 0.95:
-                return _q(subtotal * Decimal('0.28')), occ
-            if occ >= 0.80:
-                return _q(subtotal * Decimal('0.20')), occ
-            if occ >= 0.70:
-                return _q(subtotal * Decimal('0.08')), occ
-    except Exception as exc:
-        logger.warning(
-            'Pricing step [demand_adjustment] failed — using zero adjustment: '
-            'property=%s date=%s error=%s',
-            getattr(property_obj, 'id', '?'), checkin_date, exc,
-        )
+    """Demand adjustment DISABLED — no auto price hike allowed.
+    Prices only change when property owner or admin explicitly updates them.
+    Dynamic discounts (cashback, offers) are handled separately.
+    """
     return Decimal('0'), None
 
 
 def _advance_booking_modifier(checkin_date, subtotal):
-    """Early-bird: ≥60d → −5 %, ≥30d → −3 %; last-minute ≤1d → +5 %."""
-    if not checkin_date:
-        return Decimal('0')
-    try:
-        from django.utils import timezone
-        days = (checkin_date - timezone.now().date()).days
-        if days >= 60:
-            return _q(subtotal * Decimal('-0.05'))
-        if days >= 30:
-            return _q(subtotal * Decimal('-0.03'))
-        if days <= 1:
-            return _q(subtotal * Decimal('0.05'))
-    except Exception as exc:
-        logger.warning(
-            'Pricing step [advance_booking_modifier] failed — using zero modifier: '
-            'date=%s error=%s',
-            checkin_date, exc,
-        )
+    """DISABLED — no auto price hike/discount based on booking timing.
+    Early-bird discounts and last-minute surcharges are disabled.
+    Only manual offers/coupons by admin or property owner are allowed.
+    """
     return Decimal('0')
 
 
 def _los_modifier(property_obj, nights):
-    """Length-of-Stay discount/surcharge based on booking duration."""
+    """DISABLED — no auto LOS discount/surcharge. Only manual pricing allowed."""
+    return Decimal('1.00'), ''
+    # DISABLED original code below:
     if not property_obj or nights <= 1:
         return Decimal('1.00'), ''
     try:
@@ -221,7 +193,9 @@ def _occupancy_charges(room_type, nights, adults=2, children=0, infants=0):
 
 
 def _competitor_price_cap(property_obj, nights, rooms, subtotal):
-    """Cap at avg competitor price + 5 %."""
+    """DISABLED — no competitor-based price adjustments."""
+    return subtotal, False
+    # DISABLED original code below:
     if not property_obj:
         return subtotal, False
     try:
@@ -406,6 +380,9 @@ def calculate(
     except Exception:
         ota_comm = _q(final_total * Decimal('0.15'))
         net_hotel = _q(final_total - ota_comm)
+
+    # Round final total to nearest rupee for INR
+    final_total = _q(final_total.quantize(Decimal('1'), rounding='ROUND_HALF_UP'))
 
     logger.debug('pricing: room=%s final=%s demand=%s comp_cap=%s',
                  room_type_id, final_total, demand_adj, comp_cap)

@@ -26,7 +26,7 @@ const PRESS_RELEASES = [
 
 export default function PressPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen page-listing-bg">
       {/* Header */}
       <section className="bg-gradient-to-br from-neutral-900 to-neutral-700 text-white py-16 px-4 text-center">
         <h1 className="text-4xl font-black font-heading mb-3">Press &amp; Media</h1>
@@ -58,7 +58,7 @@ export default function PressPage() {
             {PRESS_RELEASES.map((pr) => (
               <div
                 key={pr.title}
-                className="bg-white border border-neutral-200 rounded-2xl p-5 hover:shadow-md transition-shadow"
+                className="bg-white/80 border border-neutral-200 rounded-2xl p-5 hover:shadow-md transition-shadow"
               >
                 <span className="text-xs text-neutral-400 font-medium">{pr.date}</span>
                 <h3 className="text-sm font-bold text-neutral-900 mt-1 mb-2">{pr.title}</h3>
@@ -84,7 +84,7 @@ export default function PressPage() {
         </div>
 
         {/* Boilerplate */}
-        <div className="bg-neutral-50 rounded-2xl border border-neutral-100 p-6">
+        <div className="bg-page rounded-2xl border border-neutral-100 p-6">
           <h2 className="text-base font-bold text-neutral-900 mb-3">About ZygoTrip (Boilerplate)</h2>
           <p className="text-sm text-neutral-600 leading-relaxed">
             ZygoTrip Technologies Pvt. Ltd. is India&apos;s fast-growing online travel platform,

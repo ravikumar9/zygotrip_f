@@ -444,13 +444,13 @@ export default function GlobalSearchBar({
     if (!suggestions.length && !showRecent && !showPopular && !loading) return null;
 
     return (
-      <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-modal border border-neutral-200 z-50 max-h-96 overflow-y-auto animate-slide-down min-w-[340px] w-full" role="listbox">
+      <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-modal border border-neutral-200 z-[9999] max-h-96 overflow-y-auto animate-slide-down w-full min-w-0" role="listbox">
         {showRecent && (
           <div className="p-2 border-b border-neutral-100">
             <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider px-2 mb-1">Recent Hotel Searches</p>
             {recentSearches.map((r, idx) => (
               <button key={r} id={`sg-${idx}`} type="button" onClick={() => handleRecentSelect(r)}
-                className={clsx('flex items-center gap-2.5 w-full text-left px-2 py-2 rounded-lg transition-colors', highlightedIndex === idx ? 'bg-primary-50 text-primary-700' : 'hover:bg-neutral-50')}
+                className={clsx('flex items-center gap-2.5 w-full text-left px-2 py-2 rounded-lg transition-colors', highlightedIndex === idx ? 'bg-primary-50 text-primary-700' : 'hover:bg-page')}
                 role="option" aria-selected={highlightedIndex === idx}>
                 <Clock size={13} className="text-neutral-300 shrink-0" />
                 <span className="text-sm text-neutral-700">{r}</span>
@@ -523,13 +523,13 @@ export default function GlobalSearchBar({
     const recentLabel = tab === 'buses' ? 'Recent Bus Searches' : tab === 'cabs' ? 'Recent Cab Searches' : 'Recent Searches';
 
     return (
-      <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-modal border border-neutral-200 z-50 max-h-80 overflow-y-auto animate-slide-down min-w-[300px] w-full" role="listbox">
+      <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-modal border border-neutral-200 z-[9999] max-h-80 overflow-y-auto animate-slide-down w-full min-w-0" role="listbox">
         {showRecent && (
           <div className="p-2 border-b border-neutral-100">
             <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider px-2 mb-1">{recentLabel}</p>
             {recentSearches.map((r, idx) => (
               <button key={r} id={`sg-${idx}`} type="button" onClick={() => handleRecentSelect(r)}
-                className={clsx('flex items-center gap-2.5 w-full text-left px-2 py-2 rounded-lg transition-colors', highlightedIndex === idx ? 'bg-primary-50 text-primary-700' : 'hover:bg-neutral-50')}
+                className={clsx('flex items-center gap-2.5 w-full text-left px-2 py-2 rounded-lg transition-colors', highlightedIndex === idx ? 'bg-primary-50 text-primary-700' : 'hover:bg-page')}
                 role="option" aria-selected={highlightedIndex === idx}>
                 <Clock size={13} className="text-neutral-300 shrink-0" />
                 <span className="text-sm text-neutral-700">{r}</span>
@@ -595,7 +595,7 @@ export default function GlobalSearchBar({
       {/* ── Tab row — aligned with search bar ── */}
       {showTabs && (
         <div className="max-w-5xl mx-auto mb-3">
-          <div className="flex items-center gap-0.5 bg-neutral-100/80 rounded-xl p-1 w-fit">
+          <div className="flex items-center gap-0.5 bg-neutral-100/80 rounded-xl p-1 w-full sm:w-fit overflow-x-auto scrollbar-none">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -605,10 +605,10 @@ export default function GlobalSearchBar({
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={clsx(
-                    'flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm cursor-pointer transition-all duration-200 whitespace-nowrap',
+                    'flex items-center gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-bold text-xs sm:text-sm cursor-pointer transition-all duration-200 whitespace-nowrap',
                     isActive
                       ? 'bg-white text-primary-600 shadow-sm'
-                      : 'text-neutral-500 hover:text-neutral-700 hover:bg-white/50',
+                      : 'text-neutral-500 hover:text-neutral-700 hover:bg-white',
                   )}
                 >
                   <Icon size={16} className={isActive ? 'text-primary-500' : 'text-neutral-400'} />
@@ -625,7 +625,7 @@ export default function GlobalSearchBar({
         className={clsx(
           'flex gap-1 w-full',
           isHero && 'hero-search-bar p-2 sm:p-3 flex-col md:flex-row max-w-5xl mx-auto',
-          isInline && 'bg-white/10 backdrop-blur-sm rounded-2xl p-2 flex-col sm:flex-row items-stretch',
+          isInline && 'bg-white backdrop-blur-sm rounded-2xl p-2 flex-col sm:flex-row items-stretch',
           isCompact && 'bg-white rounded-xl shadow-sm border border-neutral-200 p-1.5 flex-row items-stretch',
         )}
       >
@@ -635,7 +635,7 @@ export default function GlobalSearchBar({
         {activeTab === 'hotels' && (
           <>
             <div className={clsx('relative', isCompact ? 'flex-1' : 'flex-[2]')}>
-              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white border-white/30')}>
                 <MapPin size={16} className="text-primary-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="field-label">{isCompact ? 'Where' : 'Destination'}</span>
@@ -660,7 +660,7 @@ export default function GlobalSearchBar({
             </div>
 
             <div className="flex-1">
-              <div className={clsx('field-group', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group', isInline && 'bg-white border-white/30')}>
                 <span className="field-label">Check-in</span>
                 <div className="flex items-center gap-2">
                   <Calendar size={14} className="text-primary-500 shrink-0" />
@@ -671,7 +671,7 @@ export default function GlobalSearchBar({
             </div>
 
             <div className="flex-1">
-              <div className={clsx('field-group', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group', isInline && 'bg-white border-white/30')}>
                 <span className="field-label">Check-out</span>
                 <div className="flex items-center gap-2">
                   <Calendar size={14} className="text-primary-500 shrink-0" />
@@ -684,7 +684,7 @@ export default function GlobalSearchBar({
             {!isCompact && (
               <div className="flex-1 relative">
                 <button type="button" onClick={() => setGuestDropdownOpen(!guestDropdownOpen)}
-                  className={clsx('field-group w-full text-left', isInline && 'bg-white/90 border-white/30')}>
+                  className={clsx('field-group w-full text-left', isInline && 'bg-white border-white/30')}>
                   <span className="field-label">Guests & Rooms</span>
                   <div className="flex items-center gap-2">
                     <Users size={14} className="text-primary-500 shrink-0" />
@@ -692,7 +692,7 @@ export default function GlobalSearchBar({
                   </div>
                 </button>
                 {guestDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-modal border border-neutral-200 z-50 p-4 min-w-[260px] animate-slide-down">
+                  <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-modal border border-neutral-200 z-[9999] p-4 w-72 max-w-[calc(100vw-2rem)] animate-slide-down">
                     <div className="flex items-center justify-between py-2">
                       <div><p className="text-sm font-bold text-neutral-800">Adults</p><p className="text-2xs text-neutral-400">Age 13+</p></div>
                       <div className="flex items-center gap-3">
@@ -728,7 +728,7 @@ export default function GlobalSearchBar({
         {activeTab === 'buses' && (
           <>
             <div className={clsx('relative', isCompact ? 'flex-1' : 'flex-[1.5]')}>
-              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white border-white/30')}>
                 <MapPin size={16} className="text-green-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="field-label">From</span>
@@ -754,7 +754,7 @@ export default function GlobalSearchBar({
             )}
 
             <div className={clsx('relative', isCompact ? 'flex-1' : 'flex-[1.5]')}>
-              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white border-white/30')}>
                 <MapPin size={16} className="text-red-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="field-label">To</span>
@@ -772,7 +772,7 @@ export default function GlobalSearchBar({
             </div>
 
             <div className="flex-1">
-              <div className={clsx('field-group', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group', isInline && 'bg-white border-white/30')}>
                 <span className="field-label">Travel Date</span>
                 <div className="flex items-center gap-2">
                   <Calendar size={14} className="text-primary-500 shrink-0" />
@@ -790,7 +790,7 @@ export default function GlobalSearchBar({
         {activeTab === 'cabs' && (
           <>
             <div className={clsx('relative', isCompact ? 'flex-1' : 'flex-[1.5]')}>
-              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white border-white/30')}>
                 <MapPin size={16} className="text-green-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="field-label">From</span>
@@ -816,7 +816,7 @@ export default function GlobalSearchBar({
             )}
 
             <div className={clsx('relative', isCompact ? 'flex-1' : 'flex-[1.5]')}>
-              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white border-white/30')}>
                 <MapPin size={16} className="text-red-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="field-label">To</span>
@@ -834,7 +834,7 @@ export default function GlobalSearchBar({
             </div>
 
             <div className="flex-1">
-              <div className={clsx('field-group', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group', isInline && 'bg-white border-white/30')}>
                 <span className="field-label">Pickup Date</span>
                 <div className="flex items-center gap-2">
                   <Calendar size={14} className="text-primary-500 shrink-0" />
@@ -852,7 +852,7 @@ export default function GlobalSearchBar({
         {activeTab === 'packages' && (
           <>
             <div className={clsx('relative', isCompact ? 'flex-1' : 'flex-[2]')}>
-              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group flex items-center gap-2', isInline && 'bg-white border-white/30')}>
                 <MapPin size={16} className="text-primary-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="field-label">Destination</span>
@@ -870,7 +870,7 @@ export default function GlobalSearchBar({
             </div>
 
             <div className="flex-1">
-              <div className={clsx('field-group', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group', isInline && 'bg-white border-white/30')}>
                 <span className="field-label">Duration</span>
                 <div className="flex items-center gap-2">
                   <Timer size={14} className="text-primary-500 shrink-0" />
@@ -883,7 +883,7 @@ export default function GlobalSearchBar({
             </div>
 
             <div className="flex-1">
-              <div className={clsx('field-group', isInline && 'bg-white/90 border-white/30')}>
+              <div className={clsx('field-group', isInline && 'bg-white border-white/30')}>
                 <span className="field-label">Budget</span>
                 <div className="flex items-center gap-2">
                   <IndianRupee size={14} className="text-primary-500 shrink-0" />

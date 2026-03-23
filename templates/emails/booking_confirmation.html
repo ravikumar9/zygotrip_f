@@ -1,144 +1,102 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Booking Confirmed — ZygoTrip</title>
 <style>
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f8; }
-.container { max-width: 600px; margin: 0 auto; background: #fff; }
-.header { background: linear-gradient(135deg, #2563eb, #7c3aed); padding: 32px 24px; text-align: center; }
-.header h1 { color: #fff; font-size: 24px; margin: 0; font-weight: 600; }
-.header p { color: rgba(255,255,255,.85); margin: 8px 0 0; font-size: 14px; }
-.body { padding: 32px 24px; }
-.greeting { font-size: 18px; color: #1a1a2e; margin: 0 0 16px; }
-.card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0; }
-.card-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-.card-row:last-child { border-bottom: none; }
-.card-label { color: #64748b; font-size: 13px; font-weight: 500; }
-.card-value { color: #1a1a2e; font-size: 14px; font-weight: 600; text-align: right; }
-.total-row { background: #2563eb; color: #fff; border-radius: 8px; padding: 12px 16px; margin-top: 12px; display: flex; justify-content: space-between; }
-.total-row .label { font-size: 14px; }
-.total-row .value { font-size: 18px; font-weight: 700; }
-.badge { display: inline-block; background: #dcfce7; color: #166534; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
-.cta { display: block; text-align: center; background: #2563eb; color: #fff; padding: 14px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px 0; font-size: 15px; }
-.footer { text-align: center; padding: 20px 24px; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f5f0ff; color: #1a1a2e; }
+  .wrap { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+  .header { background: linear-gradient(135deg, #EB2026 0%, #c71a1f 100%); padding: 36px 32px 28px; text-align: center; }
+  .logo { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 12px; padding: 8px 18px; margin-bottom: 16px; }
+  .logo span { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .header-badge { display: inline-block; background: #fff; color: #EB2026; font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 999px; margin-bottom: 12px; }
+  .header h1 { color: #fff; font-size: 26px; font-weight: 700; line-height: 1.3; margin: 0; }
+  .header p { color: rgba(255,255,255,0.85); font-size: 14px; margin-top: 6px; }
+  .body { padding: 32px; }
+  .greeting { font-size: 17px; color: #1a1a2e; font-weight: 600; margin-bottom: 8px; }
+  .intro { color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+  .booking-ref-box { background: linear-gradient(135deg, #fff5f5, #fff0f0); border: 2px solid #EB2026; border-radius: 12px; padding: 16px 20px; text-align: center; margin-bottom: 24px; }
+  .booking-ref-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 4px; }
+  .booking-ref-value { font-size: 22px; color: #EB2026; font-weight: 800; letter-spacing: 1px; }
+  .card { background: #f8fafc; border: 1px solid #e8ecf0; border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+  .card-header { background: #1a1a2e; padding: 12px 18px; }
+  .card-header h3 { color: #fff; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 11px 18px; border-bottom: 1px solid #f1f5f9; }
+  .row:last-child { border-bottom: none; }
+  .row-label { color: #64748b; font-size: 13px; font-weight: 500; }
+  .row-value { color: #1a1a2e; font-size: 14px; font-weight: 600; text-align: right; }
+  .dates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .date-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; text-align: center; }
+  .date-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px; }
+  .date-value { font-size: 17px; font-weight: 700; color: #1a1a2e; }
+  .date-day { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .total-box { background: linear-gradient(135deg, #EB2026 0%, #c71a1f 100%); border-radius: 12px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .total-label { color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600; }
+  .total-amount { color: #fff; font-size: 24px; font-weight: 800; }
+  .cta-btn { display: block; text-align: center; background: linear-gradient(135deg, #EB2026 0%, #c71a1f 100%); color: #fff; padding: 16px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; margin: 0 0 24px; box-shadow: 0 4px 14px rgba(235,32,38,0.30); }
+  .info-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; }
+  .info-box p { font-size: 13px; color: #92400e; line-height: 1.5; }
+  .footer { background: #1a1a2e; padding: 24px 32px; text-align: center; }
+  .footer p { color: rgba(255,255,255,0.5); font-size: 12px; line-height: 1.7; }
+  .footer a { color: #EB2026; text-decoration: none; }
+  .footer-logo { color: #fff; font-size: 18px; font-weight: 800; display: block; margin-bottom: 8px; }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="wrap">
   <div class="header">
-    <h1>✅ Booking Confirmed</h1>
-    <p>Reference: {{ booking_ref }}</p>
+    <div class="logo"><span>ZygoTrip</span></div>
+    <div class="header-badge">&#x2705; Booking Confirmed</div>
+    <h1>Your trip is booked!</h1>
+    <p>Get ready for an amazing experience</p>
   </div>
   <div class="body">
     <p class="greeting">Hi {{ guest_name }},</p>
-    <p style="color:#475569; line-height:1.6;">Your booking has been confirmed! Here are the details:</p>
-
+    <p class="intro">Great news! Your booking has been confirmed. Below are your booking details. We have also sent a copy to your phone via SMS.</p>
+    <div class="booking-ref-box">
+      <div class="booking-ref-label">Booking Reference</div>
+      <div class="booking-ref-value">{{ booking_ref }}</div>
+    </div>
     <div class="card">
-      <div class="card-row">
-        <span class="card-label">Hotel</span>
-        <span class="card-value">{{ hotel_name }}</span>
-      </div>
-      <div class="card-row">
-        <span class="card-label">Check-in</span>
-        <span class="card-value">{{ check_in }}</span>
-      </div>
-      <div class="card-row">
-        <span class="card-label">Check-out</span>
-        <span class="card-value">{{ check_out }}</span>
-      </div>
-      {% if room_type %}
-      <div class="card-row">
-        <span class="card-label">Room Type</span>
-        <span class="card-value">{{ room_type }}</span>
-      </div>
-      {% endif %}
-      <div class="card-row">
-        <span class="card-label">Guests</span>
-        <span class="card-value">{{ guests }}</span>
-      </div>
-      <div class="card-row">
-        <span class="card-label">Status</span>
-        <span class="card-value"><span class="badge">Confirmed</span></span>
-      </div>
+      <div class="card-header"><h3>&#x1F3E8; Property Details</h3></div>
+      <div class="row"><span class="row-label">Hotel / Property</span><span class="row-value">{{ hotel_name }}</span></div>
+      {% if room_type %}<div class="row"><span class="row-label">Room Type</span><span class="row-value">{{ room_type }}</span></div>{% endif %}
+      <div class="row"><span class="row-label">Guests</span><span class="row-value">{{ guests }} Guest{% if guests > 1 %}s{% endif %}</span></div>
     </div>
-
-    <div class="total-row">
-      <span class="label">Total Amount</span>
-      <span class="value">{{ total_amount }}</span>
+    <table width="100%" cellpadding="6" style="margin-bottom:20px;border-collapse:collapse">
+      <tr>
+        <td width="50%" style="padding-right:6px">
+          <div class="date-box">
+            <div class="date-label">Check-In</div>
+            <div class="date-value">{{ check_in }}</div>
+            <div class="date-day">From 2:00 PM</div>
+          </div>
+        </td>
+        <td width="50%" style="padding-left:6px">
+          <div class="date-box">
+            <div class="date-label">Check-Out</div>
+            <div class="date-value">{{ check_out }}</div>
+            <div class="date-day">By 11:00 AM</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+    <div class="total-box">
+      <span class="total-label">Total Amount Paid</span>
+      <span class="total-amount">&#x20B9;{{ total_amount }}</span>
     </div>
-
-    <a href="https://zygotrip.com/booking/{{ booking_ref }}/" class="cta">View Booking Details</a>
-
-    <!-- Share Your Trip -->
-    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:12px; padding:20px; margin:20px 0; text-align:center;">
-      <p style="color:#0369a1; font-size:14px; font-weight:700; margin:0 0 4px;">🌴 Share your trip!</p>
-      <p style="color:#64748b; font-size:13px; margin:0 0 14px;">Let friends &amp; family know about your upcoming adventure</p>
-      <table align="center" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="padding:0 4px;">
-            <a href="https://wa.me/?text={{ 'Just booked ' ~ hotel_name ~ ' via ZygoTrip! 🏨 zygotrip.com/booking/' ~ booking_ref ~ '/' | urlencode }}"
-               target="_blank"
-               style="display:inline-block; background:#25D366; color:#fff; font-size:12px; font-weight:600; padding:8px 14px; border-radius:20px; text-decoration:none;">
-              📲 WhatsApp
-            </a>
-          </td>
-          <td style="padding:0 4px;">
-            <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fzygotrip.com%2Fbooking%2F{{ booking_ref }}%2F"
-               target="_blank"
-               style="display:inline-block; background:#1877F2; color:#fff; font-size:12px; font-weight:600; padding:8px 14px; border-radius:20px; text-decoration:none;">
-              👥 Facebook
-            </a>
-          </td>
-          <td style="padding:0 4px;">
-            <a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fzygotrip.com%2Fbooking%2F{{ booking_ref }}%2F&text=Just+booked+{{ hotel_name | urlencode }}+via+%40ZygoTrip+%F0%9F%8C%B4&hashtags=ZygoTrip,Travel"
-               target="_blank"
-               style="display:inline-block; background:#000; color:#fff; font-size:12px; font-weight:600; padding:8px 14px; border-radius:20px; text-decoration:none;">
-              𝕏 Tweet
-            </a>
-          </td>
-        </tr>
-      </table>
+    <a href="https://goexplorer-dev.cloud/confirmation/{{ booking_ref }}" class="cta-btn">View Booking Details &rarr;</a>
+    <div class="info-box">
+      <p><strong>&#x1F4A1; What happens next?</strong> Present this booking reference at check-in. You will receive a reminder 24 hours before your stay. For help: <a href="mailto:support@zygotrip.com" style="color:#92400e">support@zygotrip.com</a></p>
     </div>
-
-    <p style="color:#64748b; font-size:13px; line-height:1.6;">
-      Need help? Contact us at <a href="mailto:support@zygotrip.com" style="color:#2563eb;">support@zygotrip.com</a>
-    </p>
   </div>
-
-  <!-- Social Follow Footer -->
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc; border-top:1px solid #e2e8f0;">
-    <tr>
-      <td style="padding:20px 24px; text-align:center;">
-        <p style="color:#64748b; font-size:12px; font-weight:600; margin:0 0 12px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-          Follow us for travel inspiration &amp; exclusive deals
-        </p>
-        <table align="center" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="padding:0 3px;">
-              <a href="https://www.instagram.com/zygotrip/" target="_blank" style="display:inline-block; background:#E1306C; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">📷 Instagram</a>
-            </td>
-            <td style="padding:0 3px;">
-              <a href="https://www.facebook.com/profile.php?id=61583679493958" target="_blank" style="display:inline-block; background:#1877F2; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">👥 Facebook</a>
-            </td>
-            <td style="padding:0 3px;">
-              <a href="https://youtube.com/@zygotrip" target="_blank" style="display:inline-block; background:#FF0000; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">▶ YouTube</a>
-            </td>
-            <td style="padding:0 3px;">
-              <a href="https://x.com/ZygoTrip" target="_blank" style="display:inline-block; background:#000; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">𝕏 Twitter</a>
-            </td>
-            <td style="padding:0 3px;">
-              <a href="https://www.linkedin.com/in/zygo-trip-1968a63b6/" target="_blank" style="display:inline-block; background:#0077B5; color:#fff; font-size:11px; font-weight:600; padding:6px 12px; border-radius:20px; text-decoration:none;">in LinkedIn</a>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-
   <div class="footer">
-    <p>&copy; ZygoTrip — Your journey, our commitment.</p>
+    <span class="footer-logo">ZygoTrip</span>
+    <p>India's smartest way to travel. Hotels &middot; Cabs &middot; Buses &middot; Packages</p>
+    <p style="margin-top:8px"><a href="https://goexplorer-dev.cloud">goexplorer-dev.cloud</a> &middot; <a href="mailto:support@zygotrip.com">support@zygotrip.com</a></p>
+    <p style="margin-top:8px; font-size:11px; color:rgba(255,255,255,0.3)">&copy; 2025 ZygoTrip. All rights reserved.</p>
   </div>
 </div>
 </body>

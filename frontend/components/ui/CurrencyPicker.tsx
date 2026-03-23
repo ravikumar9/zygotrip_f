@@ -45,7 +45,7 @@ export default function CurrencyPicker() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-page hover:border-gray-300 transition-all shadow-sm"
         aria-label="Select currency"
       >
         <span>{flag}</span>
@@ -61,7 +61,7 @@ export default function CurrencyPicker() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 max-h-72 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-56 max-h-72 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-xl z-[9999]">
           <div className="p-2">
             {currencies.map((c) => (
               <button
@@ -73,7 +73,7 @@ export default function CurrencyPicker() {
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   c.code === currency
                     ? 'bg-blue-50 text-blue-700 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    : 'text-gray-700 hover:bg-page'
                 }`}
               >
                 <span className="text-base">{FLAG_MAP[c.code] || '🌍'}</span>

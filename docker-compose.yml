@@ -119,7 +119,7 @@ services:
       REDIS_HOST: redis
       USE_REDIS_CACHE: "true"
     healthcheck:
-      test: ["CMD-SHELL", "celery -A zygotrip_project inspect ping -d critical@$(hostname) --timeout 5 || exit 1"]
+      test: ["CMD-SHELL", "celery -A zygotrip_project inspect ping -d critical@$(hostname) --timeout 10 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -184,10 +184,12 @@ services:
 
 
   celery_beat:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
     container_name: zygotrip_celery_beat
     restart: unless-stopped
-    command: celery -A zygotrip_project beat -l info --pidfile=/tmp/celerybeat.pid
+    command: celery -A zygotrip_project beat -l info --pidfile=/tmp/celerybeat.pid --schedule=/tmp/celerybeat-schedule
     volumes:
       - .:/app
     env_file:
@@ -220,7 +222,13 @@ services:
     build: .
     container_name: zygotrip_flower
     restart: unless-stopped
-    command: celery -A zygotrip_project flower --port=5555 --broker_api=redis://redis:6379/0
+    command: celery -A zygotrip_project flower --port=5555 --broker_api=redis://redis:6379/0 --basic_auth=admin:ZygoFlower@2026
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "admin:ZygoFlower@2026", "http://localhost:5555"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     ports:
       - "5555:5555"
     env_file:
@@ -254,7 +262,7 @@ services:
     volumes:
       - es_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      test: ["CMD-SHELL", "celery -A zygotrip_project inspect ping --timeout 5 2>/dev/null | grep -q OK || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5

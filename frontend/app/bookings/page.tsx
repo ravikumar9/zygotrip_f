@@ -115,7 +115,7 @@ function CancelModal({ booking, onClose, onSuccess }: CancelModalProps) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-down">
+      <div className="relative bg-white/80 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-down">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-neutral-100">
           <X size={18} className="text-neutral-500" />
         </button>
@@ -130,7 +130,7 @@ function CancelModal({ booking, onClose, onSuccess }: CancelModalProps) {
           </div>
         </div>
 
-        <div className="bg-neutral-50 rounded-xl p-4 mb-5 space-y-2">
+        <div className="bg-page rounded-xl p-4 mb-5 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-neutral-500">Booking ID</span>
             <span className="font-semibold text-neutral-800">{booking.public_booking_id ?? booking.uuid.slice(0, 8).toUpperCase()}</span>
@@ -141,7 +141,7 @@ function CancelModal({ booking, onClose, onSuccess }: CancelModalProps) {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-neutral-500">Total paid</span>
-            <span className="font-semibold text-neutral-800">₹{parseFloat(booking.total_amount).toLocaleString('en-IN')}</span>
+            <span className="font-semibold text-neutral-800">₹{Math.round(parseFloat(booking.total_amount)).toLocaleString('en-IN')}</span>
           </div>
         </div>
 
@@ -178,7 +178,7 @@ function CancelModal({ booking, onClose, onSuccess }: CancelModalProps) {
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-neutral-200 text-neutral-700 hover:bg-neutral-50 transition-colors"
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-neutral-200 text-neutral-700 hover:bg-page transition-colors"
           >
             Keep Booking
           </button>
@@ -208,7 +208,7 @@ function BookingCard({ booking, onCancel }: BookingCardProps) {
   const StatusIcon = statusCfg.icon;
 
   return (
-    <div className="bg-white rounded-2xl shadow-card border border-neutral-100 overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-white/80 rounded-2xl shadow-card border border-neutral-100 overflow-hidden hover:shadow-md transition-shadow">
       <div className="p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-4">
@@ -228,7 +228,7 @@ function BookingCard({ booking, onCancel }: BookingCardProps) {
         </div>
 
         {/* Stay details */}
-        <div className="grid grid-cols-3 gap-3 bg-neutral-50 rounded-xl p-3 mb-4">
+        <div className="grid grid-cols-3 gap-3 bg-page rounded-xl p-3 mb-4">
           <div>
             <p className="text-[10px] font-semibold text-neutral-400 uppercase mb-1">Check-in</p>
             <p className="text-sm font-bold text-neutral-800">{format(parseISO(booking.check_in), 'd MMM')}</p>
@@ -251,7 +251,7 @@ function BookingCard({ booking, onCancel }: BookingCardProps) {
           <div>
             <p className="text-xs text-neutral-400">Total amount</p>
             <p className="text-lg font-black text-neutral-900">
-              ₹{parseFloat(booking.total_amount).toLocaleString('en-IN')}
+              ₹{Math.round(parseFloat(booking.total_amount)).toLocaleString('en-IN')}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -309,8 +309,10 @@ export default function MyBookingsPage() {
   const fetchBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/booking/my/?page_size=100');
-      setBookings(data.results ?? data ?? []);
+      const { data } = await api.get('/booking/my/?page_size=100&ordering=-created_at');
+      // API returns { success, data: { results: [...], pagination: {...} } }
+      const results = data?.data?.results ?? data?.results ?? data?.data ?? [];
+      setBookings(Array.isArray(results) ? results : []);
     } catch {
       toast.error('Could not load bookings');
     } finally {
@@ -353,7 +355,7 @@ export default function MyBookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 pt-20 pb-16">
+    <div className="min-h-screen page-listing-bg pt-20 pb-16">
       <div className="max-w-3xl mx-auto px-4">
         {/* Page header */}
         <div className="mb-6">
@@ -364,7 +366,7 @@ export default function MyBookingsPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-white rounded-2xl p-1 shadow-sm border border-neutral-100 mb-6 overflow-x-auto">
+        <div className="flex gap-1 bg-white/80 rounded-2xl p-1 shadow-sm border border-neutral-100 mb-6 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -373,7 +375,7 @@ export default function MyBookingsPage() {
                 'flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-sm font-bold whitespace-nowrap transition-all',
                 activeTab === tab.id
                   ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50',
+                  : 'text-neutral-500 hover:text-neutral-700 hover:bg-page',
               )}
             >
               {tab.label}
@@ -395,7 +397,7 @@ export default function MyBookingsPage() {
             {[1, 2, 3].map((i) => <BookingSummarySkeleton key={i} />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-card p-12 text-center">
+          <div className="bg-white/80 rounded-2xl shadow-card p-12 text-center">
             <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-4">
               <Calendar size={28} className="text-neutral-300" />
             </div>

@@ -47,7 +47,7 @@ export function CouponSuggestionCard({
         'flex items-center gap-3 rounded-xl border-2 border-dashed px-4 py-3 transition-all',
         isApplied
           ? 'bg-green-50 border-green-300'
-          : 'bg-white border-primary-200 hover:border-primary-400 hover:shadow-sm',
+          : 'bg-white/80 border-primary-200 hover:border-primary-400 hover:shadow-sm',
         className,
       )}
     >

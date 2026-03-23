@@ -64,7 +64,7 @@ export default function FilterSidebar({ filterCounts, className }: FilterSidebar
     searchParams.get('property_type');
 
   return (
-    <div className={clsx('bg-white rounded-2xl shadow-card p-5 sticky top-24', className)}>
+    <div className={clsx('bg-white/80 rounded-2xl shadow-card p-5 sticky top-24', className)}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-neutral-900 text-sm flex items-center gap-2">

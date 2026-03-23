@@ -60,7 +60,7 @@ function getJourneyDuration(dep: string, arr: string): string {
 /* ── Skeleton ── */
 function BusCardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-5 animate-pulse">
+    <div className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm p-5 animate-pulse">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 space-y-3">
           <div className="h-4 bg-neutral-100 rounded w-1/3" />
@@ -85,7 +85,7 @@ function BusCard({ bus }: { bus: Bus }) {
   const availableSeats = bus.available_seats ?? 0;
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-5">
+    <div className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-5">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         {/* Left: Operator & Route */}
         <div className="flex-1 min-w-0">
@@ -171,7 +171,7 @@ function RouteCard({ route, onSelect }: { route: BusRoute; onSelect: (from: stri
     <button
       type="button"
       onClick={() => onSelect(route.from_city, route.to_city)}
-      className="bg-white rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-4 flex items-center gap-3 text-left w-full"
+      className="bg-white/80 rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-4 flex items-center gap-3 text-left w-full"
     >
       <div className="shrink-0 w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
         <MapPin size={18} className="text-blue-500" />
@@ -305,7 +305,7 @@ export default function BusSearchClient() {
 
           <form
             onSubmit={handleSearch}
-            className="bg-white rounded-2xl shadow-xl p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"
+            className="bg-white/80 rounded-2xl shadow-xl p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"
           >
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1 block">From</label>
@@ -340,7 +340,7 @@ export default function BusSearchClient() {
               <select
                 value={busType}
                 onChange={(e) => setBusType(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 bg-white"
+                className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 bg-white/80"
               >
                 {BUS_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
@@ -435,7 +435,7 @@ export default function BusSearchClient() {
                 {/* Mobile filter toggle */}
                 <button
                   onClick={() => setFiltersOpen(true)}
-                  className="flex lg:hidden items-center gap-1.5 text-sm border rounded-xl px-3 py-1.5 bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400 transition-colors"
+                  className="flex lg:hidden items-center gap-1.5 text-sm border rounded-xl px-3 py-1.5 bg-white/80 text-neutral-700 border-neutral-200 hover:border-neutral-400 transition-colors"
                 >
                   <SlidersHorizontal size={14} />
                   Filters
@@ -444,7 +444,7 @@ export default function BusSearchClient() {
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-neutral-200 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  className="px-3 py-2 rounded-xl border border-neutral-200 text-sm font-medium bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 >
                   {SORT_OPTIONS.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
@@ -460,7 +460,7 @@ export default function BusSearchClient() {
                   className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap ${
                     busType === t.value
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400'
+                      : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400'
                   }`}>{t.label}</button>
               ))}
               <span className="w-px h-5 bg-neutral-200 mx-1" />
@@ -469,7 +469,7 @@ export default function BusSearchClient() {
                   className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap ${
                     timeSlot === t.value
                       ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-blue-400'
+                      : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-blue-400'
                   }`}>{t.label}</button>
               ))}
             </div>
@@ -481,8 +481,8 @@ export default function BusSearchClient() {
                   className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
                   onClick={() => setFiltersOpen(false)}
                 />
-                <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
-                  <div className="sticky top-0 bg-white z-10 px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between">
+                <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white/80 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
+                  <div className="sticky top-0 bg-white/80 z-10 px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between">
                     <h3 className="font-bold text-neutral-900 text-base font-heading flex items-center gap-2">
                       <SlidersHorizontal size={16} /> Filters
                     </h3>
@@ -507,7 +507,7 @@ export default function BusSearchClient() {
                         {BUS_TYPES.filter(t => t.value).map((t) => (
                           <button key={t.value} onClick={() => setBusType(busType === t.value ? '' : t.value)}
                             className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                              busType === t.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200'
+                              busType === t.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                             }`}>{t.label}</button>
                         ))}
                       </div>
@@ -518,7 +518,7 @@ export default function BusSearchClient() {
                         {TIME_SLOTS.filter(t => t.value).map((t) => (
                           <button key={t.value} onClick={() => setTimeSlot(timeSlot === t.value ? '' : t.value)}
                             className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                              timeSlot === t.value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-neutral-700 border-neutral-200'
+                              timeSlot === t.value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                             }`}>
                             {t.label}
                             {t.desc && <span className="block text-[10px] opacity-70">{t.desc}</span>}
@@ -532,13 +532,13 @@ export default function BusSearchClient() {
                         {SORT_OPTIONS.map((s) => (
                           <button key={s.value} onClick={() => { setSort(s.value); setFiltersOpen(false); }}
                             className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                              sort === s.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200'
+                              sort === s.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                             }`}>{s.label}</button>
                         ))}
                       </div>
                     </div>
                   </div>
-                  <div className="sticky bottom-0 px-5 py-4 border-t border-neutral-100 bg-white">
+                  <div className="sticky bottom-0 px-5 py-4 border-t border-neutral-100 bg-white/80">
                     <button
                       onClick={() => setFiltersOpen(false)}
                       className="w-full py-3 rounded-xl font-bold text-white text-sm"
@@ -595,7 +595,7 @@ export default function BusSearchClient() {
                 <button
                   onClick={() => doSearch(page - 1)}
                   disabled={page <= 1}
-                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-page transition-colors"
                 >
                   ← Prev
                 </button>
@@ -605,7 +605,7 @@ export default function BusSearchClient() {
                 <button
                   onClick={() => doSearch(page + 1)}
                   disabled={page >= totalPages}
-                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-page transition-colors"
                 >
                   Next →
                 </button>

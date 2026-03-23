@@ -51,7 +51,7 @@ function LoginForm() {
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-card p-8">
+        <div className="bg-white/80 rounded-2xl shadow-card p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">

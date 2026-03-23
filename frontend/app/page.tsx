@@ -124,7 +124,7 @@ export default function HomePage() {
         </p>
         <Link
           href="/hotels"
-          className="shrink-0 bg-white text-xs font-black px-4 py-1.5 rounded-full transition-opacity hover:opacity-90"
+          className="shrink-0 bg-white/80 text-xs font-black px-4 py-1.5 rounded-full transition-opacity hover:opacity-90"
           style={{ color: 'var(--primary)' }}
         >
           VIEW DEALS →
@@ -162,7 +162,7 @@ export default function HomePage() {
             <Link
               key={item.city}
               href={`/hotels?location=${item.city}`}
-              className="group rounded-2xl border border-neutral-100 bg-white p-4 hover:shadow-md transition-all text-center"
+              className="group rounded-2xl border border-neutral-100 bg-white/80 p-4 hover:shadow-md transition-all text-center"
             >
               <div className={`w-12 h-12 ${item.color} rounded-xl flex items-center justify-center text-2xl mx-auto mb-2 group-hover:scale-110 transition-transform`}>
                 {item.emoji}
@@ -181,7 +181,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link
             href="/buses"
-            className="group relative rounded-2xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-md transition-shadow bg-white p-6 flex items-center gap-4"
+            className="group relative rounded-2xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-md transition-shadow bg-white/80 p-6 flex items-center gap-4"
           >
             <div className="shrink-0 w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
               🚌
@@ -193,7 +193,7 @@ export default function HomePage() {
           </Link>
           <Link
             href="/cabs"
-            className="group relative rounded-2xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-md transition-shadow bg-white p-6 flex items-center gap-4"
+            className="group relative rounded-2xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-md transition-shadow bg-white/80 p-6 flex items-center gap-4"
           >
             <div className="shrink-0 w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
               🚕
@@ -205,7 +205,7 @@ export default function HomePage() {
           </Link>
           <Link
             href="/packages"
-            className="group relative rounded-2xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-md transition-shadow bg-white p-6 flex items-center gap-4"
+            className="group relative rounded-2xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-md transition-shadow bg-white/80 p-6 flex items-center gap-4"
           >
             <div className="shrink-0 w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
               🌴
@@ -328,7 +328,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/hotels"
-              className="bg-white font-black px-8 py-3 rounded-xl text-sm hover:bg-red-50 transition-colors shadow-lg"
+              className="bg-white/80 font-black px-8 py-3 rounded-xl text-sm hover:bg-red-50 transition-colors shadow-lg"
               style={{ color: 'var(--primary)' }}
             >
               🏨 Browse Hotels

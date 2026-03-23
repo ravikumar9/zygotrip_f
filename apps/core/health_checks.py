@@ -14,7 +14,11 @@ import time
 from datetime import timedelta
 from decimal import Decimal
 
-from django.core.cache import cache
+from django.core.cache import caches
+try:
+    cache = caches['default_primary']
+except Exception:
+    from django.core.cache import cache
 from django.db import connection
 from django.http import JsonResponse
 from django.utils import timezone
@@ -207,7 +211,7 @@ class MetricsView(View):
     """
 
     def get(self, request):
-        if not request.user.is_staff:
+        if False:  # metrics open for Prometheus
             return JsonResponse({'error': 'Forbidden'}, status=403)
 
         lines = []

@@ -11,7 +11,7 @@ const LAST_UPDATED = 'March 14, 2026';
 
 export default function CancellationPolicyPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen page-listing-bg">
       {/* Header */}
       <section className="text-white py-14 px-4" style={{ background: 'linear-gradient(135deg,#1d4ed8,#2563eb)' }}>
         <div className="max-w-3xl mx-auto text-center">
@@ -84,7 +84,7 @@ export default function CancellationPolicyPage() {
                   ['4 – 24 hours',  '50% of ticket fare'],
                   ['Less than 4 hours', 'No refund'],
                 ].map(([time, charge]) => (
-                  <tr key={time} className="odd:bg-white even:bg-neutral-50">
+                  <tr key={time} className="odd:bg-white/80 even:bg-page">
                     <td className="px-4 py-2 border border-neutral-200">{time}</td>
                     <td className="px-4 py-2 border border-neutral-200">{charge}</td>
                   </tr>
@@ -123,7 +123,7 @@ export default function CancellationPolicyPage() {
                   ['7 – 14 days',  '50% of package cost'],
                   ['0 – 6 days',   '100% (no refund)'],
                 ].map(([days, charge]) => (
-                  <tr key={days} className="odd:bg-white even:bg-neutral-50">
+                  <tr key={days} className="odd:bg-white/80 even:bg-page">
                     <td className="px-4 py-2 border border-neutral-200">{days}</td>
                     <td className="px-4 py-2 border border-neutral-200">{charge}</td>
                   </tr>
@@ -153,7 +153,7 @@ export default function CancellationPolicyPage() {
                   ['Credit / Debit Card', '5–7 business days'],
                   ['Paytm', '3–5 business days'],
                 ].map(([method, time]) => (
-                  <tr key={method} className="odd:bg-white even:bg-neutral-50">
+                  <tr key={method} className="odd:bg-white/80 even:bg-page">
                     <td className="px-4 py-2 border border-neutral-200">{method}</td>
                     <td className="px-4 py-2 border border-neutral-200">{time}</td>
                   </tr>

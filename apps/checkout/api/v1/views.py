@@ -145,10 +145,13 @@ def verify_cashfree(request, session_id):
         session = BookingSession.objects.select_related(
             'hotel', 'room_type', 'inventory_token', 'booking',
         ).get(pk=session.pk)
-        return Response({
+        response_data = {
             'status': 'completed',
             'session': CheckoutSessionResponseSerializer(session).data,
-        })
+        }
+        if session.booking:
+            response_data['booking'] = BookingConfirmationSerializer(session.booking).data
+        return Response(response_data)
 
     order_id = request.data.get('order_id') or request.query_params.get('order_id', '')
     if not order_id:
@@ -321,7 +324,7 @@ def _create_cashfree_order(session, intent, attempt):
             'customer_phone': guest_phone,
         },
         'order_meta': {
-            'return_url': f'{success_url}{session.session_id}?order_id={order_id}',
+            'return_url': f'{success_url}?session_id={session.session_id}&order_id={order_id}',
             'notify_url': getattr(
                 _settings, 'CASHFREE_WEBHOOK_URL',
                 'http://127.0.0.1:8000/api/v1/payment/webhook/cashfree/',
@@ -1213,3 +1216,141 @@ def retry_payment(request, session_id):
             {'error': 'Could not retry payment. Please restart checkout.'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+# ============================================================================
+# APPLY PROMO CODE TO CHECKOUT SESSION
+# ============================================================================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def apply_promo(request, session_id):
+    """
+    POST /api/v1/checkout/{session_id}/apply-promo/
+    Body: { "promo_code": "SAVE10" }
+
+    Validate and apply a promo code to the session's price snapshot.
+    Returns updated price_snapshot with promo_discount applied.
+    """
+    from decimal import Decimal
+    from apps.promos.models import Promo
+    from django.utils import timezone as _tz
+
+    session = _get_session_by_id(session_id)
+    if not session:
+        return Response({'error': 'Session not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if session.session_status not in (
+        BookingSession.STATUS_ROOM_SELECTED,
+        BookingSession.STATUS_GUEST_DETAILS,
+    ):
+        return Response(
+            {'error': 'Session is not in a valid state for promo application'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    promo_code = (request.data.get('promo_code') or '').strip().upper()
+    if not promo_code:
+        # Remove promo if empty code sent
+        snapshot = dict(session.price_snapshot or {})
+        snapshot['promo_discount'] = '0'
+        snapshot['promo_code'] = ''
+        # Recalculate total
+        total = (
+            Decimal(str(snapshot.get('base_price', 0)))
+            + Decimal(str(snapshot.get('meal_amount', 0)))
+            + Decimal(str(snapshot.get('service_fee', 0)))
+            + Decimal(str(snapshot.get('gst', 0)))
+            - Decimal(str(snapshot.get('property_discount', 0)))
+            - Decimal(str(snapshot.get('platform_discount', 0)))
+        )
+        snapshot['total'] = str(total.quantize(Decimal('0.01')))
+        snapshot['final_total'] = str(total.quantize(Decimal('0.01')))
+        session.price_snapshot = snapshot
+        search_snap = dict(session.search_snapshot or {})
+        search_snap['promo_code'] = ''
+        session.search_snapshot = search_snap
+        session.save(update_fields=['price_snapshot', 'search_snapshot'])
+        return Response({
+            'applied': False,
+            'message': 'Promo removed',
+            'price_snapshot': snapshot,
+        })
+
+    # Validate promo code
+    from apps.promos.models import Promo
+    try:
+        promo = Promo.objects.get(
+            code__iexact=promo_code,
+            is_active=True,
+        )
+    except Promo.DoesNotExist:
+        return Response(
+            {'error': 'Invalid or expired promo code'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Check validity (dates)
+    if not promo.is_valid():
+        return Response({'error': 'This promo code has expired or is not yet active'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check usage limits (max_uses == 0 means unlimited)
+    if promo.max_uses > 0:
+        used = promo.usages.count()
+        if used >= promo.max_uses:
+            return Response({'error': 'This promo code has reached its usage limit'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Calculate discount — applies on room charge ONLY (not service_fee or gst)
+    # This matches real-world OTA behaviour (Goibibo/MMT/Agoda):
+    # GST and service fee are ALWAYS on original tariff, never reduced by promo
+    snapshot = dict(session.price_snapshot or {})
+    room_charge = (
+        Decimal(str(snapshot.get('base_price', 0)))
+        + Decimal(str(snapshot.get('meal_amount', 0)))
+        - Decimal(str(snapshot.get('property_discount', 0)))
+        - Decimal(str(snapshot.get('platform_discount', 0)))
+    )
+    base_total = room_charge  # promo applies on room charge only
+
+    discount_amount = Decimal('0')
+    discount_type = promo.discount_type  # 'percent' or 'amount'
+    discount_value = Decimal(str(promo.value or 0))
+
+    if discount_type == 'percent':
+        discount_amount = (base_total * discount_value / Decimal('100')).quantize(Decimal('0.01'))
+    else:
+        discount_amount = min(discount_value, base_total)
+
+    # Cap at max_discount if set
+    if promo.max_discount:
+        discount_amount = min(discount_amount, Decimal(str(promo.max_discount)))
+
+    discounted_room = max(Decimal('0'), room_charge - discount_amount)
+    service_fee = Decimal(str(snapshot.get('service_fee', 0)))
+    gst_amount = Decimal(str(snapshot.get('gst_amount', snapshot.get('gst', 0))))
+    new_total = discounted_room + service_fee + gst_amount
+
+    snapshot['promo_discount'] = str(discount_amount.quantize(Decimal('0.01')))
+    snapshot['promo_code'] = promo_code
+    snapshot['total'] = str(new_total.quantize(Decimal('0.01')))
+    snapshot['final_total'] = str(new_total.quantize(Decimal('0.01')))
+
+    session.price_snapshot = snapshot
+    search_snap = dict(session.search_snapshot or {})
+    search_snap['promo_code'] = promo_code
+    session.search_snapshot = search_snap
+    session.save(update_fields=['price_snapshot', 'search_snapshot'])
+
+    logger.info(
+        'apply_promo: session=%s code=%s discount=%s new_total=%s',
+        session_id, promo_code, discount_amount, new_total,
+    )
+
+    return Response({
+        'applied': True,
+        'promo_code': promo_code,
+        'discount_amount': str(discount_amount),
+        'discount_description': getattr(promo, 'description', '') or f'{promo_code} applied',
+        'new_total': str(new_total),
+        'price_snapshot': snapshot,
+    })

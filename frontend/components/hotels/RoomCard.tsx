@@ -32,7 +32,7 @@ export default function RoomCard({ room, isSelected, selectedMealPlanCode, onSel
 
   return (
     <div className={[
-      'rounded-2xl border-2 overflow-hidden bg-white transition-all duration-200',
+      'rounded-2xl border-2 overflow-hidden bg-white/80 transition-all duration-200',
       isSelected
         ? 'border-primary-500 shadow-booking ring-1 ring-primary-200'
         : 'border-neutral-200 hover:border-primary-300 hover:shadow-md',
@@ -105,7 +105,7 @@ export default function RoomCard({ room, isSelected, selectedMealPlanCode, onSel
             {(room.amenities ?? []).length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {room.amenities!.map((a) => (
-                  <span key={a.name} className="flex items-center gap-1 text-xs text-neutral-500 bg-neutral-50 border border-neutral-100 px-1.5 py-0.5 rounded">
+                  <span key={a.name} className="flex items-center gap-1 text-xs text-neutral-500 bg-page border border-neutral-100 px-1.5 py-0.5 rounded">
                     <Check size={9} className="text-green-500" />
                     {a.name}
                   </span>
@@ -159,7 +159,7 @@ export default function RoomCard({ room, isSelected, selectedMealPlanCode, onSel
                 className={[
                   'grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-4 px-4 py-4 transition-colors',
                   idx < mealPlans.length - 1 ? 'border-b border-neutral-100' : '',
-                  isMpSelected ? 'bg-primary-50' : 'hover:bg-neutral-50/80',
+                  isMpSelected ? 'bg-primary-50' : 'hover:bg-page/80',
                 ].join(' ')}
               >
                 <div>

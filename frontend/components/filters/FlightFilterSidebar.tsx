@@ -86,7 +86,7 @@ export default function FlightFilterSidebar({
     searchParams.get('cabin_class');
 
   return (
-    <div className={clsx('bg-white rounded-2xl shadow-card p-5 sticky top-24', className)}>
+    <div className={clsx('bg-white/80 rounded-2xl shadow-card p-5 sticky top-24', className)}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-neutral-900 text-sm flex items-center gap-2">

@@ -66,7 +66,7 @@ export interface HotelCardConversionProps {
 
 export function HotelCardSkeleton() {
   return (
-    <div className="block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
+    <div className="block bg-white/80 rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
       <div className="flex flex-col sm:flex-row">
         <div className="w-full sm:w-64 h-48 sm:h-52 bg-gray-200 flex-shrink-0" />
         <div className="flex-1 p-4 space-y-3">
@@ -160,7 +160,7 @@ export default function HotelCardConversion({
     <Link
       href={`/hotels/${slug}`}
       onClick={handleCardClick}
-      className="group block bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-200 overflow-hidden"
+      className="group block bg-white/80 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-200 overflow-hidden"
     >
       <div className="flex flex-col sm:flex-row">
         {/* Image section */}
@@ -203,7 +203,7 @@ export default function HotelCardConversion({
             <button
               onClick={handleWishlistClick}
               aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-              className="absolute top-2 right-2 p-1.5 bg-white/80 hover:bg-white rounded-full shadow-sm backdrop-blur-sm transition"
+              className="absolute top-2 right-2 p-1.5 bg-white/80/80 hover:bg-white/80 rounded-full shadow-sm backdrop-blur-sm transition"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

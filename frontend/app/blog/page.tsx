@@ -76,7 +76,7 @@ const TAG_COLORS: Record<string, string> = {
 
 export default function BlogPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen page-listing-bg">
       {/* Header */}
       <section className="text-white py-16 px-4 text-center" style={{ background: 'linear-gradient(135deg,#1d4ed8,#f97316)' }}>
         <h1 className="text-4xl font-black font-heading mb-3">ZygoTrip Travel Blog</h1>
@@ -91,7 +91,7 @@ export default function BlogPage() {
           {POSTS.map((post) => (
             <article
               key={post.slug}
-              className="bg-white border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow"
+              className="bg-white/80 border border-neutral-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow"
             >
               {/* Placeholder image */}
               <div className="h-44 flex items-center justify-center text-4xl" style={{ background: 'linear-gradient(135deg,#dbeafe,#fed7aa)' }}>
@@ -141,7 +141,7 @@ export default function BlogPage() {
       </section>
 
       {/* Explore destinations CTA */}
-      <section className="bg-neutral-50 border-t border-neutral-100 py-12 px-4 text-center">
+      <section className="bg-page border-t border-neutral-100 py-12 px-4 text-center">
         <h2 className="text-xl font-bold text-neutral-900 mb-2">Ready to travel?</h2>
         <p className="text-neutral-500 text-sm mb-5">Book hotels across 500+ Indian destinations on ZygoTrip.</p>
         <Link

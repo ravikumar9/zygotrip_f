@@ -145,13 +145,13 @@ export default function PropertyGallery({ images, propertyName }: PropertyGaller
               <>
                 <button
                   onClick={prev}
-                  className="absolute left-8 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/35 transition-all"
+                  className="absolute left-8 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/80/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/80/35 transition-all"
                 >
                   <ChevronLeft size={22} />
                 </button>
                 <button
                   onClick={next}
-                  className="absolute right-8 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/35 transition-all"
+                  className="absolute right-8 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/80/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/80/35 transition-all"
                 >
                   <ChevronRight size={22} />
                 </button>

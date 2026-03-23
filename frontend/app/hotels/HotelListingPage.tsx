@@ -40,7 +40,7 @@ const PRICE_BUCKETS = [
 // ── Skeleton for loading state ──────────────────────────────────────
 function HotelCardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-card border border-neutral-100 flex flex-col sm:flex-row">
+    <div className="bg-white/80 rounded-2xl overflow-hidden shadow-card border border-neutral-100 flex flex-col sm:flex-row">
       <div className="skeleton sm:w-[240px] h-52 sm:h-auto sm:min-h-[210px] shrink-0" />
       <div className="flex-1 p-4 space-y-3">
         <div className="skeleton h-3 w-20 rounded" />
@@ -253,7 +253,7 @@ export default function HotelListingPage() {
                       'text-xs rounded-xl px-3 py-1.5 font-semibold border transition-all',
                       isActive
                         ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white text-neutral-700 border-neutral-200 hover:border-primary-400 hover:text-primary-700'
+                        : 'bg-white/80 text-neutral-700 border-neutral-200 hover:border-primary-400 hover:text-primary-700'
                     )}
                   >
                     {area.area}
@@ -270,7 +270,7 @@ export default function HotelListingPage() {
         <div className="flex gap-6">
           {/* ── Left sidebar (Filters) ─────────────────────────── */}
           <aside className="w-64 shrink-0 hidden lg:block">
-            <div className="bg-white rounded-2xl shadow-card p-5 sticky top-24">
+            <div className="bg-white/80 rounded-2xl shadow-card p-5 sticky top-24">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-neutral-900 text-sm">Filters</h3>
                 {hasActiveFilters && (
@@ -483,7 +483,7 @@ export default function HotelListingPage() {
                       'text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap',
                       currentSort === opt.value
                         ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                        : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400 hover:text-primary-600'
+                        : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400 hover:text-primary-600'
                     )}
                   >
                     {opt.label}
@@ -500,7 +500,7 @@ export default function HotelListingPage() {
                     'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap',
                     showMap
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400 hover:text-primary-600'
+                      : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400 hover:text-primary-600'
                   )}
                 >
                   <MapPin size={12} />
@@ -517,7 +517,7 @@ export default function HotelListingPage() {
                       'flex items-center gap-1.5 text-sm border rounded-xl px-3 py-1.5 transition-colors',
                       filtersOpen
                         ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white text-neutral-700 border-neutral-200'
+                        : 'bg-white/80 text-neutral-700 border-neutral-200'
                     )}
                   >
                     <SlidersHorizontal size={14} />
@@ -539,7 +539,7 @@ export default function HotelListingPage() {
                   <select
                     value={currentSort}
                     onChange={(e) => updateParam('sort', e.target.value)}
-                    className="text-sm border border-neutral-200 rounded-xl px-3 py-1.5 bg-white text-neutral-700 outline-none focus:border-primary-400"
+                    className="text-sm border border-neutral-200 rounded-xl px-3 py-1.5 bg-white/80 text-neutral-700 outline-none focus:border-primary-400"
                   >
                     {SORT_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -558,8 +558,8 @@ export default function HotelListingPage() {
                   onClick={() => setFiltersOpen(false)}
                 />
                 {/* Bottom sheet panel */}
-                <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
-                  <div className="sticky top-0 bg-white z-10 px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between">
+                <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white/80 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
+                  <div className="sticky top-0 bg-white/80 z-10 px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between">
                     <h3 className="font-bold text-neutral-900 text-base font-heading flex items-center gap-2">
                       <SlidersHorizontal size={16} /> Filters
                     </h3>
@@ -590,7 +590,7 @@ export default function HotelListingPage() {
                             : applyPriceBucket(bucket.min, bucket.max)
                           }
                           className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]',
-                            active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
+                            active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200')}>
                           {bucket.label}
                         </button>
                       );
@@ -604,7 +604,7 @@ export default function HotelListingPage() {
                       const active = searchParams.get('property_type') === type;
                       return (
                         <button key={type} onClick={() => updateParam('property_type', active ? null : type)}
-                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
+                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200')}>
                           {type}
                         </button>
                       );
@@ -618,7 +618,7 @@ export default function HotelListingPage() {
                       const active = searchParams.getAll('amenity').includes(amenity);
                       return (
                         <button key={amenity} onClick={() => toggleAmenity(amenity)}
-                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
+                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200')}>
                           {amenity}
                         </button>
                       );
@@ -654,7 +654,7 @@ export default function HotelListingPage() {
                       const active = searchParams.get('user_rating') === v;
                       return (
                         <button key={v} onClick={() => updateParam('user_rating', active ? null : v)}
-                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200')}>
+                          className={clsx('text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px]', active ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200')}>
                           {l}
                         </button>
                       );
@@ -663,7 +663,7 @@ export default function HotelListingPage() {
                 </div>
                   </div>
                   {/* Sticky apply button */}
-                  <div className="sticky bottom-0 bg-white border-t border-neutral-100 px-5 py-3">
+                  <div className="sticky bottom-0 bg-white/80 border-t border-neutral-100 px-5 py-3">
                     <button
                       onClick={() => setFiltersOpen(false)}
                       className="btn-primary w-full py-3 text-sm"
@@ -684,7 +684,7 @@ export default function HotelListingPage() {
 
             {/* ── Error state with auto-retry ───────────────────── */}
             {isError && (
-              <div className="bg-white rounded-2xl shadow-card p-6">
+              <div className="bg-white/80 rounded-2xl shadow-card p-6">
                 <ApiErrorState
                   error={error instanceof Error ? error : null}
                   onRetry={() => refetch()}
@@ -697,7 +697,7 @@ export default function HotelListingPage() {
             {!isLoading && !isError && data && (
               <>
                 {allHotels.length === 0 ? (
-                  <div className="text-center py-16 bg-white rounded-2xl shadow-card">
+                  <div className="text-center py-16 bg-white/80 rounded-2xl shadow-card">
                     <p className="text-5xl mb-4">🔍</p>
                     <h2 className="text-xl font-semibold text-neutral-900 mb-2">No hotels found</h2>
                     <p className="text-neutral-500 mb-5">
@@ -753,7 +753,7 @@ export default function HotelListingPage() {
           {/* ── Right panel: Map (toggleable 3rd zone) ─────────── */}
           {showMap && (
             <aside className="w-80 shrink-0 hidden xl:block">
-              <div className="bg-white rounded-2xl shadow-card sticky top-24 overflow-hidden" style={{ height: 'calc(100vh - 120px)' }}>
+              <div className="bg-white/80 rounded-2xl shadow-card sticky top-24 overflow-hidden" style={{ height: 'calc(100vh - 120px)' }}>
                 <div className="p-4 border-b border-neutral-100">
                   <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
                     <MapPin size={14} className="text-primary-500" />
@@ -761,7 +761,7 @@ export default function HotelListingPage() {
                   </h3>
                   <p className="text-xs text-neutral-400 mt-0.5">{allHotels.length} properties</p>
                 </div>
-                <div className="h-full bg-neutral-50 flex flex-col items-center justify-center p-6 text-center">
+                <div className="h-full bg-page flex flex-col items-center justify-center p-6 text-center">
                   <div className="w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center mb-3">
                     <MapPin size={24} className="text-primary-500" />
                   </div>
@@ -773,7 +773,7 @@ export default function HotelListingPage() {
                   {allHotels.length > 0 && (
                     <div className="mt-4 w-full space-y-2 max-h-[50vh] overflow-y-auto">
                       {allHotels.slice(0, 10).map((h) => (
-                        <div key={h.id} className="flex items-center gap-2 text-left bg-white rounded-lg p-2 border border-neutral-100">
+                        <div key={h.id} className="flex items-center gap-2 text-left bg-white/80 rounded-lg p-2 border border-neutral-100">
                           <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
                             <span className="text-[10px] font-bold text-primary-600">📍</span>
                           </div>

@@ -52,7 +52,7 @@ const difficultyColor: Record<string, string> = {
 /* ── Skeleton ── */
 function PackageCardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden animate-pulse">
+    <div className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm overflow-hidden animate-pulse">
       <div className="h-52 bg-neutral-100" />
       <div className="p-4 space-y-3">
         <div className="h-4 bg-neutral-100 rounded w-1/3" />
@@ -71,7 +71,7 @@ function PackageCardSkeleton() {
 function PackageCard({ pkg }: { pkg: TravelPackage }) {
   const { formatPrice } = useFormatPrice();
   return (
-    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
+    <div className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
       {/* Image */}
       <div className="relative h-52 bg-neutral-100 overflow-hidden">
         {pkg.image_url ? (
@@ -84,7 +84,7 @@ function PackageCard({ pkg }: { pkg: TravelPackage }) {
           <div className="w-full h-full flex items-center justify-center text-5xl">🌴</div>
         )}
         {/* Duration badge */}
-        <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-neutral-700 shadow-sm inline-flex items-center gap-1">
+        <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/80/90 backdrop-blur-sm text-neutral-700 shadow-sm inline-flex items-center gap-1">
           <Clock size={10} /> {pkg.duration_days} Day{pkg.duration_days !== 1 ? 's' : ''}
         </span>
         {/* Difficulty badge */}
@@ -164,7 +164,7 @@ function DestinationCard({ dest, onSelect }: { dest: PackageDestination; onSelec
     <button
       type="button"
       onClick={() => onSelect(dest.destination)}
-      className="bg-white rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-4 flex items-center gap-3 text-left w-full"
+      className="bg-white/80 rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-4 flex items-center gap-3 text-left w-full"
     >
       <div className="shrink-0 w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center">
         <MapPin size={18} className="text-purple-500" />
@@ -298,7 +298,7 @@ export default function PackageSearchClient() {
 
           <form
             onSubmit={handleSearch}
-            className="bg-white rounded-2xl shadow-xl p-4 sm:p-5"
+            className="bg-white/80 rounded-2xl shadow-xl p-4 sm:p-5"
           >
             {/* Primary row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
@@ -317,7 +317,7 @@ export default function PackageSearchClient() {
                 <select
                   value={categorySlug}
                   onChange={(e) => setCategorySlug(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 bg-white/80"
                 >
                   {categoryOptions.map((c) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
@@ -329,7 +329,7 @@ export default function PackageSearchClient() {
                 <select
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 bg-white/80"
                 >
                   {DURATION_OPTIONS.map((d) => (
                     <option key={d.value} value={d.value}>{d.label}</option>
@@ -363,7 +363,7 @@ export default function PackageSearchClient() {
                   <select
                     value={budget}
                     onChange={(e) => setBudget(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 bg-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 bg-white/80"
                   >
                     {BUDGET_OPTIONS.map((b) => (
                       <option key={b.value} value={b.value}>{b.label}</option>
@@ -375,7 +375,7 @@ export default function PackageSearchClient() {
                   <select
                     value={difficulty}
                     onChange={(e) => setDifficulty(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 bg-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 bg-white/80"
                   >
                     {DIFFICULTY_OPTIONS.map((d) => (
                       <option key={d.value} value={d.value}>{d.label}</option>
@@ -478,7 +478,7 @@ export default function PackageSearchClient() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setMobileFiltersOpen(true)}
-                  className="flex lg:hidden items-center gap-1.5 text-sm border rounded-xl px-3 py-1.5 bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400 transition-colors"
+                  className="flex lg:hidden items-center gap-1.5 text-sm border rounded-xl px-3 py-1.5 bg-white/80 text-neutral-700 border-neutral-200 hover:border-neutral-400 transition-colors"
                 >
                   <SlidersHorizontal size={14} />
                   Filters
@@ -487,7 +487,7 @@ export default function PackageSearchClient() {
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-neutral-200 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                  className="px-3 py-2 rounded-xl border border-neutral-200 text-sm font-medium bg-white/80 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
                 >
                   {SORT_OPTIONS.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
@@ -503,8 +503,8 @@ export default function PackageSearchClient() {
                   className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
                   onClick={() => setMobileFiltersOpen(false)}
                 />
-                <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
-                  <div className="sticky top-0 bg-white z-10 px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between">
+                <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white/80 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
+                  <div className="sticky top-0 bg-white/80 z-10 px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between">
                     <h3 className="font-bold text-neutral-900 text-base font-heading flex items-center gap-2">
                       <SlidersHorizontal size={16} /> Filters
                     </h3>
@@ -529,7 +529,7 @@ export default function PackageSearchClient() {
                         {DURATION_OPTIONS.filter(d => d.value).map((d) => (
                           <button key={d.value} onClick={() => setDuration(duration === d.value ? '' : d.value)}
                             className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                              duration === d.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200'
+                              duration === d.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                             }`}>{d.label}</button>
                         ))}
                       </div>
@@ -540,7 +540,7 @@ export default function PackageSearchClient() {
                         {BUDGET_OPTIONS.filter(b => b.value).map((b) => (
                           <button key={b.value} onClick={() => setBudget(budget === b.value ? '' : b.value)}
                             className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                              budget === b.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200'
+                              budget === b.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                             }`}>{b.label}</button>
                         ))}
                       </div>
@@ -551,7 +551,7 @@ export default function PackageSearchClient() {
                         {DIFFICULTY_OPTIONS.filter(d => d.value).map((d) => (
                           <button key={d.value} onClick={() => setDifficulty(difficulty === d.value ? '' : d.value)}
                             className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                              difficulty === d.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200'
+                              difficulty === d.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                             }`}>{d.label}</button>
                         ))}
                       </div>
@@ -563,7 +563,7 @@ export default function PackageSearchClient() {
                           {categories.map((cat) => (
                             <button key={cat.slug} onClick={() => setCategorySlug(categorySlug === cat.slug ? '' : cat.slug)}
                               className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                                categorySlug === cat.slug ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200'
+                                categorySlug === cat.slug ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                               }`}>{cat.name}</button>
                           ))}
                         </div>
@@ -575,13 +575,13 @@ export default function PackageSearchClient() {
                         {SORT_OPTIONS.map((s) => (
                           <button key={s.value} onClick={() => { setSort(s.value); setMobileFiltersOpen(false); doSearch(1, { sort: s.value as PackageSearchParams['sort'] }); }}
                             className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                              sort === s.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200'
+                              sort === s.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                             }`}>{s.label}</button>
                         ))}
                       </div>
                     </div>
                   </div>
-                  <div className="sticky bottom-0 px-5 py-4 border-t border-neutral-100 bg-white">
+                  <div className="sticky bottom-0 px-5 py-4 border-t border-neutral-100 bg-white/80">
                     <button
                       onClick={() => { setMobileFiltersOpen(false); doSearch(1); }}
                       className="w-full py-3 rounded-xl font-bold text-white text-sm"
@@ -606,7 +606,7 @@ export default function PackageSearchClient() {
                   className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap ${
                     duration === d.value
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400'
+                      : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400'
                   }`}>{d.label}</button>
               ))}
               <span className="text-neutral-200 mx-1">|</span>
@@ -620,7 +620,7 @@ export default function PackageSearchClient() {
                   className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap ${
                     budget === b.value
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400'
+                      : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400'
                   }`}>{b.label}</button>
               ))}
             </div>
@@ -646,7 +646,7 @@ export default function PackageSearchClient() {
                 <button
                   onClick={() => doSearch(page - 1)}
                   disabled={page <= 1}
-                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-page transition-colors"
                 >
                   ← Prev
                 </button>
@@ -656,7 +656,7 @@ export default function PackageSearchClient() {
                 <button
                   onClick={() => doSearch(page + 1)}
                   disabled={page >= totalPages}
-                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-page transition-colors"
                 >
                   Next →
                 </button>

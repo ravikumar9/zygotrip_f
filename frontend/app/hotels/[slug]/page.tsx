@@ -1,5 +1,14 @@
 'use client';
 
+const MEAL_PLAN_LABELS: Record<string, string> = {
+  'EP': 'Room Only (No Meals)',
+  'CP': 'Continental Plan (Breakfast)',
+  'MAP': 'Modified American Plan (Breakfast + Dinner)',
+  'AP': 'American Plan (All Meals)',
+  'AI': 'All Inclusive',
+};
+
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -25,8 +34,6 @@ import { useQuery } from '@tanstack/react-query';
 import { getPropertyDetail } from '@/services/hotels';
 import { checkoutService } from '@/services/checkout';
 import { analytics, bookingFunnel } from '@/lib/analytics';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import PropertyGallery from '@/components/hotels/PropertyGallery';
 import RoomSelector from '@/components/hotels/RoomSelector';
 import ReviewSection from '@/components/hotels/ReviewSection';
@@ -72,7 +79,7 @@ function StickyBookingBar({
   const { formatPrice } = useFormatPrice();
 
   return (
-    <div className="hidden lg:flex fixed top-0 left-0 right-0 z-40 bg-white border-b border-neutral-200 shadow-sm items-center gap-6 px-6 py-3">
+    <div className="hidden lg:flex fixed top-0 left-0 right-0 z-40 bg-white/80 border-b border-neutral-200 shadow-sm items-center gap-6 px-6 py-3">
       <div className="flex-1 min-w-0">
         <h2 className="font-bold text-neutral-900 text-sm truncate">{property.name}</h2>
         <div className="flex items-center gap-2 text-xs text-neutral-500">
@@ -145,6 +152,10 @@ export default function HotelDetailPage() {
   const handleRoomSelect = useCallback(
     (room: RoomType, mealPlan?: RoomMealPlan) => {
       setSelectedRoom(room);
+        setTimeout(() => {
+          const bookBtn = document.getElementById('book-now-btn');
+          if (bookBtn) bookBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);;
       setSelectedMealPlan(mealPlan);
       setBookingError(null);
       analytics.track('room_selected', {
@@ -224,8 +235,7 @@ export default function HotelDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-neutral-50">
-        <Header />
+      <div className="min-h-screen page-listing-bg">
         <div className="max-w-6xl mx-auto px-4 pt-6 pb-16">
           <Skeleton className="h-80 w-full rounded-2xl mb-6" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -239,15 +249,13 @@ export default function HotelDetailPage() {
             </div>
           </div>
         </div>
-        <Footer />
-      </div>
+</div>
     );
   }
 
   if (error || !property) {
     return (
-      <div className="min-h-screen bg-neutral-50">
-        <Header />
+      <div className="min-h-screen page-listing-bg">
         <div className="max-w-2xl mx-auto px-4 py-20 text-center">
           <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-neutral-900 mb-2">Hotel Not Found</h1>
@@ -261,8 +269,7 @@ export default function HotelDetailPage() {
             Search Hotels
           </Link>
         </div>
-        <Footer />
-      </div>
+</div>
     );
   }
 
@@ -293,8 +300,7 @@ export default function HotelDetailPage() {
       : (property.amenity_names || []).map((name, idx) => ({ id: idx, name }));
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <Header />
+    <div className="min-h-screen page-listing-bg">
       <StickyBookingBar property={property} minPrice={minPrice} onBookNow={handleBookNow} />
 
       <div className="max-w-6xl mx-auto px-4 pt-4">
@@ -306,7 +312,7 @@ export default function HotelDetailPage() {
         </button>
 
         {ctx.checkin && ctx.checkout && (
-          <div className="flex items-center gap-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-xl px-4 py-2 mb-4 w-fit shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-medium text-neutral-700 bg-white/80 border border-neutral-200 rounded-xl px-4 py-2 mb-4 w-fit shadow-sm">
             <Clock size={14} className="text-primary-500" />
             <span>{ctx.checkin}</span>
             <ChevronRight size={14} className="text-neutral-300" />
@@ -330,7 +336,7 @@ export default function HotelDetailPage() {
       <div className="max-w-6xl mx-auto px-4 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
+            <div className="bg-white/80 rounded-2xl p-5 shadow-sm border border-neutral-100">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex-1 min-w-0">
                   <span className="text-xs text-primary-600 font-semibold uppercase tracking-wide">
@@ -346,7 +352,7 @@ export default function HotelDetailPage() {
                   >
                     <Heart size={16} fill={wishlisted ? '#eb5757' : 'none'} stroke={wishlisted ? '#eb5757' : '#374151'} />
                   </button>
-                  <button className="p-2 rounded-full border border-neutral-200 hover:bg-neutral-50 transition-colors">
+                  <button className="p-2 rounded-full border border-neutral-200 hover:bg-page transition-colors">
                     <Share2 size={16} className="text-neutral-600" />
                   </button>
                 </div>
@@ -391,7 +397,7 @@ export default function HotelDetailPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
+            <div className="bg-white/80 rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
               <div className="flex overflow-x-auto border-b border-neutral-100 scrollbar-hide">
                 {tabs.map((tab) => (
                   <button
@@ -475,7 +481,7 @@ export default function HotelDetailPage() {
             </div>
 
             {property.id ? (
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
+              <div className="bg-white/80 rounded-2xl p-5 shadow-sm border border-neutral-100">
                 <h3 className="font-bold text-neutral-900 text-base mb-4">Price Calendar</h3>
                 <PriceCalendar
                   propertyId={property.id}
@@ -493,7 +499,7 @@ export default function HotelDetailPage() {
 
           <div className="lg:col-span-1">
             <div className="sticky top-4 space-y-4">
-              <div className="bg-white rounded-2xl shadow-card border border-neutral-100 p-5">
+              <div className="bg-white/80 rounded-2xl shadow-card border border-neutral-100 p-5">
                 <div className="mb-4">
                   {minPrice > 0 && (
                     <div className="flex items-end gap-2">
@@ -540,7 +546,7 @@ export default function HotelDetailPage() {
                       : 'bg-primary-600 hover:bg-primary-700 active:bg-primary-800 shadow-md hover:shadow-lg',
                   ].join(' ')}
                 >
-                  {isBooking ? 'Processing...' : selectedRoom ? 'Book Now →' : 'View Room Options'}
+                  {isBooking ? 'Processing...' : selectedRoom ? `Book ${selectedRoom.name} Now →` : 'Select a Room to Book'}
                 </button>
 
                 <div className="mt-4 space-y-2">
@@ -564,8 +570,6 @@ export default function HotelDetailPage() {
           </div>
         </div>
       </div>
-
-      <Footer />
-    </div>
+</div>
   );
 }

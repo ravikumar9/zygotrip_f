@@ -164,6 +164,22 @@ class PlatformSettings(TimeStampedModel):
     min_app_version_android = models.CharField(max_length=32, blank=True, default='')
     min_app_version_ios = models.CharField(max_length=32, blank=True, default='')
 
+    # ── Payment Gateway Controls (admin-configurable) ─────────────────
+    cashfree_enabled = models.BooleanField(default=True, help_text='Enable Cashfree PG for bookings')
+    stripe_enabled = models.BooleanField(default=True, help_text='Enable Stripe for international cards')
+    paytm_enabled = models.BooleanField(default=False, help_text='Enable Paytm UPI (pending approval)')
+    wallet_enabled = models.BooleanField(default=True, help_text='Enable ZygoWallet payment method')
+    wallet_topup_enabled = models.BooleanField(default=True, help_text='Allow wallet top-ups')
+    wallet_topup_gateway = models.CharField(
+        max_length=20, default='cashfree',
+        choices=[('cashfree', 'Cashfree'), ('razorpay', 'Razorpay'), ('paytm', 'Paytm')],
+        help_text='Gateway used for wallet top-up transactions'
+    )
+    min_wallet_topup = models.DecimalField(max_digits=10, decimal_places=2, default=100, help_text='Minimum wallet top-up (INR)')
+    max_wallet_topup = models.DecimalField(max_digits=10, decimal_places=2, default=50000, help_text='Maximum wallet top-up (INR)')
+    offers_enabled = models.BooleanField(default=True, help_text='Enable offers and coupons system')
+    referral_enabled = models.BooleanField(default=True, help_text='Enable referral program')
+
     class Meta:
         verbose_name_plural = "Platform Settings"
 

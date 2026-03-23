@@ -76,7 +76,7 @@ export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCo
           <div
             key={room.id}
             className={[
-              'bg-white transition-all duration-200',
+              'bg-white/80 transition-all duration-200',
               roomIdx > 0 ? 'border-t-2 border-neutral-200' : '',
               isRoomSelected ? 'ring-2 ring-inset ring-primary-400' : '',
             ].join(' ')}
@@ -143,7 +143,7 @@ export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCo
                   {(room.amenities ?? []).length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
                       {room.amenities!.slice(0, 4).map((a) => (
-                        <span key={a.name} className="flex items-center gap-0.5 text-[10px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-1.5 py-0.5 rounded">
+                        <span key={a.name} className="flex items-center gap-0.5 text-[10px] text-neutral-500 bg-page border border-neutral-100 px-1.5 py-0.5 rounded">
                           {AMENITY_ICON[a.name.toLowerCase()] ?? <Check size={8} className="text-green-500" />}
                           {a.name}
                         </span>
@@ -160,7 +160,7 @@ export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCo
                     View More Details <ChevronDown size={11} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   </button>
                   {isExpanded && (
-                    <div className="mt-2 text-[11px] text-neutral-500 bg-neutral-50 rounded-lg p-2 border border-neutral-100 space-y-1.5">
+                    <div className="mt-2 text-[11px] text-neutral-500 bg-page rounded-lg p-2 border border-neutral-100 space-y-1.5">
                       <div>
                         <p className="font-semibold text-neutral-700 mb-0.5">Cancellation:</p>
                         <p>{isFree ? '✅ Free cancellation until 24h before check-in' : '❌ Non-refundable — lowest price guarantee'}</p>
@@ -319,7 +319,7 @@ export default function RoomSelector({ rooms, selectedRoomId, selectedMealPlanCo
     {/* ── Room Gallery Modal ── */}
     {galleryRoom && galleryRoom.images && galleryRoom.images.length > 0 && (
       <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setGalleryRoomId(null)}>
-        <div className="relative bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="relative bg-white/80 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between p-4 border-b border-neutral-100">
             <h3 className="font-bold text-neutral-900 text-sm">{galleryRoom.name} — Photos</h3>
             <button onClick={() => setGalleryRoomId(null)} className="p-1 rounded-full hover:bg-neutral-100 transition-colors">

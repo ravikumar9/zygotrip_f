@@ -118,15 +118,15 @@ export default function Header() {
                       <p className="text-xs text-neutral-400 truncate mt-0.5">{user.email}</p>
                     </div>
                     <Link href="/account" onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors">
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-page transition-colors">
                       <User size={15} className="text-neutral-400" /> My Account
                     </Link>
                     <Link href="/bookings" onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors">
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-page transition-colors">
                       <BookOpen size={15} className="text-neutral-400" /> My Trips
                     </Link>
                     <Link href="/wallet" onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors">
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-page transition-colors">
                       <Wallet size={15} className="text-neutral-400" /> Wallet
                     </Link>
                     <div className="border-t border-neutral-100 mt-1 pt-1">
@@ -215,7 +215,7 @@ export default function Header() {
                   Login
                 </Link>
                 <Link href="/account/register" onClick={() => setMenuOpen(false)} className="flex items-center justify-center py-2.5 px-3 text-sm font-black text-white rounded-xl transition-colors" style={{ background: 'var(--primary)' }}>
-                  Sign Up Free
+                  Sign Up
                 </Link>
               </>
             )}

@@ -214,7 +214,7 @@ export default function PriceCalendar({
   };
 
   return (
-    <div className={`bg-white rounded-2xl shadow-card p-5 ${className}`}>
+    <div className={`bg-white/80 rounded-2xl shadow-card p-5 ${className}`}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-neutral-800 text-sm font-heading">Price Calendar</h3>

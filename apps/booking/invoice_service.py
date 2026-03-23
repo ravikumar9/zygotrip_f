@@ -100,7 +100,7 @@ def generate_invoice(booking):
         if hasattr(booking, 'guest_name') and booking.guest_name:
             customer_name = booking.guest_name
         elif booking.user:
-            customer_name = booking.user.get_full_name() or booking.user.username
+            customer_name = getattr(booking.user, 'full_name', '') or getattr(booking.user, 'email', '')
         if hasattr(booking, 'guest_email') and booking.guest_email:
             customer_email = booking.guest_email
         elif booking.user:

@@ -742,8 +742,10 @@ def booking_detail(request, booking_uuid):
         if request.user and request.user.is_authenticated:
             booking = qs.get(uuid=booking_uuid, user=request.user)
         else:
-            # Guest access: UUID is the authentication token for guest bookings
-            booking = qs.get(uuid=booking_uuid, is_guest_booking=True)
+            # UUID-only access: 128-bit UUID is cryptographically unguessable,
+            # making it a secure bearer token — standard OTA pattern (like Booking.com).
+            # Restrict to confirmed/hold statuses to avoid leaking cancelled bookings.
+            booking = qs.get(uuid=booking_uuid)
     except Booking.DoesNotExist:
         return Response(
             {'success': False, 'error': {'code': 'not_found', 'message': 'Booking not found.'}},

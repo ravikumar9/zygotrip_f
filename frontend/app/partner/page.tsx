@@ -48,7 +48,7 @@ const STEPS = [
 
 export default function PartnerPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen page-listing-bg">
       {/* Hero */}
       <section className="text-white py-20 px-4 text-center" style={{ background: 'linear-gradient(135deg,#171717,#1e3a8a)' }}>
         <h1 className="text-4xl md:text-5xl font-black font-heading mb-4">
@@ -92,7 +92,7 @@ export default function PartnerPage() {
           {BENEFITS.map((b) => (
             <div
               key={b.title}
-              className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6 hover:shadow-md transition-shadow"
+              className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm p-6 hover:shadow-md transition-shadow"
             >
               <span className="text-3xl">{b.icon}</span>
               <h3 className="font-bold text-neutral-900 mt-3 mb-2 text-sm">{b.title}</h3>
@@ -103,7 +103,7 @@ export default function PartnerPage() {
       </section>
 
       {/* How It Works */}
-      <section className="bg-neutral-50 py-14 px-4">
+      <section className="bg-page py-14 px-4">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold text-neutral-900 font-heading text-center mb-10">
             How It Works
@@ -141,7 +141,7 @@ export default function PartnerPage() {
           </a>
           <Link
             href="/list-property"
-            className="border border-neutral-300 text-neutral-700 font-semibold px-7 py-3 rounded-xl hover:bg-neutral-50 transition-colors"
+            className="border border-neutral-300 text-neutral-700 font-semibold px-7 py-3 rounded-xl hover:bg-page transition-colors"
           >
             List Your Property →
           </Link>

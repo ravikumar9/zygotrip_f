@@ -44,6 +44,8 @@ export interface CheckoutPriceSnapshot {
   platform_discount: string;
   demand_adjustment: string;
   advance_modifier: string;
+  promo_discount?: string;
+  promo_code?: string;
 }
 
 export interface CheckoutSearchSnapshot {

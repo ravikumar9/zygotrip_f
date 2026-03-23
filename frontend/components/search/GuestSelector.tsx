@@ -46,7 +46,7 @@ export default function GuestSelector({
         </button>
 
         {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-modal border border-neutral-200 p-4 z-50 animate-slide-down">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white/80 rounded-xl shadow-modal border border-neutral-200 p-4 z-50 animate-slide-down">
             <CounterRow label="Adults" value={adults} min={1} max={12} onChange={onAdultsChange} />
             {onChildrenChange && (
               <CounterRow label="Children" sublabel="0–12 yrs" value={children} min={0} max={6} onChange={onChildrenChange} />

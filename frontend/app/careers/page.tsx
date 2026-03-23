@@ -29,7 +29,7 @@ const PERKS = [
 
 export default function CareersPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen page-listing-bg">
       {/* Hero */}
       <section className="text-white py-20 px-4 text-center" style={{ background: 'linear-gradient(135deg,#1d4ed8 0%,#2563eb 55%,#f97316 100%)' }}>
         <h1 className="text-4xl md:text-5xl font-black font-heading mb-4">
@@ -42,12 +42,12 @@ export default function CareersPage() {
       </section>
 
       {/* Perks */}
-      <section className="bg-neutral-50 py-14 px-4">
+      <section className="bg-page py-14 px-4">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-bold text-neutral-900 font-heading text-center mb-10">Why ZygoTrip?</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
             {PERKS.map((p) => (
-              <div key={p.label} className="bg-white rounded-2xl border border-neutral-100 p-5 shadow-sm">
+              <div key={p.label} className="bg-white/80 rounded-2xl border border-neutral-100 p-5 shadow-sm">
                 <span className="text-2xl">{p.icon}</span>
                 <h3 className="font-bold text-neutral-900 mt-2 mb-1 text-sm">{p.label}</h3>
                 <p className="text-xs text-neutral-500">{p.desc}</p>
@@ -64,7 +64,7 @@ export default function CareersPage() {
           {OPENINGS.map((job) => (
             <div
               key={job.role}
-              className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-neutral-200 rounded-2xl px-5 py-4 hover:shadow-md hover:border-primary-300 transition-all"
+              className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/80 border border-neutral-200 rounded-2xl px-5 py-4 hover:shadow-md hover:border-primary-300 transition-all"
             >
               <div>
                 <p className="font-semibold text-neutral-900 text-sm">{job.role}</p>
@@ -95,7 +95,7 @@ export default function CareersPage() {
         <p className="text-white/80 text-sm mb-6">Send your CV to careers@zygotrip.com and let&apos;s talk.</p>
         <Link
           href="mailto:careers@zygotrip.com"
-          className="bg-white text-primary-700 font-semibold px-8 py-3 rounded-xl hover:bg-neutral-50 transition-colors text-sm"
+          className="bg-white/80 text-primary-700 font-semibold px-8 py-3 rounded-xl hover:bg-page transition-colors text-sm"
         >
           Get in Touch
         </Link>

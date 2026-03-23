@@ -220,7 +220,7 @@ export default function ShareButton({
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label="Share this page"
-        className={`flex items-center rounded-xl border border-neutral-200 bg-white font-medium text-neutral-600 hover:shadow-sm active:scale-95 transition-all ${sizeClasses}`}
+        className={`flex items-center rounded-xl border border-neutral-200 bg-white/80 font-medium text-neutral-600 hover:shadow-sm active:scale-95 transition-all ${sizeClasses}`}
       >
         <Share2 size={iconSize} />
         {variant === 'button' && <span>Share</span>}
@@ -237,7 +237,7 @@ export default function ShareButton({
             ref={panelRef}
             role="dialog"
             aria-label="Share options"
-            className="absolute right-0 top-full mt-2 z-50 w-72 bg-white rounded-2xl shadow-2xl border border-neutral-100 p-4 animate-in fade-in slide-in-from-top-2 duration-150"
+            className="absolute right-0 top-full mt-2 z-50 w-72 bg-white/80 rounded-2xl shadow-2xl border border-neutral-100 p-4 animate-in fade-in slide-in-from-top-2 duration-150"
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -272,7 +272,7 @@ export default function ShareButton({
                         }
                       : undefined
                   }
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-neutral-100 hover:bg-neutral-50 transition-colors cursor-pointer text-sm font-medium text-neutral-800 select-none"
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-neutral-100 hover:bg-page transition-colors cursor-pointer text-sm font-medium text-neutral-800 select-none"
                 >
                   <span
                     className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
@@ -296,7 +296,7 @@ export default function ShareButton({
             <button
               type="button"
               onClick={() => handleCopy('main')}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-sm font-medium text-neutral-700 hover:bg-neutral-100 active:scale-[0.99] transition-all"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-page border border-neutral-200 text-sm font-medium text-neutral-700 hover:bg-neutral-100 active:scale-[0.99] transition-all"
             >
               {copied ? (
                 <>

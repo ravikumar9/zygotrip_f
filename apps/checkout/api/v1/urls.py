@@ -13,4 +13,6 @@ urlpatterns = [
     path('<uuid:session_id>/pay/', views.initiate_payment, name='checkout-pay'),
     path('<uuid:session_id>/callback/', views.payment_callback, name='checkout-callback'),
     path('<uuid:session_id>/retry/', views.retry_payment, name='checkout-retry'),
+    path('<uuid:session_id>/verify-cashfree/', views.verify_cashfree, name='checkout-verify-cashfree'),
+    path('<uuid:session_id>/apply-promo/', views.apply_promo, name='checkout-apply-promo'),
 ]

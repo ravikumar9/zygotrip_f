@@ -46,14 +46,39 @@ def _send_email(to_email, subject, text_body, html_body=None):
         return False
 
 
-def _send_sms(phone, message):
-    """Send SMS via configured backend."""
+def _send_sms(phone, message, template_id=None, variables=None):
+    """Send SMS via MSG91 with template support."""
     if not phone:
         return False
     try:
-        from apps.accounts.sms_service import get_sms_backend
-        backend = get_sms_backend()
-        return backend.send(phone, message)
+        from django.conf import settings as _s
+        import requests as _req
+        auth_key = getattr(_s, 'MSG91_AUTH_KEY', '')
+        sender = getattr(_s, 'MSG91_SENDER_ID', 'ZYGOIN')
+
+        if not auth_key:
+            # Fallback to console
+            from apps.accounts.sms_service import get_sms_backend
+            return get_sms_backend().send(phone, message)
+
+        mobile = str(phone).replace('+', '').replace(' ', '').replace('-', '')
+        if not mobile.startswith('91') and len(mobile) == 10:
+            mobile = '91' + mobile
+
+        if template_id:
+            url = 'https://control.msg91.com/api/v5/flow/'
+            headers = {'authkey': auth_key, 'Content-Type': 'application/json'}
+            recipient = {'mobiles': mobile}
+            if variables:
+                recipient.update(variables)
+            payload = {'template_id': template_id, 'sender': sender, 'recipients': [recipient]}
+            resp = _req.post(url, json=payload, headers=headers, timeout=10)
+            data = resp.json()
+            logger.info('MSG91 SMS to %s template=%s: %s', phone, template_id, data)
+            return data.get('type') == 'success'
+        else:
+            from apps.accounts.sms_service import get_sms_backend
+            return get_sms_backend().send(phone, message)
     except Exception as e:
         logger.error('SMS failed to %s: %s', phone, e)
         return False
@@ -88,31 +113,77 @@ def send_booking_confirmation_notification(self, booking_id):
             },
         )
 
-        # 2. Email to guest
-        email_body = (
-            f"Dear {booking.user.full_name},\n\n"
-            f"Your booking has been confirmed!\n\n"
-            f"Booking ID: {booking_ref}\n"
-            f"Property: {property_name}\n"
-            f"Check-in: {booking.check_in}\n"
-            f"Check-out: {booking.check_out}\n"
-            f"Total: ₹{booking.total_amount}\n\n"
-            f"You can view your booking details in your ZygoTrip dashboard.\n\n"
-            f"Have a great stay!\n"
-            f"— Team ZygoTrip"
-        )
-        _send_email(
-            booking.user.email,
-            f'Booking Confirmed — {booking_ref} at {property_name}',
-            email_body,
-        )
+        # 2. Email to guest (HTML template + PDF invoice attachment)
+        try:
+            from apps.core.email_service import send_booking_confirmation as _html_conf
+            from django.core.mail import EmailMultiAlternatives
+            from django.template.loader import render_to_string
+            from django.conf import settings as _cfg
+            import mimetypes
+
+            # Generate PDF invoice attachment
+            pdf_bytes = None
+            try:
+                from apps.booking.invoice_pdf import get_invoice_pdf_bytes
+                pdf_bytes = get_invoice_pdf_bytes(booking)
+            except Exception as _pdf_err:
+                logger.warning('PDF generation skipped for %s: %s', booking_ref, _pdf_err)
+
+            if pdf_bytes:
+                # Send with PDF attachment using EmailMultiAlternatives
+                to_email = (
+                    getattr(booking, 'guest_email', None)
+                    or (booking.user.email if booking.user else '')
+                )
+                guest_nm = (
+                    getattr(booking, 'guest_name', None)
+                    or (booking.user.full_name if booking.user else 'Guest')
+                )
+                subject = f'Booking Confirmed - {booking_ref} | ZygoTrip'
+                text_body = (
+                    f"Hi {guest_nm},\n\n"
+                    f"Your booking at {property_name} is confirmed!\n\n"
+                    f"Booking ID: {booking_ref}\n"
+                    f"Check-in: {booking.check_in}\n"
+                    f"Check-out: {booking.check_out}\n"
+                    f"Total: Rs{booking.total_amount}\n\n"
+                    f"Your invoice PDF is attached to this email.\n\n"
+                    f"Thank you for choosing ZygoTrip!"
+                )
+                msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=text_body,
+                    from_email=_cfg.DEFAULT_FROM_EMAIL,
+                    to=[to_email],
+                )
+                # Attach PDF
+                filename = f'ZygoTrip_Invoice_{booking_ref}.pdf'
+                msg.attach(filename, pdf_bytes, 'application/pdf')
+                msg.send(fail_silently=False)
+                logger.info('Confirmation email with PDF sent to %s for booking %s', to_email, booking_ref)
+            else:
+                # Fallback: send without PDF
+                _html_conf(
+                    to_email=booking.user.email,
+                    booking_ref=str(booking_ref),
+                    guest_name=booking.user.full_name or 'Guest',
+                    hotel_name=property_name,
+                    check_in=str(booking.check_in),
+                    check_out=str(booking.check_out),
+                    total_amount=str(booking.total_amount),
+                    room_type=getattr(booking, 'room_type_name', '') or '',
+                    guests=getattr(booking, 'adults', 1) or 1,
+                )
+        except Exception as _email_err:
+            logger.error('HTML confirmation email failed for %s: %s', booking_ref, _email_err)
 
         # 3. SMS to guest
-        sms_msg = (
-            f'ZygoTrip: Booking {booking_ref} at {property_name} is confirmed! '
-            f'Check-in: {booking.check_in}. Total: Rs{booking.total_amount}.'
+        sms_msg = f'ZygoTrip: Booking {booking_ref} at {property_name} is confirmed! Check-in: {booking.check_in}. Total: Rs{booking.total_amount}.'
+        _send_sms(
+            booking.user.phone, sms_msg,
+            template_id=getattr(__import__('django.conf', fromlist=['settings']).settings, 'MSG91_BOOKING_TEMPLATE_ID', ''),
+            variables={'booking_id': booking_ref, 'name': booking.user.full_name or 'Guest'},
         )
-        _send_sms(booking.user.phone, sms_msg)
 
         # 4. Notify property owner
         if booking.property and hasattr(booking.property, 'owner') and booking.property.owner:

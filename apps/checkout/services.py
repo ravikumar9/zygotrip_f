@@ -86,6 +86,8 @@ def _build_price_snapshot(price_result):
         or price_result.get('total')
         or 0
     )
+    from decimal import ROUND_HALF_UP as _RHU
+    total = Decimal(str(total)).quantize(Decimal("1"), rounding=_RHU)
     gst_amount = price_result.get('gst_amount', price_result.get('gst', 0))
 
     return {
@@ -172,7 +174,7 @@ def create_checkout_session(
     price_snapshot = _build_price_snapshot(price_result)
 
     search_snapshot = {
-        'city': getattr(property_obj, 'city', ''),
+        'city': str(getattr(property_obj, 'city', '') or ''),
         'check_in': str(check_in),
         'check_out': str(check_out),
         'guests': guests,
@@ -239,7 +241,7 @@ def set_guest_details(session, guest_details):
         session.transition_to(BookingSession.STATUS_EXPIRED)
         raise SessionExpiredException("Session has expired")
 
-    if session.session_status != BookingSession.STATUS_ROOM_SELECTED:
+    if session.session_status not in [BookingSession.STATUS_ROOM_SELECTED, BookingSession.STATUS_GUEST_DETAILS]:
         raise SessionStateError(
             f"Cannot set guest details in state {session.session_status}"
         )
@@ -256,6 +258,7 @@ def set_guest_details(session, guest_details):
         'phone': str(guest_details['phone']).strip(),
         'special_requests': guest_details.get('special_requests', '').strip(),
     }
+    session.save(update_fields=['guest_details', 'updated_at'])
     session.transition_to(BookingSession.STATUS_GUEST_DETAILS)
 
     logger.info("Guest details set: session=%s", session.session_id)
@@ -510,6 +513,13 @@ def complete_payment(attempt, gateway_response=None):
         promo_code=search.get('promo_code', ''),
         locked_price=total,
     )
+    # Save guest details + payment reference to booking
+    booking.guest_name = guests_data.get('name', '')
+    booking.guest_email = guests_data.get('email', session.user.email if session.user else '')
+    booking.guest_phone = guests_data.get('phone', '')
+    booking.payment_reference_id = str(intent.intent_id)
+    booking.idempotency_key = str(session.session_id)
+    booking.save(update_fields=['guest_name', 'guest_email', 'guest_phone', 'payment_reference_id', 'idempotency_key', 'updated_at'])
 
     # Convert holds to booking
     token = session.inventory_token
@@ -524,8 +534,15 @@ def complete_payment(attempt, gateway_response=None):
         token.token_status = InventoryToken.STATUS_CONVERTED
         token.save(update_fields=['token_status', 'updated_at'])
 
-    # Transition booking from HOLD → CONFIRMED
+    # Transition booking from HOLD → PAYMENT_PENDING → CONFIRMED
     if booking.status == Booking.STATUS_HOLD:
+        booking = BookingStateMachine.transition(
+            booking,
+            Booking.STATUS_PAYMENT_PENDING,
+            note='Payment initiated via checkout flow',
+            user=session.user,
+        )
+    if booking.status == Booking.STATUS_PAYMENT_PENDING:
         booking = BookingStateMachine.transition(
             booking,
             Booking.STATUS_CONFIRMED,
@@ -538,6 +555,7 @@ def complete_payment(attempt, gateway_response=None):
     intent.save(update_fields=['booking', 'updated_at'])
 
     session.booking = booking
+    session.save(update_fields=['booking', 'updated_at'])
     session.transition_to(BookingSession.STATUS_COMPLETED)
 
     logger.info(
@@ -545,9 +563,31 @@ def complete_payment(attempt, gateway_response=None):
         session.session_id, booking.uuid, intent.amount,
     )
 
+    # Generate invoice
+    try:
+        from apps.booking.invoice_service import generate_invoice
+        generate_invoice(booking)
+        logger.info("Invoice generated for booking=%s", booking.uuid)
+    except Exception as e:
+        logger.warning("Invoice generation failed: %s", e)
+
+    # Fire confirmation email async
+    try:
+        from apps.core.tasks import send_booking_confirmation_email
+        send_booking_confirmation_email.delay(booking.id)
+        logger.info("Booking confirmation email queued: booking=%s", booking.uuid)
+    except Exception as e:
+        logger.warning("Failed to queue confirmation email: %s", e)
+
+    # Fire booking confirmed SMS
+    try:
+        from apps.core.sms_tasks import send_booking_confirmed_sms, send_payment_received_sms
+        send_booking_confirmed_sms.delay(booking.id)
+        send_payment_received_sms.delay(booking.id)
+        logger.info("Booking SMS queued: booking=%s", booking.uuid)
+    except Exception as e:
+        logger.warning("Failed to queue booking SMS: %s", e)
     return booking, session
-
-
 # ============================================================================
 # 7. PAYMENT FAILURE
 # ============================================================================

@@ -7,7 +7,7 @@ const BusDetailClient = dynamic(() => import('./BusDetailClient'), {
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="h-8 bg-neutral-100 rounded-xl animate-pulse mb-6 w-1/3" />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-neutral-100 p-6 animate-pulse">
+        <div className="lg:col-span-2 bg-white/80 rounded-2xl border border-neutral-100 p-6 animate-pulse">
           <div className="h-6 bg-neutral-100 rounded w-1/2 mb-4" />
           <div className="grid grid-cols-10 gap-2">
             {Array.from({ length: 40 }).map((_, i) => (
@@ -15,7 +15,7 @@ const BusDetailClient = dynamic(() => import('./BusDetailClient'), {
             ))}
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-neutral-100 p-6 animate-pulse">
+        <div className="bg-white/80 rounded-2xl border border-neutral-100 p-6 animate-pulse">
           <div className="h-6 bg-neutral-100 rounded w-2/3 mb-4" />
           <div className="space-y-3">
             <div className="h-4 bg-neutral-100 rounded w-full" />

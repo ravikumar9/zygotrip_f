@@ -97,7 +97,14 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        tokenStore.clear();
+        const _re = refreshError as any;
+        if (_re?.response?.status === 401 || _re?.response?.status === 400) {
+          tokenStore.clear();
+          if (typeof window !== "undefined" && !window.location.pathname.includes("checkout") && !window.location.pathname.includes("payment")) {
+            setTimeout(() => { window.location.href = "/account/login?session_expired=1"; }, 100);
+          }
+        }
+        // tokenStore.clear() moved above
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

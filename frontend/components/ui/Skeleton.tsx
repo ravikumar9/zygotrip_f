@@ -20,7 +20,7 @@ export function Skeleton({ className, style }: SkeletonProps) {
 
 export function HotelCardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl shadow-card overflow-hidden flex flex-col sm:flex-row">
+    <div className="bg-white/80 rounded-2xl shadow-card overflow-hidden flex flex-col sm:flex-row">
       {/* Image */}
       <Skeleton className="sm:w-64 sm:shrink-0 h-48 sm:h-auto rounded-none sm:rounded-l-2xl" />
 
@@ -63,7 +63,7 @@ export function HotelCardSkeleton() {
 
 export function HotelDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen page-listing-bg">
       {/* Gallery */}
       <div className="h-[420px] bg-neutral-200 animate-pulse" />
 
@@ -72,7 +72,7 @@ export function HotelDetailSkeleton() {
           {/* Left */}
           <div className="space-y-5">
             {/* Title block */}
-            <div className="bg-white rounded-2xl p-6 space-y-3">
+            <div className="bg-white/80 rounded-2xl p-6 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="space-y-2 flex-1">
                   <Skeleton className="h-8 w-72" />
@@ -89,7 +89,7 @@ export function HotelDetailSkeleton() {
             </div>
 
             {/* Tab content skeleton */}
-            <div className="bg-white rounded-2xl p-6 space-y-3">
+            <div className="bg-white/80 rounded-2xl p-6 space-y-3">
               <div className="flex gap-4 border-b pb-3">
                 <Skeleton className="h-5 w-20" />
                 <Skeleton className="h-5 w-20" />
@@ -108,7 +108,7 @@ export function HotelDetailSkeleton() {
           </div>
 
           {/* Right — Booking widget */}
-          <div className="bg-white rounded-2xl shadow-card p-5 h-fit space-y-4">
+          <div className="bg-white/80 rounded-2xl shadow-card p-5 h-fit space-y-4">
             <Skeleton className="h-6 w-36" />
             <div className="grid grid-cols-2 gap-3">
               <Skeleton className="h-14 rounded-xl" />
@@ -153,7 +153,7 @@ export function SearchResultsSkeleton({ count = 4 }: { count?: number }) {
 
 export function BookingSummarySkeleton() {
   return (
-    <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+    <div className="bg-white/80 rounded-2xl shadow-card overflow-hidden">
       {/* Image strip */}
       <Skeleton className="h-40 w-full rounded-none" />
 
@@ -168,7 +168,7 @@ export function BookingSummarySkeleton() {
         </div>
 
         {/* Dates grid */}
-        <div className="grid grid-cols-3 gap-3 bg-neutral-50 rounded-xl p-3">
+        <div className="grid grid-cols-3 gap-3 bg-page rounded-xl p-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="space-y-1">
               <Skeleton className="h-3 w-12" />

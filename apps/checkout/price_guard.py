@@ -37,7 +37,7 @@ logger = logging.getLogger('zygotrip.checkout.price_guard')
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 FRESHNESS_TTL_SECONDS: int = 300          # 5 minutes
-MAX_DRIFT_PERCENT: Decimal = Decimal('3.0')   # ±3% allowed price change
+MAX_DRIFT_PERCENT: Decimal = Decimal('3.0')    # ±3% allowed price change
 
 
 class PriceGuard:
@@ -138,13 +138,20 @@ class PriceGuard:
                     session.session_id, old_exc, new_exc,
                 )
                 # Update the snapshot to reflect new price
-                session.price_snapshot['total'] = str(new_exc)
+                from decimal import Decimal as _Dec
+                promo_discount = _Dec(str(session.price_snapshot.get('promo_discount', 0) or 0))
+                adjusted = max(_Dec('0'), new_exc - promo_discount)
+                session.price_snapshot['total'] = str(adjusted.quantize(_Dec('0.01')))
+                session.price_snapshot['final_total'] = str(adjusted.quantize(_Dec('0.01')))
                 session.price_revalidated_at = timezone.now()
                 session.price_changed = True
                 session.save(update_fields=[
                     'price_snapshot', 'price_revalidated_at', 'price_changed', 'updated_at',
                 ])
-                return session, new_exc
+                # Return discounted price, not inflated new_exc
+                promo_discount = _Dec(str(session.price_snapshot.get('promo_discount', 0) or 0))
+                final_amount = max(_Dec('0'), new_exc - promo_discount)
+                return session, final_amount
             else:
                 # Beyond 3% — block payment, inform frontend
                 logger.warning(
@@ -154,6 +161,16 @@ class PriceGuard:
                     session.session_id, old_exc, new_exc,
                 )
                 raise   # re-raise original PriceChangedException
+
+        # ── Re-apply promo discount to new_total ─────────────────────────
+        from decimal import Decimal as _Dec
+        promo_discount = _Dec(str(session.price_snapshot.get('promo_discount', 0) or 0))
+        if promo_discount > 0:
+            new_total = max(_Dec('0'), new_total - promo_discount)
+            session.price_snapshot['total'] = str(new_total.quantize(_Dec('0.01')))
+            session.price_snapshot['final_total'] = str(new_total.quantize(_Dec('0.01')))
+            session.save(update_fields=['price_snapshot', 'updated_at'])
+            logger.info('PriceGuard: re-applied promo discount=%s new_total=%s', promo_discount, new_total)
 
         # ── Price within services.py 2% tolerance (no exception raised) ──
         if price_changed:

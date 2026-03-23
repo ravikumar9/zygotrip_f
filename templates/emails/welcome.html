@@ -1,109 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Welcome to ZygoTrip!</title>
 <style>
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f8; }
-.container { max-width: 600px; margin: 0 auto; background: #fff; }
-.header { background: linear-gradient(135deg, #2563eb, #7c3aed); padding: 40px 24px; text-align: center; }
-.header h1 { color: #fff; font-size: 28px; margin: 0; font-weight: 700; }
-.header p { color: rgba(255,255,255,.85); margin: 8px 0 0; font-size: 15px; }
-.body { padding: 32px 24px; }
-.greeting { font-size: 20px; color: #1a1a2e; margin: 0 0 16px; font-weight: 600; }
-.features { margin: 24px 0; }
-.feature { display: flex; align-items: flex-start; margin-bottom: 16px; }
-.feature-icon { font-size: 24px; margin-right: 12px; flex-shrink: 0; }
-.feature-text h3 { margin: 0; font-size: 15px; color: #1a1a2e; }
-.feature-text p { margin: 4px 0 0; font-size: 13px; color: #64748b; }
-.cta { display: block; text-align: center; background: #2563eb; color: #fff; padding: 14px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 24px 0; font-size: 15px; }
-.footer { text-align: center; padding: 20px 24px; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; }
+  * { margin:0;padding:0;box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f5f0ff;color:#1a1a2e; }
+  .wrap { max-width:600px;margin:24px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10); }
+  .header { background:linear-gradient(135deg,#EB2026 0%,#c71a1f 50%,#7c3aed 100%);padding:48px 32px 36px;text-align:center; }
+  .logo { display:inline-block;background:rgba(255,255,255,0.15);border-radius:12px;padding:8px 18px;margin-bottom:20px; }
+  .logo span { color:#fff;font-size:24px;font-weight:800; }
+  .header h1 { color:#fff;font-size:30px;font-weight:800;line-height:1.2; }
+  .header p { color:rgba(255,255,255,0.85);font-size:15px;margin-top:8px; }
+  .body { padding:36px 32px; }
+  .greeting { font-size:20px;font-weight:700;margin-bottom:12px; }
+  .intro { color:#475569;font-size:15px;line-height:1.7;margin-bottom:28px; }
+  .features-table { width:100%;border-collapse:collapse;margin-bottom:28px; }
+  .features-table td { width:50%;padding:6px; }
+  .feature { background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center; }
+  .feature-icon { font-size:28px;margin-bottom:8px; }
+  .feature-title { font-size:13px;font-weight:700;color:#1a1a2e; }
+  .feature-desc { font-size:12px;color:#94a3b8;margin-top:2px; }
+  .cta-btn { display:block;text-align:center;background:linear-gradient(135deg,#EB2026 0%,#c71a1f 100%);color:#fff;padding:18px 28px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;margin:0 0 24px;box-shadow:0 4px 14px rgba(235,32,38,0.30); }
+  .promo-box { background:linear-gradient(135deg,#fff5f5,#fffbeb);border:1px dashed #EB2026;border-radius:12px;padding:18px 20px;text-align:center;margin-bottom:20px; }
+  .promo-text { font-size:13px;color:#64748b;margin-bottom:8px; }
+  .promo-code { font-size:20px;font-weight:800;color:#EB2026;letter-spacing:2px; }
+  .footer { background:#1a1a2e;padding:24px 32px;text-align:center; }
+  .footer p { color:rgba(255,255,255,0.5);font-size:12px;line-height:1.7; }
+  .footer a { color:#EB2026;text-decoration:none; }
+  .footer-logo { color:#fff;font-size:18px;font-weight:800;display:block;margin-bottom:8px; }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="wrap">
   <div class="header">
-    <h1>Welcome to ZygoTrip!</h1>
-    <p>Your journey starts here</p>
+    <div class="logo"><span>ZygoTrip</span></div>
+    <h1>Welcome aboard, {{ user_name }}! &#x1F389;</h1>
+    <p>India's smartest travel companion is here for you</p>
   </div>
   <div class="body">
     <p class="greeting">Hi {{ user_name }},</p>
-    <p style="color:#475569; line-height:1.6;">
-      Thank you for joining ZygoTrip! We're excited to help you discover amazing travel experiences at the best prices.
-    </p>
-
-    <div class="features">
-      <div class="feature">
-        <span class="feature-icon">🏨</span>
-        <div class="feature-text">
-          <h3>Hotels & Stays</h3>
-          <p>Browse thousands of properties worldwide with verified reviews</p>
-        </div>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">🚌</span>
-        <div class="feature-text">
-          <h3>Bus Bookings</h3>
-          <p>Choose your seat and travel comfortably across cities</p>
-        </div>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">🚕</span>
-        <div class="feature-text">
-          <h3>Cab Services</h3>
-          <p>Airport transfers, point-to-point rides, daily rentals</p>
-        </div>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">📦</span>
-        <div class="feature-text">
-          <h3>Travel Packages</h3>
-          <p>Curated packages with hotels, transfers, and sightseeing</p>
-        </div>
-      </div>
+    <p class="intro">Your ZygoTrip account is ready! We are excited to help you discover amazing stays, smooth rides, and unforgettable experiences across India — all at the best prices.</p>
+    <table class="features-table">
+      <tr>
+        <td><div class="feature"><div class="feature-icon">&#x1F3E8;</div><div class="feature-title">Hotels</div><div class="feature-desc">Best rates, instant booking</div></div></td>
+        <td><div class="feature"><div class="feature-icon">&#x1F697;</div><div class="feature-title">Cabs</div><div class="feature-desc">Outstation &amp; local rides</div></div></td>
+      </tr>
+      <tr>
+        <td><div class="feature"><div class="feature-icon">&#x1F68C;</div><div class="feature-title">Buses</div><div class="feature-desc">Sleeper &amp; AC coaches</div></div></td>
+        <td><div class="feature"><div class="feature-icon">&#x1F3D5;&#xFE0F;</div><div class="feature-title">Packages</div><div class="feature-desc">Curated travel packages</div></div></td>
+      </tr>
+    </table>
+    <a href="https://goexplorer-dev.cloud" class="cta-btn">Start Exploring &rarr;</a>
+    <div class="promo-box">
+      <p class="promo-text">&#x1F381; Use this code on your first booking:</p>
+      <div class="promo-code">WELCOME10</div>
     </div>
-
-    <a href="https://zygotrip.com/" class="cta">Start Exploring</a>
-
-    <p style="color:#64748b; font-size:13px; line-height:1.6;">
-      Need help? Reach out at <a href="mailto:support@zygotrip.com" style="color:#2563eb;">support@zygotrip.com</a>
-    </p>
   </div>
-
-  <!-- Social Follow Footer — prominent for welcome email -->
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:linear-gradient(135deg,#1e1b4b,#312e81); border-top:2px solid #4f46e5;">
-    <tr>
-      <td style="padding:24px; text-align:center;">
-        <p style="color:#c7d2fe; font-size:13px; font-weight:700; margin:0 0 6px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; letter-spacing:0.5px; text-transform:uppercase;">
-          Join our community
-        </p>
-        <p style="color:#a5b4fc; font-size:12px; margin:0 0 16px;">Get daily travel inspiration, flash deals &amp; trip ideas</p>
-        <table align="center" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="padding:0 4px;">
-              <a href="https://www.instagram.com/zygotrip/" target="_blank" style="display:inline-block; background:#E1306C; color:#fff; font-size:12px; font-weight:700; padding:9px 16px; border-radius:24px; text-decoration:none;">📷 Instagram</a>
-            </td>
-            <td style="padding:0 4px;">
-              <a href="https://www.facebook.com/profile.php?id=61583679493958" target="_blank" style="display:inline-block; background:#1877F2; color:#fff; font-size:12px; font-weight:700; padding:9px 16px; border-radius:24px; text-decoration:none;">👥 Facebook</a>
-            </td>
-            <td style="padding:0 4px;">
-              <a href="https://youtube.com/@zygotrip" target="_blank" style="display:inline-block; background:#FF0000; color:#fff; font-size:12px; font-weight:700; padding:9px 16px; border-radius:24px; text-decoration:none;">▶ YouTube</a>
-            </td>
-            <td style="padding:0 4px;">
-              <a href="https://x.com/ZygoTrip" target="_blank" style="display:inline-block; background:#fff; color:#000; font-size:12px; font-weight:700; padding:9px 16px; border-radius:24px; text-decoration:none;">𝕏 Twitter</a>
-            </td>
-            <td style="padding:0 4px;">
-              <a href="https://www.linkedin.com/in/zygo-trip-1968a63b6/" target="_blank" style="display:inline-block; background:#0077B5; color:#fff; font-size:12px; font-weight:700; padding:9px 16px; border-radius:24px; text-decoration:none;">in LinkedIn</a>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-
   <div class="footer">
-    <p>&copy; ZygoTrip — Your journey, our commitment.</p>
+    <span class="footer-logo">ZygoTrip</span>
+    <p>India's smartest way to travel. Hotels &middot; Cabs &middot; Buses &middot; Packages</p>
+    <p style="margin-top:8px"><a href="https://goexplorer-dev.cloud">goexplorer-dev.cloud</a> &middot; <a href="mailto:support@zygotrip.com">support@zygotrip.com</a></p>
   </div>
 </div>
 </body>

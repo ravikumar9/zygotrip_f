@@ -96,7 +96,7 @@ export default function WishlistButton({
           text,
           saved
             ? 'bg-red-50 border-red-300 text-red-600 hover:bg-red-100'
-            : 'bg-white/90 border-neutral-200 text-neutral-600 hover:border-red-300 hover:text-red-500',
+            : 'bg-white/80/90 border-neutral-200 text-neutral-600 hover:border-red-300 hover:text-red-500',
           loading && 'opacity-60 cursor-not-allowed',
           className,
         )}
@@ -121,7 +121,7 @@ export default function WishlistButton({
       className={clsx(
         'flex items-center justify-center rounded-full shadow-md transition-all',
         size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-11 h-11' : 'w-9 h-9',
-        saved ? 'bg-red-500 text-white' : 'bg-white/90 text-neutral-500 hover:text-red-500',
+        saved ? 'bg-red-500 text-white' : 'bg-white/80/90 text-neutral-500 hover:text-red-500',
         loading && 'opacity-60 cursor-not-allowed',
         className,
       )}

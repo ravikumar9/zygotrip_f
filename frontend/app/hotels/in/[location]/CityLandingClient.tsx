@@ -53,7 +53,7 @@ export default function CityLandingClient({ location, cityName }: CityLandingCli
                 'text-xs px-3 py-1.5 rounded-full border font-semibold transition-all',
                 sort === opt.value
                   ? 'bg-primary-600 text-white border-primary-600'
-                  : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400'
+                  : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400'
               )}
             >
               {opt.label}
@@ -71,7 +71,7 @@ export default function CityLandingClient({ location, cityName }: CityLandingCli
       {isLoading && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm border flex h-[160px]">
+            <div key={i} className="bg-white/80 rounded-2xl overflow-hidden shadow-sm border flex h-[160px]">
               <div className="w-[200px] shrink-0 bg-neutral-100 animate-pulse" />
               <div className="flex-1 p-4 space-y-2">
                 <div className="h-4 bg-neutral-100 rounded animate-pulse w-2/3" />
@@ -85,7 +85,7 @@ export default function CityLandingClient({ location, cityName }: CityLandingCli
 
       {/* Error */}
       {isError && (
-        <div className="text-center py-16 bg-white rounded-2xl shadow-card">
+        <div className="text-center py-16 bg-white/80 rounded-2xl shadow-card">
           <p className="text-4xl mb-4">⚠️</p>
           <h2 className="text-lg font-semibold text-neutral-900 mb-2">Failed to load hotels</h2>
           <button onClick={() => window.location.reload()} className="btn-primary mt-4">
@@ -98,7 +98,7 @@ export default function CityLandingClient({ location, cityName }: CityLandingCli
       {!isLoading && !isError && data && (
         <>
           {data.results.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl shadow-card">
+            <div className="text-center py-16 bg-white/80 rounded-2xl shadow-card">
               <p className="text-5xl mb-4">🔍</p>
               <h2 className="text-xl font-semibold text-neutral-900 mb-2">
                 No hotels found in {cityName}

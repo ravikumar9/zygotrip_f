@@ -86,7 +86,7 @@ export default function OffersSection() {
         {offers.map((offer) => (
           <div
             key={offer.code}
-            className="bg-white rounded-2xl border border-neutral-100 shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all overflow-hidden"
+            className="bg-white/80 rounded-2xl border border-neutral-100 shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all overflow-hidden"
           >
             {/* Gradient banner */}
             <div

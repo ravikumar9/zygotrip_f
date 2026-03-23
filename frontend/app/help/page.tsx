@@ -100,7 +100,7 @@ const FAQ_CATEGORIES = [
 
 export default function HelpPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen page-listing-bg">
       {/* Header */}
       <section className="text-white py-16 px-4 text-center" style={{ background: 'linear-gradient(135deg,#1d4ed8,#f97316)' }}>
         <h1 className="text-3xl md:text-4xl font-black font-heading mb-3">Help Centre</h1>
@@ -111,7 +111,7 @@ export default function HelpPage() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a
             href="mailto:support@zygotrip.com"
-            className="bg-white text-primary-700 font-semibold px-6 py-3 rounded-xl hover:bg-neutral-50 transition-colors text-sm inline-flex items-center gap-2"
+            className="bg-white/80 text-primary-700 font-semibold px-6 py-3 rounded-xl hover:bg-page transition-colors text-sm inline-flex items-center gap-2"
           >
             ✉️ Email Support
           </a>
@@ -119,7 +119,7 @@ export default function HelpPage() {
             href="https://wa.me/91XXXXXXXXXX"
             target="_blank"
             rel="noopener noreferrer"
-            className="border border-white/50 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm inline-flex items-center gap-2"
+            className="border border-white/50 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/80/10 transition-colors text-sm inline-flex items-center gap-2"
           >
             💬 WhatsApp Chat
           </a>
@@ -127,7 +127,7 @@ export default function HelpPage() {
       </section>
 
       {/* Quick links */}
-      <section className="bg-neutral-50 border-b border-neutral-100 py-6 px-4">
+      <section className="bg-page border-b border-neutral-100 py-6 px-4">
         <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-sm">
           {[
             { label: 'My Bookings', href: '/bookings', icon: '📋' },
@@ -138,7 +138,7 @@ export default function HelpPage() {
             <Link
               key={link.label}
               href={link.href}
-              className="bg-white border border-neutral-200 rounded-xl px-4 py-3 hover:shadow-md hover:border-primary-300 transition-all font-medium text-neutral-700"
+              className="bg-white/80 border border-neutral-200 rounded-xl px-4 py-3 hover:shadow-md hover:border-primary-300 transition-all font-medium text-neutral-700"
             >
               <span className="block text-xl mb-1">{link.icon}</span>
               {link.label}
@@ -162,9 +162,9 @@ export default function HelpPage() {
               {cat.faqs.map((faq, i) => (
                 <details
                   key={i}
-                  className="bg-white border border-neutral-200 rounded-xl overflow-hidden group"
+                  className="bg-white/80 border border-neutral-200 rounded-xl overflow-hidden group"
                 >
-                  <summary className="px-5 py-4 text-sm font-semibold text-neutral-800 cursor-pointer hover:bg-neutral-50 transition-colors list-none flex items-center justify-between">
+                  <summary className="px-5 py-4 text-sm font-semibold text-neutral-800 cursor-pointer hover:bg-page transition-colors list-none flex items-center justify-between">
                     {faq.q}
                     <span className="text-neutral-400 ml-4 shrink-0 group-open:rotate-180 transition-transform">
                       ▼
@@ -181,7 +181,7 @@ export default function HelpPage() {
       </section>
 
       {/* Still need help */}
-      <section className="bg-neutral-50 border-t border-neutral-100 py-14 px-4 text-center">
+      <section className="bg-page border-t border-neutral-100 py-14 px-4 text-center">
         <h2 className="text-xl font-bold text-neutral-900 mb-2">Still need help?</h2>
         <p className="text-neutral-500 text-sm mb-6">
           Our support team is available 9 AM – 9 PM IST, 7 days a week.
@@ -211,7 +211,7 @@ export default function HelpPage() {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-neutral-600 hover:border-primary-300 hover:text-primary-700 transition-colors"
+                className="rounded-full border border-neutral-200 bg-white/80 px-4 py-2 text-neutral-600 hover:border-primary-300 hover:text-primary-700 transition-colors"
               >
                 {link.label}
               </a>

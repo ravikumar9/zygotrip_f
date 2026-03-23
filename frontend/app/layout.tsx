@@ -1,13 +1,20 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import './globals.css';
 import 'leaflet/dist/leaflet.css';
 import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import QueryProvider from './providers';
 import AnalyticsProvider from '@/components/AnalyticsProvider';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import Footer from '@/components/layout/Footer';
 import AbandonmentBanner from '@/components/booking/AbandonmentBanner';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://zygotrip.com'),
@@ -38,10 +45,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AnalyticsProvider>
               <ErrorBoundary>
                 <Header />
-                <main className="pt-14 min-h-screen bg-page">{children}</main>
+                <main className="pt-14 bg-page">{children}</main>
                 <AbandonmentBanner />
                 <Footer />
-              </ErrorBoundary>
+</ErrorBoundary>
             </AnalyticsProvider>
           </Suspense>
         </QueryProvider>

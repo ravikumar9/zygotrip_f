@@ -47,7 +47,7 @@ export default function RecentlyViewed() {
             <Link
               key={hotel.id}
               href={`/hotels/${hotel.slug}`}
-              className="flex-shrink-0 w-48 bg-white rounded-xl border border-neutral-100 overflow-hidden hover:shadow-md transition-shadow group"
+              className="flex-shrink-0 w-48 bg-white/80 rounded-xl border border-neutral-100 overflow-hidden hover:shadow-md transition-shadow group"
             >
               <div className="relative h-28 bg-neutral-100">
                 {hotel.image ? (

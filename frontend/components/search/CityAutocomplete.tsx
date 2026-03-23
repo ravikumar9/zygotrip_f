@@ -166,7 +166,7 @@ export default function CityAutocomplete({
       {/* Suggestions dropdown */}
       {isOpen && suggestions.length > 0 && (
         <ul
-          className="absolute z-50 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-60 overflow-y-auto"
+          className="absolute z-[9999] left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl max-h-72 overflow-y-auto backdrop-blur-none"
           role="listbox"
         >
           {suggestions.map((item, idx) => (
@@ -177,7 +177,7 @@ export default function CityAutocomplete({
               className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors text-sm ${
                 idx === activeIndex
                   ? 'bg-green-50 text-green-700'
-                  : 'hover:bg-neutral-50 text-neutral-700'
+                  : 'hover:bg-page text-neutral-700'
               }`}
               onMouseEnter={() => setActiveIndex(idx)}
               onMouseDown={(e) => {

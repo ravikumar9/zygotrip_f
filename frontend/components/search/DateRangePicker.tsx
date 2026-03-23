@@ -124,7 +124,7 @@ function DateField({
   return (
     <div>
       <label className="text-xs font-semibold text-neutral-500 block mb-1">{label}</label>
-      <div className="flex items-center gap-1 bg-neutral-50 rounded-xl px-2.5 py-2.5 border border-neutral-200 focus-within:border-primary-400">
+      <div className="flex items-center gap-1 bg-page rounded-xl px-2.5 py-2.5 border border-neutral-200 focus-within:border-primary-400">
         <Calendar size={12} className="text-neutral-400 shrink-0" />
         <input
           type="date"

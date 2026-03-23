@@ -98,7 +98,7 @@ function Toggle({
         style={{ width: 40, height: 22 }}
       >
         <span
-          className="absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform"
+          className="absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white/80 rounded-full shadow transition-transform"
           style={{
             width: 18,
             height: 18,
@@ -165,7 +165,7 @@ export default function FilterBottomSheet({
       />
 
       {/* Sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden bg-white rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col animate-slide-up">
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden bg-white/80 rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col animate-slide-up">
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 bg-neutral-200 rounded-full" />
@@ -215,7 +215,7 @@ export default function FilterBottomSheet({
                       'text-xs font-semibold px-3 py-1.5 rounded-full border transition-all',
                       active
                         ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400',
+                        : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400',
                     )}
                   >
                     {chip.label}
@@ -276,7 +276,7 @@ export default function FilterBottomSheet({
                       'flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full border transition-all',
                       active
                         ? 'bg-amber-400 text-white border-amber-400'
-                        : 'bg-white text-neutral-600 border-neutral-200 hover:border-amber-400',
+                        : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-amber-400',
                     )}
                   >
                     {'★'.repeat(star)}
@@ -303,7 +303,7 @@ export default function FilterBottomSheet({
                     'text-xs font-bold px-3 py-1.5 rounded-full border transition-all',
                     local.guestRating === value
                       ? 'bg-green-600 text-white border-green-600'
-                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-green-400',
+                      : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-green-400',
                   )}
                 >
                   {label}
@@ -365,7 +365,7 @@ export default function FilterBottomSheet({
                       'text-xs font-semibold px-3 py-1.5 rounded-full border transition-all',
                       active
                         ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400',
+                        : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400',
                     )}
                   >
                     {t}
@@ -393,7 +393,7 @@ export default function FilterBottomSheet({
         </div>
 
         {/* Sticky footer */}
-        <div className="shrink-0 px-5 py-4 border-t border-neutral-100 bg-white">
+        <div className="shrink-0 px-5 py-4 border-t border-neutral-100 bg-white/80">
           <button
             onClick={() => {
               onApply(local);

@@ -44,7 +44,7 @@ export default function WalletApply({
   if (!isAuthenticated) {
     return (
       <div className={clsx(
-        'rounded-xl border border-neutral-200 bg-neutral-50 p-4',
+        'rounded-xl border border-neutral-200 bg-page p-4',
         className,
       )}>
         <div className="flex items-center gap-3">
@@ -72,7 +72,7 @@ export default function WalletApply({
   return (
     <div className={clsx(
       'rounded-xl border transition-all',
-      isApplied ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-neutral-200',
+      isApplied ? 'bg-emerald-50 border-emerald-300' : 'bg-white/80 border-neutral-200',
       className,
     )}>
       {/* Header */}

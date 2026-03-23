@@ -17,7 +17,7 @@ function ActivityCard({ activity, onClick }: { activity: Activity; onClick: () =
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group"
+      className="bg-white/80 rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group"
     >
       <div className="relative h-48 bg-neutral-100 overflow-hidden">
         {activity.primary_image ? (
@@ -25,7 +25,7 @@ function ActivityCard({ activity, onClick }: { activity: Activity; onClick: () =
         ) : (
           <div className="w-full h-full flex items-center justify-center text-5xl">🎯</div>
         )}
-        <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-neutral-700">
+        <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/80/90 backdrop-blur-sm text-neutral-700">
           {activity.category}
         </span>
         {activity.is_free_cancellation && (
@@ -47,7 +47,7 @@ function ActivityCard({ activity, onClick }: { activity: Activity; onClick: () =
         {activity.highlights && activity.highlights.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap mb-3">
             {activity.highlights.slice(0, 3).map((h, i) => (
-              <span key={i} className="text-[10px] bg-neutral-50 text-neutral-600 px-2 py-0.5 rounded-full border border-neutral-100">
+              <span key={i} className="text-[10px] bg-page text-neutral-600 px-2 py-0.5 rounded-full border border-neutral-100">
                 {h}
               </span>
             ))}
@@ -116,7 +116,7 @@ export default function ActivitySearchClient() {
       <div className="bg-gradient-to-r from-[#1a1a2e] to-[#0f3460] py-6">
         <div className="max-w-5xl mx-auto px-4">
           <h1 className="text-white text-xl font-black font-heading mb-4">Things to Do</h1>
-          <div className="bg-white rounded-2xl p-4 shadow-lg">
+          <div className="bg-white/80 rounded-2xl p-4 shadow-lg">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-3">
               <div>
                 <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">City</label>
@@ -158,7 +158,7 @@ export default function ActivitySearchClient() {
               className={`text-xs px-3 py-2 rounded-full border font-semibold transition-all shrink-0 ${
                 (cat === 'All' && !category) || category === cat
                   ? 'bg-primary-600 text-white border-primary-600'
-                  : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-300'
+                  : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-300'
               }`}
             >
               {cat}
@@ -171,7 +171,7 @@ export default function ActivitySearchClient() {
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-neutral-500">{data.total || data.results?.length || 0} activities found</p>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-              className="text-xs bg-white border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
+              className="text-xs bg-white/80 border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
               <option value="popular">Most Popular</option>
               <option value="price_asc">Price: Low → High</option>
               <option value="price_desc">Price: High → Low</option>

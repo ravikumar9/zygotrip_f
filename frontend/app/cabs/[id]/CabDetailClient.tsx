@@ -153,7 +153,7 @@ export default function CabDetailClient() {
   return (
     <div className="min-h-screen page-listing-bg">
       {/* Top bar */}
-      <div className="bg-white border-b sticky top-0 z-40">
+      <div className="bg-white/80 border-b sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-4">
           <button onClick={() => router.back()} className="text-neutral-500 hover:text-neutral-800">
             <ArrowLeft size={20} />
@@ -174,7 +174,7 @@ export default function CabDetailClient() {
           {/* Left — Vehicle details + map placeholder */}
           <div className="space-y-5">
             {/* Vehicle card */}
-            <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+            <div className="bg-white/80 rounded-2xl shadow-card overflow-hidden">
               <div className="h-56 bg-neutral-100 flex items-center justify-center">
                 {cab.image_url ? (
                   <img src={cab.image_url} alt={cab.name} className="w-full h-full object-cover" />
@@ -185,19 +185,19 @@ export default function CabDetailClient() {
               <div className="p-5">
                 <h2 className="text-xl font-black text-neutral-900 mb-2">{cab.name}</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-neutral-50 rounded-xl p-3 text-center border border-neutral-100">
+                  <div className="bg-page rounded-xl p-3 text-center border border-neutral-100">
                     <Users size={16} className="mx-auto text-primary-500 mb-1" />
                     <p className="text-xs font-semibold text-neutral-700">{cab.seats} Seats</p>
                   </div>
-                  <div className="bg-neutral-50 rounded-xl p-3 text-center border border-neutral-100">
+                  <div className="bg-page rounded-xl p-3 text-center border border-neutral-100">
                     <Car size={16} className="mx-auto text-primary-500 mb-1" />
                     <p className="text-xs font-semibold text-neutral-700">{cab.category_label || cab.category}</p>
                   </div>
-                  <div className="bg-neutral-50 rounded-xl p-3 text-center border border-neutral-100">
+                  <div className="bg-page rounded-xl p-3 text-center border border-neutral-100">
                     <Shield size={16} className="mx-auto text-green-500 mb-1" />
                     <p className="text-xs font-semibold text-neutral-700">Verified</p>
                   </div>
-                  <div className="bg-neutral-50 rounded-xl p-3 text-center border border-neutral-100">
+                  <div className="bg-page rounded-xl p-3 text-center border border-neutral-100">
                     <Clock size={16} className="mx-auto text-amber-500 mb-1" />
                     <p className="text-xs font-semibold text-neutral-700">24/7</p>
                   </div>
@@ -207,7 +207,7 @@ export default function CabDetailClient() {
 
             {/* Live tracking panel */}
             {tracking && (
-              <div className="bg-white rounded-2xl shadow-card p-5">
+              <div className="bg-white/80 rounded-2xl shadow-card p-5">
                 <h3 className="font-bold text-neutral-800 text-sm mb-4">Live Tracking</h3>
 
                 {/* Status progress */}
@@ -230,7 +230,7 @@ export default function CabDetailClient() {
                 {/* Status message */}
                 <div className={`flex items-start gap-3 rounded-xl p-4 mb-4 ${
                   tracking.status === 'searching' ? 'bg-amber-50 border border-amber-200' :
-                  tracking.status === 'completed' ? 'bg-neutral-50 border border-neutral-200' :
+                  tracking.status === 'completed' ? 'bg-page border border-neutral-200' :
                   'bg-green-50 border border-green-200'
                 }`}>
                   {tracking.status === 'searching' ? (
@@ -262,7 +262,7 @@ export default function CabDetailClient() {
 
                 {/* Driver info */}
                 {tracking.driver && (
-                  <div className="mt-4 bg-neutral-50 rounded-xl p-4 border border-neutral-200">
+                  <div className="mt-4 bg-page rounded-xl p-4 border border-neutral-200">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
@@ -281,7 +281,7 @@ export default function CabDetailClient() {
                         <Phone size={16} />
                       </a>
                     </div>
-                    <div className="flex items-center justify-between text-xs bg-white rounded-lg px-3 py-2 border border-neutral-100">
+                    <div className="flex items-center justify-between text-xs bg-white/80 rounded-lg px-3 py-2 border border-neutral-100">
                       <span className="text-neutral-500">Vehicle: <span className="font-semibold text-neutral-700">{tracking.driver.vehicle_number}</span></span>
                       <span className="text-neutral-500">OTP: <span className="font-bold text-primary-600 text-sm">{tracking.driver.otp}</span></span>
                     </div>
@@ -291,7 +291,7 @@ export default function CabDetailClient() {
             )}
 
             {/* Features */}
-            <div className="bg-white rounded-2xl shadow-card p-5">
+            <div className="bg-white/80 rounded-2xl shadow-card p-5">
               <h3 className="font-bold text-neutral-800 text-sm mb-3">Inclusions &amp; Policies</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
@@ -299,7 +299,7 @@ export default function CabDetailClient() {
                   'Toll/parking extra', 'GST @5% included',
                   '24/7 customer support', 'Clean & sanitized vehicles',
                 ].map((item) => (
-                  <div key={item} className="flex items-center gap-2 text-xs text-neutral-600 bg-neutral-50 rounded-lg px-3 py-2.5 border border-neutral-100">
+                  <div key={item} className="flex items-center gap-2 text-xs text-neutral-600 bg-page rounded-lg px-3 py-2.5 border border-neutral-100">
                     <CheckCircle size={12} className="text-green-500 shrink-0" />
                     {item}
                   </div>
@@ -316,7 +316,7 @@ export default function CabDetailClient() {
               <div className="space-y-3 mb-4">
                 <div>
                   <label className="text-xs font-semibold text-neutral-500 block mb-1">Pickup Location *</label>
-                  <div className="flex items-center gap-2 bg-neutral-50 rounded-xl px-3 py-2.5 border border-neutral-200 focus-within:border-primary-400">
+                  <div className="flex items-center gap-2 bg-page rounded-xl px-3 py-2.5 border border-neutral-200 focus-within:border-primary-400">
                     <MapPin size={14} className="text-green-500 shrink-0" />
                     <input
                       type="text"
@@ -330,7 +330,7 @@ export default function CabDetailClient() {
 
                 <div>
                   <label className="text-xs font-semibold text-neutral-500 block mb-1">Drop-off Location *</label>
-                  <div className="flex items-center gap-2 bg-neutral-50 rounded-xl px-3 py-2.5 border border-neutral-200 focus-within:border-primary-400">
+                  <div className="flex items-center gap-2 bg-page rounded-xl px-3 py-2.5 border border-neutral-200 focus-within:border-primary-400">
                     <MapPin size={14} className="text-red-500 shrink-0" />
                     <input
                       type="text"
@@ -349,7 +349,7 @@ export default function CabDetailClient() {
                       type="date"
                       value={pickupDate}
                       onChange={(e) => setPickupDate(e.target.value)}
-                      className="w-full bg-neutral-50 rounded-xl px-3 py-2.5 border border-neutral-200 text-sm text-neutral-700 outline-none focus:border-primary-400"
+                      className="w-full bg-page rounded-xl px-3 py-2.5 border border-neutral-200 text-sm text-neutral-700 outline-none focus:border-primary-400"
                     />
                   </div>
                   <div>
@@ -358,7 +358,7 @@ export default function CabDetailClient() {
                       type="time"
                       value={pickupTime}
                       onChange={(e) => setPickupTime(e.target.value)}
-                      className="w-full bg-neutral-50 rounded-xl px-3 py-2.5 border border-neutral-200 text-sm text-neutral-700 outline-none focus:border-primary-400"
+                      className="w-full bg-page rounded-xl px-3 py-2.5 border border-neutral-200 text-sm text-neutral-700 outline-none focus:border-primary-400"
                     />
                   </div>
                 </div>
@@ -372,14 +372,14 @@ export default function CabDetailClient() {
                     value={estimatedKm || ''}
                     onChange={(e) => setEstimatedKm(Number(e.target.value))}
                     placeholder="Enter approx. distance"
-                    className="w-full bg-neutral-50 rounded-xl px-3 py-2.5 border border-neutral-200 text-sm text-neutral-700 outline-none focus:border-primary-400"
+                    className="w-full bg-page rounded-xl px-3 py-2.5 border border-neutral-200 text-sm text-neutral-700 outline-none focus:border-primary-400"
                   />
                 </div>
               </div>
 
               {/* Fare estimate */}
               {estimatedFare > 0 && (
-                <div className="bg-neutral-50 rounded-xl p-3.5 mb-4 border border-neutral-200">
+                <div className="bg-page rounded-xl p-3.5 mb-4 border border-neutral-200">
                   <div className="flex justify-between text-xs text-neutral-500 mb-1">
                     <span>{formatPrice(cab.price_per_km)}/km × {estimatedKm} km</span>
                     <span>{formatPrice(cab.price_per_km * estimatedKm)}</span>

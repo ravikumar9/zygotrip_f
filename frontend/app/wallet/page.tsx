@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Wallet, ArrowUpRight, ArrowDownLeft, Plus, TrendingUp, Clock, Shield } from 'lucide-react';
-import { useWalletBalance, useWalletTransactions, useTopUp } from '@/hooks/useWallet';
+import { useQueryClient } from '@tanstack/react-query';
+import { useWalletBalance, useWalletTransactions } from '@/hooks/useWallet';
+import { initiateWalletTopup, confirmWalletTopup } from '@/services/wallet';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,7 +27,8 @@ export default function WalletPage() {
 
   const { data: wallet, isLoading, error } = useWalletBalance();
   const { data: txData, fetchNextPage, hasNextPage } = useWalletTransactions();
-  const topUp = useTopUp();
+  const queryClient = useQueryClient();
+  const [topupLoading, setTopupLoading] = useState(false);
 
   // Redirect on API 401
   useEffect(() => {
@@ -48,7 +51,48 @@ export default function WalletPage() {
       return;
     }
     try {
-      await topUp.mutateAsync({ amount: amt });
+      setTopupLoading(true);
+      try {
+        // Step 1: Create Cashfree order
+        const orderData = await initiateWalletTopup(amt);
+        if (orderData.status === 'payment_required') {
+          // Load Cashfree SDK and open payment
+          await new Promise<void>((resolve, reject) => {
+            if ((window as any).Cashfree) { resolve(); return; }
+            const script = document.createElement('script');
+            script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Cashfree SDK'));
+            document.head.appendChild(script);
+          });
+          const cashfree = (window as any).Cashfree({ mode: orderData.cashfree_env === 'production' ? 'production' : 'sandbox' });
+          cashfree.checkout({
+            paymentSessionId: orderData.payment_session_id,
+            redirectTarget: '_modal',
+          }).then(async (result: any) => {
+            if (result.error) {
+              toast.error('Payment failed: ' + result.error.message);
+            } else if (result.paymentDetails) {
+              // Step 2: Verify and credit wallet
+              try {
+                const confirmed = await confirmWalletTopup(amt, orderData.order_id);
+                toast.success(confirmed.message || 'Wallet topped up successfully!');
+                setShowTopUp(false);
+                setAmount('');
+                queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
+                queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
+              } catch (e: any) {
+                toast.error(e.message || 'Verification failed. Contact support.');
+              }
+            }
+          });
+          return; // Don't run finally yet - async flow
+        }
+      } catch (err: any) {
+        toast.error(err.message || 'Top-up failed');
+      } finally {
+        setTopupLoading(false);
+      }
       toast.success(`${formatPrice(amt)} added to your wallet!`);
       setAmount('');
       setShowTopUp(false);
@@ -78,19 +122,19 @@ export default function WalletPage() {
                   {formatPrice(parseFloat(wallet?.balance || '0'))}
                 </p>
               </div>
-              <div className="bg-white/20 p-3 rounded-xl">
+              <div className="bg-white/80/20 p-3 rounded-xl">
                 <Wallet className="w-6 h-6" />
               </div>
             </div>
             {wallet?.locked_balance && parseFloat(wallet.locked_balance) > 0 && (
-              <div className="bg-white/10 rounded-xl px-3 py-2 text-sm">
+              <div className="bg-white/80/10 rounded-xl px-3 py-2 text-sm">
                 <span className="text-primary-200">Locked for booking: </span>
                 <span className="font-semibold">{formatPrice(parseFloat(wallet.locked_balance))}</span>
               </div>
             )}
             <button
               onClick={() => setShowTopUp(true)}
-              className="mt-4 bg-white text-primary-600 font-semibold px-5 py-2 rounded-xl text-sm hover:bg-primary-50 transition-colors flex items-center gap-2"
+              className="mt-4 bg-white/80 text-primary-600 font-semibold px-5 py-2 rounded-xl text-sm hover:bg-primary-50 transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Add Money
@@ -99,7 +143,7 @@ export default function WalletPage() {
 
           {/* Stats */}
           <div className="space-y-3">
-            <div className="bg-white rounded-xl p-4 shadow-card">
+            <div className="bg-white/80 rounded-xl p-4 shadow-card">
               <div className="flex items-center gap-2 text-green-600 mb-1">
                 <TrendingUp className="w-4 h-4" />
                 <span className="text-xs font-medium uppercase tracking-wide">Total Added</span>
@@ -108,7 +152,7 @@ export default function WalletPage() {
                 {formatPrice(parseFloat(wallet?.total_balance || '0'))}
               </p>
             </div>
-            <div className="bg-white rounded-xl p-4 shadow-card">
+            <div className="bg-white/80 rounded-xl p-4 shadow-card">
               <div className="flex items-center gap-2 text-blue-600 mb-1">
                 <Shield className="w-4 h-4" />
                 <span className="text-xs font-medium uppercase tracking-wide">Secure &amp; Instant</span>
@@ -121,7 +165,7 @@ export default function WalletPage() {
         {/* Top-up modal */}
         {showTopUp && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            <div className="bg-white/80 rounded-2xl p-6 w-full max-w-sm">
               <h3 className="text-lg font-bold text-neutral-900 mb-4">Add Money to Wallet</h3>
               <form onSubmit={handleTopUp} className="space-y-4">
                 <div>
@@ -201,10 +245,10 @@ export default function WalletPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={topUp.isPending}
+                    disabled={topupLoading}
                     className="flex-1 btn-primary disabled:opacity-50"
                   >
-                    {topUp.isPending ? 'Processing...' : 'Add Money'}
+                    {topupLoading ? 'Processing...' : 'Add Money'}
                   </button>
                 </div>
               </form>
@@ -213,7 +257,7 @@ export default function WalletPage() {
         )}
 
         {/* Transaction History */}
-        <div className="bg-white rounded-2xl shadow-card">
+        <div className="bg-white/80 rounded-2xl shadow-card">
           <div className="p-5 border-b border-neutral-100">
             <h2 className="text-lg font-semibold text-neutral-900">Transaction History</h2>
           </div>
@@ -227,7 +271,7 @@ export default function WalletPage() {
           ) : (
             <div className="divide-y divide-neutral-50">
               {transactions.map(tx => (
-                <div key={tx.id} className="flex items-center gap-4 p-4 hover:bg-neutral-50 transition-colors">
+                <div key={tx.id} className="flex items-center gap-4 p-4 hover:bg-page transition-colors">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
                     tx.transaction_type === 'credit'
                       ? 'bg-green-100 text-green-600'
@@ -239,7 +283,8 @@ export default function WalletPage() {
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-neutral-800 truncate">{tx.description || 'Transaction'}</p>
+                    <p className="font-medium text-neutral-800 truncate">{tx.description || tx.note || 'Transaction'}</p>
+                    {tx.reference && <p className="text-xs text-neutral-400 truncate">Ref: {tx.reference}</p>}
                     <div className="flex items-center gap-2 text-xs text-neutral-400">
                       <Clock className="w-3 h-3" />
                       <span>{new Date(tx.created_at).toLocaleString('en-IN', {

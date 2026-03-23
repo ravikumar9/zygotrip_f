@@ -60,7 +60,7 @@ const TEAM = [
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen page-listing-bg">
 
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section
@@ -83,7 +83,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── Stats bar ────────────────────────────────────────── */}
-      <section className="bg-neutral-50 py-12 px-4 border-b border-neutral-100">
+      <section className="bg-page py-12 px-4 border-b border-neutral-100">
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {STATS.map((s) => (
             <div key={s.label}>
@@ -122,7 +122,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── Values ───────────────────────────────────────────── */}
-      <section className="bg-neutral-50 py-16 px-4">
+      <section className="bg-page py-16 px-4">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-bold text-neutral-900 mb-10 text-center">
             What We Stand For
@@ -131,7 +131,7 @@ export default function AboutPage() {
             {VALUES.map((v) => (
               <div
                 key={v.title}
-                className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6 hover:shadow-md transition-shadow"
+                className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm p-6 hover:shadow-md transition-shadow"
               >
                 <span className="text-3xl">{v.icon}</span>
                 <h3 className="text-base font-bold text-neutral-900 mt-3 mb-2">{v.title}</h3>
@@ -181,7 +181,7 @@ export default function AboutPage() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/hotels"
-            className="bg-white text-blue-700 font-semibold px-7 py-3 rounded-xl hover:bg-neutral-50 transition-colors text-sm"
+            className="bg-white/80 text-blue-700 font-semibold px-7 py-3 rounded-xl hover:bg-page transition-colors text-sm"
           >
             Search Hotels
           </Link>

@@ -1,6 +1,6 @@
 'use client';
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getWalletBalance, getWalletTransactions, topUpWallet, getOwnerWallet } from '@/services/wallet';
+import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { getWalletBalance, getWalletTransactions, getOwnerWallet } from '@/services/wallet';
 
 export function useWalletBalance() {
   return useQuery({
@@ -24,17 +24,7 @@ export function useWalletTransactions() {
   });
 }
 
-export function useTopUp() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ amount, note }: { amount: number; note?: string }) =>
-      topUpWallet(amount, note),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
-    },
-  });
-}
+
 
 export function useOwnerWallet() {
   return useQuery({

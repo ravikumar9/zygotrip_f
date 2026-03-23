@@ -19,10 +19,10 @@ function TimeSlotCard({ slot, selected, onSelect }: { slot: ActivityTimeSlot; se
       disabled={slot.remaining_seats <= 0}
       className={`text-left border rounded-xl p-3 transition-all ${
         slot.remaining_seats <= 0
-          ? 'opacity-50 cursor-not-allowed border-neutral-200 bg-neutral-50'
+          ? 'opacity-50 cursor-not-allowed border-neutral-200 bg-page'
           : selected
           ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-200'
-          : 'border-neutral-200 hover:border-primary-300 bg-white'
+          : 'border-neutral-200 hover:border-primary-300 bg-white/80'
       }`}
     >
       <p className="text-sm font-bold text-neutral-800">{slot.start_time}</p>
@@ -75,9 +75,9 @@ export default function ActivityDetailClient({ slug }: { slug: string }) {
   const toggleSection = (s: string) => setExpandedSection(expandedSection === s ? null : s);
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen page-listing-bg">
       {/* Top bar */}
-      <div className="sticky top-0 z-30 bg-white border-b border-neutral-100 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white/80 border-b border-neutral-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-neutral-600">
             <ArrowLeft size={16} /> Back
@@ -98,7 +98,7 @@ export default function ActivityDetailClient({ slug }: { slug: string }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6">
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20 text-white mb-2 inline-block">
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/80/20 text-white mb-2 inline-block">
             {activity.category}
           </span>
           <h1 className="text-white text-xl md:text-2xl font-black">{activity.name}</h1>
@@ -130,7 +130,7 @@ export default function ActivityDetailClient({ slug }: { slug: string }) {
           </div>
 
           {/* Overview accordion */}
-          <div className="bg-white rounded-xl border border-neutral-100">
+          <div className="bg-white/80 rounded-xl border border-neutral-100">
             <button onClick={() => toggleSection('overview')} className="w-full flex items-center justify-between p-4">
               <h2 className="text-sm font-bold text-neutral-900">Overview</h2>
               {expandedSection === 'overview' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -156,7 +156,7 @@ export default function ActivityDetailClient({ slug }: { slug: string }) {
 
           {/* What's Included */}
           {activity.inclusions && activity.inclusions.length > 0 && (
-            <div className="bg-white rounded-xl border border-neutral-100">
+            <div className="bg-white/80 rounded-xl border border-neutral-100">
               <button onClick={() => toggleSection('included')} className="w-full flex items-center justify-between p-4">
                 <h2 className="text-sm font-bold text-neutral-900">What&apos;s Included</h2>
                 {expandedSection === 'included' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -174,7 +174,7 @@ export default function ActivityDetailClient({ slug }: { slug: string }) {
           )}
 
           {/* Time slots */}
-          <div className="bg-white rounded-xl border border-neutral-100 p-4">
+          <div className="bg-white/80 rounded-xl border border-neutral-100 p-4">
             <h2 className="text-sm font-bold text-neutral-900 mb-3">Select Time</h2>
             <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
               {Array.from({ length: 7 }).map((_, i) => {
@@ -187,7 +187,7 @@ export default function ActivityDetailClient({ slug }: { slug: string }) {
                     className={`text-center px-3 py-2 rounded-lg border text-xs font-semibold shrink-0 transition-all ${
                       selectedDate === val
                         ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-300'
+                        : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-300'
                     }`}
                   >
                     <div className="text-[10px]">{format(d, 'EEE')}</div>
@@ -212,7 +212,7 @@ export default function ActivityDetailClient({ slug }: { slug: string }) {
 
         {/* Booking sidebar */}
         <div className="lg:sticky lg:top-20 h-fit space-y-4">
-          <div className="bg-white rounded-xl border border-neutral-100 p-4">
+          <div className="bg-white/80 rounded-xl border border-neutral-100 p-4">
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-2xl font-black text-neutral-900">{formatPrice(activity.price_adult)}</span>
               <span className="text-xs text-neutral-400">per person</span>

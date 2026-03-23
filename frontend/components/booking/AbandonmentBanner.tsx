@@ -78,19 +78,19 @@ export default function AbandonmentBanner() {
     <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:bottom-4 sm:max-w-md z-50 animate-slide-up">
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-2xl shadow-2xl p-4 pr-10 relative overflow-hidden">
         {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
+        <div className="absolute top-0 right-0 w-24 h-24 bg-white/80/5 rounded-full -translate-y-8 translate-x-8" />
 
         {/* Dismiss button */}
         <button
           onClick={() => { setDismissed(true); clearPendingBooking(); }}
-          className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+          className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white/80/20 hover:bg-white/80/30 flex items-center justify-center transition-colors"
           aria-label="Dismiss"
         >
           <X size={12} />
         </button>
 
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 bg-white/80/20 rounded-xl flex items-center justify-center shrink-0">
             <Gift size={18} />
           </div>
           <div className="flex-1 min-w-0">
@@ -109,7 +109,7 @@ export default function AbandonmentBanner() {
 
         <Link
           href={`/booking/${pending.contextUuid}`}
-          className="mt-3 block w-full text-center text-xs font-bold bg-white text-primary-700 rounded-xl py-2.5 hover:bg-white/90 transition-colors"
+          className="mt-3 block w-full text-center text-xs font-bold bg-white/80 text-primary-700 rounded-xl py-2.5 hover:bg-white/80/90 transition-colors"
         >
           Continue Booking →
         </Link>

@@ -18,7 +18,7 @@ export {
 } from './useBooking';
 
 // Wallet
-export { useWalletBalance, useWalletTransactions, useTopUp, useOwnerWallet } from './useWallet';
+export { useWalletBalance, useWalletTransactions, useOwnerWallet } from './useWallet';
 
 // Currency
 export { useCurrency } from '../contexts/CurrencyContext';

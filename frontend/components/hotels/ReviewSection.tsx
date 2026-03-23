@@ -97,7 +97,7 @@ function ReviewCard({ review }: { review: Review }) {
   const [helpful, setHelpful] = useState(false);
 
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 p-5 hover:shadow-sm transition-shadow">
+    <div className="bg-white/80 rounded-xl border border-neutral-100 p-5 hover:shadow-sm transition-shadow">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
@@ -150,7 +150,7 @@ function ReviewCard({ review }: { review: Review }) {
         <button
           onClick={() => setHelpful(!helpful)}
           className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${
-            helpful ? 'bg-blue-50 text-blue-600' : 'text-neutral-400 hover:bg-neutral-50'
+            helpful ? 'bg-blue-50 text-blue-600' : 'text-neutral-400 hover:bg-page'
           }`}
         >
           <ThumbsUp size={12} /> Helpful ({review.helpful_count + (helpful ? 1 : 0)})
@@ -234,7 +234,7 @@ export default function ReviewSection({
   };
 
   return (
-    <div id="guest-reviews" className="bg-white rounded-2xl shadow-card p-6">
+    <div id="guest-reviews" className="bg-white/80 rounded-2xl shadow-card p-6">
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-lg font-bold text-neutral-900 font-heading">Guest Reviews</h3>
         <div className="flex items-center gap-2">
@@ -277,7 +277,7 @@ export default function ReviewSection({
 
       {/* Write review form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-neutral-50 rounded-xl p-5 mb-6 border border-neutral-200">
+        <form onSubmit={handleSubmit} className="bg-page rounded-xl p-5 mb-6 border border-neutral-200">
           <h4 className="font-semibold text-neutral-800 text-sm mb-4">Share your experience</h4>
 
           <div className="mb-4">
@@ -321,7 +321,7 @@ export default function ReviewSection({
                   className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
                     formTravelType === t
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-300'
+                      : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-300'
                   }`}
                 >
                   {t}

@@ -96,7 +96,7 @@ export default function AccountPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Profile Card */}
           <div className="md:col-span-1">
-            <div className="bg-white rounded-2xl shadow-card p-6">
+            <div className="bg-white/80 rounded-2xl shadow-card p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-14 h-14 bg-primary-600 rounded-full flex items-center justify-center text-white text-2xl font-black">
                   {user?.full_name?.charAt(0)?.toUpperCase() ?? 'U'}
@@ -177,7 +177,7 @@ export default function AccountPage() {
             {bookingsLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="bg-white rounded-2xl shadow-card p-5">
+                  <div key={i} className="bg-white/80 rounded-2xl shadow-card p-5">
                     <div className="skeleton h-5 w-3/4 rounded mb-2" />
                     <div className="skeleton h-4 w-1/4 rounded mb-4" />
                     <div className="skeleton h-4 w-1/2 rounded" />
@@ -185,7 +185,7 @@ export default function AccountPage() {
                 ))}
               </div>
             ) : bookings.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-card p-10 text-center">
+              <div className="bg-white/80 rounded-2xl shadow-card p-10 text-center">
                 <Calendar className="w-12 h-12 text-neutral-200 mx-auto mb-3" />
                 <p className="text-neutral-500 mb-1">No bookings yet</p>
                 <p className="text-sm text-neutral-400 mb-4">Explore hotels and make your first booking</p>
@@ -222,7 +222,7 @@ function BookingCard({ booking }: { booking: BookingSummary }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-card p-5 hover:shadow-card-hover transition-shadow">
+    <div className="bg-white/80 rounded-2xl shadow-card p-5 hover:shadow-card-hover transition-shadow">
       <div className="flex justify-between items-start mb-3">
         <div className="min-w-0 flex-1 pr-3">
           <p className="font-semibold text-neutral-900 truncate">{booking.property_name}</p>
@@ -252,7 +252,7 @@ function BookingCard({ booking }: { booking: BookingSummary }) {
           {formatPrice(parseFloat(booking.total_amount))}
         </p>
         {['hold', 'payment_pending', 'confirmed'].includes(booking.status) && (
-          <span className="text-xs text-neutral-400 bg-neutral-50 px-2.5 py-1 rounded-full">
+          <span className="text-xs text-neutral-400 bg-page px-2.5 py-1 rounded-full">
             Cancellation available
           </span>
         )}

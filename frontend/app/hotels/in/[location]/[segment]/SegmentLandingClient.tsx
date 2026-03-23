@@ -94,7 +94,7 @@ export default function SegmentLandingClient({
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 pb-10">
         {isLoading
           ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm border flex h-[160px]">
+              <div key={i} className="bg-white/80 rounded-2xl overflow-hidden shadow-sm border flex h-[160px]">
                 <div className="w-[200px] shrink-0 bg-neutral-100 animate-pulse" />
                 <div className="flex-1 p-4 space-y-2">
                   <div className="h-4 bg-neutral-100 rounded animate-pulse w-2/3" />

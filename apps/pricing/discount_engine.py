@@ -356,7 +356,8 @@ def calculate_final_price(
             pass
 
     final = after_promo - cashback
-    tax_rate = Decimal('0.18')
+    from apps.pricing.pricing_service import get_gst_rate
+    tax_rate = get_gst_rate(final / max(nights * rooms, 1))
     tax = (final * tax_rate).quantize(Decimal('0.01'))
 
     return {

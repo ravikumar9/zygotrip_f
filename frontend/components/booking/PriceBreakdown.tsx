@@ -169,7 +169,7 @@ export default function PriceBreakdown(props: PriceBreakdownProps) {
     };
 
     return (
-      <div className={clsx('bg-white rounded-2xl shadow-card p-5', className)}>
+      <div className={clsx('bg-white/80 rounded-2xl shadow-card p-5', className)}>
         <h3 className="font-bold text-neutral-900 mb-1 font-heading">Price Breakdown</h3>
         <p className="text-xs text-neutral-400 mb-4">
           {context.nights} night{context.nights !== 1 ? 's' : ''} × {context.rooms} room{context.rooms !== 1 ? 's' : ''}
@@ -334,7 +334,7 @@ export default function PriceBreakdown(props: PriceBreakdownProps) {
                         {availableCoupons.map(c => (
                           <div
                             key={c.code}
-                            className="flex items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 hover:border-primary-200 transition-all"
+                            className="flex items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-neutral-200 bg-page/50 hover:border-primary-200 transition-all"
                           >
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-bold text-neutral-800 font-mono tracking-wider">{c.code}</p>
@@ -374,7 +374,7 @@ export default function PriceBreakdown(props: PriceBreakdownProps) {
   const totalTaxes = Number(serviceFee) + Number(gst);
 
   return (
-    <div className={clsx('bg-white rounded-xl border border-neutral-200 p-4', className)}>
+    <div className={clsx('bg-white/80 rounded-xl border border-neutral-200 p-4', className)}>
       <h3 className="font-semibold text-neutral-900 mb-3">Price Breakdown</h3>
 
       {nights && rooms && (

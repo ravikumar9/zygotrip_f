@@ -15,13 +15,11 @@ export async function register(
   password: string,
   role: string = 'traveler',
   phone?: string,
-): Promise<AuthData> {
+) {
   const payload = { full_name, email, password, role, ...(phone ? { phone } : {}) };
-  const { data } = await api.post<ApiResponse<AuthData>>('/auth/register/', payload);
-  if (!data.success) throw new Error('Registration failed');
-  tokenStore.setAccess(data.data.tokens.access);
-  tokenStore.setRefresh(data.data.tokens.refresh);
-  return data.data;
+  const { data } = await api.post('/auth/register/', payload);
+  if (data.success === false) throw { response: { data } };
+  return data;
 }
 
 export async function logout(): Promise<void> {
@@ -58,6 +56,26 @@ export interface OtpSendResponse {
 
 export interface OtpVerifyResponse extends AuthData {
   is_new_user: boolean;
+}
+
+export async function verifyRegistrationOtp(userId: number, otp: string) {
+  const { data } = await api.post('/auth/verify-otp/', { user_id: userId, otp });
+  return data;
+}
+
+export async function resendRegistrationOtp(userId: number) {
+  const { data } = await api.post('/auth/resend-otp/', { user_id: userId });
+  return data;
+}
+
+export async function forgotPassword(email: string) {
+  const { data } = await api.post('/auth/forgot-password/', { email });
+  return data;
+}
+
+export async function resetPassword(userId: number, otp: string, newPassword: string) {
+  const { data } = await api.post('/auth/reset-password/', { user_id: userId, otp, new_password: newPassword });
+  return data;
 }
 
 export async function sendOtp(phone: string, purpose: 'login' | 'verify' = 'login'): Promise<OtpSendResponse> {

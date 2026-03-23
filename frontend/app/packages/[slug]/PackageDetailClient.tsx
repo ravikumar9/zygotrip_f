@@ -155,7 +155,7 @@ export default function PackageDetailClient() {
   return (
     <div className="min-h-screen page-listing-bg">
       {/* Top bar */}
-      <div className="bg-white border-b sticky top-0 z-40">
+      <div className="bg-white/80 border-b sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
           <button onClick={() => router.back()} className="text-neutral-500 hover:text-neutral-800">
             <ArrowLeft size={20} />
@@ -183,7 +183,7 @@ export default function PackageDetailClient() {
           {/* Left — Itinerary */}
           <div className="space-y-5">
             {/* Overview */}
-            <div className="bg-white rounded-2xl shadow-card p-5">
+            <div className="bg-white/80 rounded-2xl shadow-card p-5">
               <h2 className="text-lg font-black text-neutral-900 mb-2 font-heading">{pkg.name}</h2>
               <div className="flex items-center gap-4 flex-wrap mb-3">
                 <span className="flex items-center gap-1.5 text-xs text-neutral-500">
@@ -216,7 +216,7 @@ export default function PackageDetailClient() {
             </div>
 
             {/* Day-by-day Itinerary */}
-            <div className="bg-white rounded-2xl shadow-card p-5">
+            <div className="bg-white/80 rounded-2xl shadow-card p-5">
               <h3 className="font-bold text-neutral-800 text-sm mb-4 font-heading">Day-by-Day Itinerary</h3>
               <div className="space-y-3">
                 {(pkg.itinerary || []).map((day: PackageItineraryDay, index: number) => {
@@ -225,7 +225,7 @@ export default function PackageDetailClient() {
                     <div key={index} className="border border-neutral-100 rounded-xl overflow-hidden">
                       <button
                         onClick={() => setExpandedDay(isExpanded ? null : index)}
-                        className="w-full flex items-center justify-between px-4 py-3 bg-neutral-50 hover:bg-neutral-100 transition-colors"
+                        className="w-full flex items-center justify-between px-4 py-3 bg-page hover:bg-neutral-100 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <span className="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
@@ -246,7 +246,7 @@ export default function PackageDetailClient() {
                           {day.activities && day.activities.length > 0 && (
                             <div className="space-y-2">
                               {day.activities.map((activity, ai) => (
-                                <div key={ai} className="flex items-start gap-3 bg-neutral-50 rounded-lg px-3 py-2.5 border border-neutral-100">
+                                <div key={ai} className="flex items-start gap-3 bg-page rounded-lg px-3 py-2.5 border border-neutral-100">
                                   <span className="text-primary-500 mt-0.5 shrink-0">
                                     {ACTIVITY_ICONS[activity.type || 'default'] || ACTIVITY_ICONS.default}
                                   </span>
@@ -285,7 +285,7 @@ export default function PackageDetailClient() {
 
             {/* Availability Calendar */}
             {availability.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-card p-5">
+              <div className="bg-white/80 rounded-2xl shadow-card p-5">
                 <h3 className="font-bold text-neutral-800 text-sm mb-4 font-heading">Availability &amp; Pricing</h3>
                 <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2">
                   {availability.slice(0, 28).map((slot) => (
@@ -297,8 +297,8 @@ export default function PackageDetailClient() {
                         selectedDate === slot.date
                           ? 'bg-primary-600 text-white border-primary-600'
                           : slot.is_sold_out
-                          ? 'bg-neutral-50 text-neutral-300 border-neutral-100 cursor-not-allowed'
-                          : 'bg-white text-neutral-700 border-neutral-200 hover:border-primary-300'
+                          ? 'bg-page text-neutral-300 border-neutral-100 cursor-not-allowed'
+                          : 'bg-white/80 text-neutral-700 border-neutral-200 hover:border-primary-300'
                       }`}
                     >
                       <p className="text-[10px] font-medium">{format(parseISO(slot.date), 'dd MMM')}</p>
@@ -344,7 +344,7 @@ export default function PackageDetailClient() {
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   min={format(new Date(), 'yyyy-MM-dd')}
-                  className="w-full bg-neutral-50 rounded-xl px-3 py-2.5 border border-neutral-200 text-sm outline-none focus:border-primary-400"
+                  className="w-full bg-page rounded-xl px-3 py-2.5 border border-neutral-200 text-sm outline-none focus:border-primary-400"
                 />
               </div>
 
@@ -356,10 +356,10 @@ export default function PackageDetailClient() {
                 ].map((item) => (
                   <div key={item.label}>
                     <label className="text-xs font-semibold text-neutral-500 block mb-1">{item.label}</label>
-                    <div className="flex items-center justify-between bg-neutral-50 rounded-xl px-2.5 py-2 border border-neutral-200">
-                      <button onClick={() => item.set(Math.max(item.min, item.val - 1))} className="w-6 h-6 rounded-full bg-white border border-neutral-300 flex items-center justify-center hover:border-primary-400"><Minus size={10} /></button>
+                    <div className="flex items-center justify-between bg-page rounded-xl px-2.5 py-2 border border-neutral-200">
+                      <button onClick={() => item.set(Math.max(item.min, item.val - 1))} className="w-6 h-6 rounded-full bg-white/80 border border-neutral-300 flex items-center justify-center hover:border-primary-400"><Minus size={10} /></button>
                       <span className="text-sm font-bold">{item.val}</span>
-                      <button onClick={() => item.set(Math.min(item.max, item.val + 1))} className="w-6 h-6 rounded-full bg-white border border-neutral-300 flex items-center justify-center hover:border-primary-400"><Plus size={10} /></button>
+                      <button onClick={() => item.set(Math.min(item.max, item.val + 1))} className="w-6 h-6 rounded-full bg-white/80 border border-neutral-300 flex items-center justify-center hover:border-primary-400"><Plus size={10} /></button>
                     </div>
                   </div>
                 ))}
@@ -380,7 +380,7 @@ export default function PackageDetailClient() {
                         className={`flex-1 text-xs py-2 rounded-lg border font-semibold transition-all capitalize ${
                           hotelUpgrade === tier
                             ? 'bg-primary-600 text-white border-primary-600'
-                            : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-300'
+                            : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-300'
                         }`}
                       >
                         {tier}
@@ -397,7 +397,7 @@ export default function PackageDetailClient() {
                   className={`w-full flex items-center justify-between text-xs px-3 py-2.5 rounded-lg border font-semibold mb-2 transition-all ${
                     mealUpgrade
                       ? 'bg-green-50 text-green-700 border-green-200'
-                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-green-300'
+                      : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-green-300'
                   }`}
                 >
                   <span className="flex items-center gap-2">
@@ -409,7 +409,7 @@ export default function PackageDetailClient() {
 
               {/* Price breakdown */}
               {totalEstimate > 0 && (
-                <div className="bg-neutral-50 rounded-xl p-3.5 mb-4 border border-neutral-200">
+                <div className="bg-page rounded-xl p-3.5 mb-4 border border-neutral-200">
                   <div className="flex justify-between text-xs text-neutral-500 mb-1">
                     <span>{adults} Adult{adults > 1 ? 's' : ''} × {formatPrice(pkg.price_adult)}</span>
                     <span>{formatPrice(pkg.price_adult * adults)}</span>

@@ -49,7 +49,7 @@ export default function CabRegisterPage() {
         </div>
 
         {/* Form */}
-        <div className="bg-white rounded-2xl shadow-card p-8">
+        <div className="bg-white/80 rounded-2xl shadow-card p-8">
           <RegisterForm
             role="cab_owner"
             roleLabel="Cab Owner"

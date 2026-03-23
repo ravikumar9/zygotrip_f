@@ -78,7 +78,7 @@ export default function ListPropertyPage() {
         </div>
 
         {/* Role selector */}
-        <div className="bg-white rounded-2xl shadow-card p-6">
+        <div className="bg-white/80 rounded-2xl shadow-card p-6">
           <p className="text-sm font-semibold text-neutral-600 mb-4">
             What type of business do you operate?
           </p>

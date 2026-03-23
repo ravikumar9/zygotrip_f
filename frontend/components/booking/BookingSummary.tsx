@@ -31,11 +31,11 @@ export default function BookingSummary({ context }: BookingSummaryProps) {
     ?? 1;
 
   return (
-    <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+    <div className="bg-white/80 rounded-2xl shadow-card overflow-hidden">
       {/* Gradient header with property name */}
       <div className="bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 p-5 text-white">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0 text-xl">
+          <div className="w-10 h-10 bg-white/80/20 rounded-xl flex items-center justify-center shrink-0 text-xl">
             🏨
           </div>
           <div className="min-w-0">
@@ -55,14 +55,14 @@ export default function BookingSummary({ context }: BookingSummaryProps) {
       <div className="p-5 space-y-4">
         {/* Check-in / Check-out grid */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100">
+          <div className="bg-page rounded-xl p-3 border border-neutral-100">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 mb-1.5">
               <Calendar size={11} /> Check-in
             </div>
             <p className="font-bold text-sm text-neutral-900">{fmtDate(checkin)}</p>
             <p className="text-xs text-neutral-400 mt-0.5">From 2:00 PM</p>
           </div>
-          <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100">
+          <div className="bg-page rounded-xl p-3 border border-neutral-100">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 mb-1.5">
               <Calendar size={11} /> Check-out
             </div>

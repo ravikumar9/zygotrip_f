@@ -75,6 +75,10 @@ urlpatterns = [
     path('api/v1/notifications/mark-read/', mark_notifications_read, name='api_notifications_mark_read'),
     path('api/v1/notifications/unread-count/', unread_count, name='api_notifications_unread'),
 
+    # ── v1 aliases for health & metrics (Prometheus + healthcheck probes) ──
+    path('api/v1/health/', HealthCheckView.as_view(), name='health_quick_v1'),
+    path('api/v1/health/detailed/', DetailedHealthCheckView.as_view(), name='health_detailed_v1'),
+    path('api/v1/metrics/', MetricsView.as_view(), name='prometheus_metrics_v1'),
     # ── Rate Plans API (System 3) ─────────────────────────────────────────
     path('api/v1/rate-plans/', rate_plans_api, name='api_rate_plans'),
 

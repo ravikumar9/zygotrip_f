@@ -19,7 +19,7 @@ function MetricCard({ label, value, icon: Icon, trend, color = 'text-neutral-900
   label: string; value: string; icon: React.ElementType; trend?: number; color?: string;
 }) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-neutral-100 shadow-sm">
+    <div className="bg-white/80 rounded-xl p-4 border border-neutral-100 shadow-sm">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-semibold text-neutral-500">{label}</span>
         <Icon size={16} className="text-neutral-300" />
@@ -84,7 +84,7 @@ function HotelOwnerDashboard({ propertyId }: { propertyId: number | null }) {
 
       {/* Revenue breakdown */}
       {revenue && (
-        <div className="bg-white rounded-xl p-5 border border-neutral-100 shadow-sm">
+        <div className="bg-white/80 rounded-xl p-5 border border-neutral-100 shadow-sm">
           <h3 className="font-bold text-neutral-800 text-sm mb-4">Revenue Breakdown</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="bg-green-50 rounded-lg p-3 border border-green-100">
@@ -113,7 +113,7 @@ function HotelOwnerDashboard({ propertyId }: { propertyId: number | null }) {
 
       {/* Top rooms */}
       {analytics && analytics.top_rooms && analytics.top_rooms.length > 0 && (
-        <div className="bg-white rounded-xl p-5 border border-neutral-100 shadow-sm">
+        <div className="bg-white/80 rounded-xl p-5 border border-neutral-100 shadow-sm">
           <h3 className="font-bold text-neutral-800 text-sm mb-4">Top Room Types</h3>
           <SimpleBarChart
             data={analytics.top_rooms}
@@ -126,7 +126,7 @@ function HotelOwnerDashboard({ propertyId }: { propertyId: number | null }) {
 
       {/* Inventory calendar */}
       {calendar && calendar.length > 0 && (
-        <div className="bg-white rounded-xl p-5 border border-neutral-100 shadow-sm">
+        <div className="bg-white/80 rounded-xl p-5 border border-neutral-100 shadow-sm">
           <h3 className="font-bold text-neutral-800 text-sm mb-4">Inventory Calendar — {calMonth}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -177,7 +177,7 @@ function BusOperatorDashboardPanel() {
         <MetricCard label="Occupancy" value={`${(data.occupancy_rate || 0).toFixed(0)}%`} icon={BarChart3} color="text-blue-700" />
       </div>
       {data.routes && data.routes.length > 0 && (
-        <div className="bg-white rounded-xl p-5 border border-neutral-100 shadow-sm">
+        <div className="bg-white/80 rounded-xl p-5 border border-neutral-100 shadow-sm">
           <h3 className="font-bold text-neutral-800 text-sm mb-4">Top Routes</h3>
           <SimpleBarChart
             data={data.routes}
@@ -208,7 +208,7 @@ function CabFleetDashboardPanel() {
         <MetricCard label="Avg Rating" value={data.avg_rating?.toFixed(1) || 'N/A'} icon={BarChart3} color="text-amber-700" />
       </div>
       {data.drivers && data.drivers.length > 0 && (
-        <div className="bg-white rounded-xl p-5 border border-neutral-100 shadow-sm">
+        <div className="bg-white/80 rounded-xl p-5 border border-neutral-100 shadow-sm">
           <h3 className="font-bold text-neutral-800 text-sm mb-4">Driver Performance</h3>
           <SimpleBarChart
             data={data.drivers}
@@ -239,7 +239,7 @@ function PackageProviderDashboardPanel() {
         <MetricCard label="Bookings" value={String(data.total_bookings)} icon={Users} />
       </div>
       {data.popular_packages && data.popular_packages.length > 0 && (
-        <div className="bg-white rounded-xl p-5 border border-neutral-100 shadow-sm">
+        <div className="bg-white/80 rounded-xl p-5 border border-neutral-100 shadow-sm">
           <h3 className="font-bold text-neutral-800 text-sm mb-4">Popular Packages</h3>
           <SimpleBarChart
             data={data.popular_packages}
@@ -293,7 +293,7 @@ export default function OwnerDashboardClient() {
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-black text-neutral-900 font-heading">Owner Dashboard</h1>
-          <p className="text-xs text-neutral-400 bg-white px-3 py-1.5 rounded-full border border-neutral-200">
+          <p className="text-xs text-neutral-400 bg-white/80 px-3 py-1.5 rounded-full border border-neutral-200">
             {user?.full_name || 'Owner'} · {userRole.replace(/_/g, ' ')}
           </p>
         </div>
@@ -310,7 +310,7 @@ export default function OwnerDashboardClient() {
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                     activeTab === tab.key
                       ? 'bg-primary-600 text-white'
-                      : 'bg-white text-neutral-600 border border-neutral-200 hover:border-primary-300'
+                      : 'bg-white/80 text-neutral-600 border border-neutral-200 hover:border-primary-300'
                   }`}
                 >
                   <Icon size={14} /> {tab.label}

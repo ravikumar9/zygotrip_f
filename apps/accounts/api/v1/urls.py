@@ -21,4 +21,9 @@ urlpatterns = [
 
     # User profile
     path('users/me/', views.me_view, name='api_users_me'),
+    # OTP Registration verification
+    path('auth/verify-otp/', views.verify_otp_view, name='api_auth_verify_otp'),
+    path('auth/resend-otp/', views.resend_otp_view, name='api_auth_resend_otp'),
+    path('auth/forgot-password/', views.forgot_password_view, name='api_auth_forgot_password'),
+    path('auth/reset-password/', views.reset_password_view, name='api_auth_reset_password'),
 ]

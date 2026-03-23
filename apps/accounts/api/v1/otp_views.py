@@ -71,14 +71,42 @@ def otp_send(request):
 
     # Send OTP via SMS
     sent = send_otp(phone, otp.code)
-    if not sent:
+
+    # Email fallback if SMS fails or email provided
+    email = request.data.get('email', '')
+    email_sent = False
+    if email:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from django.conf import settings
+            msg = MIMEText(f'''Your ZygoTrip OTP is: {otp.code}
+
+Valid for 5 minutes. Do not share with anyone.
+
+ZygoTrip Team''')
+            msg['Subject'] = f'ZygoTrip OTP: {otp.code}'
+            msg['From'] = 'ZYGOTRIP <noreply@zygotrip.com>'
+            msg['To'] = email
+            server = smtplib.SMTP(settings.EMAIL_HOST, 587, timeout=10)
+            server.ehlo()
+            server.starttls()
+            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+            server.sendmail('noreply@zygotrip.com', [email], msg.as_string())
+            server.quit()
+            email_sent = True
+            logger.info('OTP email sent to %s', email)
+        except Exception as e:
+            logger.warning('OTP email failed: %s', e)
+
+    if not sent and not email_sent:
         logger.error('Failed to send OTP to %s', phone)
         return Response(
             {'success': False, 'error': {'code': 'sms_failed', 'message': 'Failed to send OTP. Please try again.'}},
             status=status.HTTP_502_BAD_GATEWAY,
         )
 
-    logger.info('OTP sent to %s (purpose=%s)', phone, purpose)
+    logger.info('OTP sent to %s (purpose=%s, sms=%s, email=%s)', phone, purpose, sent, email_sent)
 
     return Response({
         'success': True,
@@ -86,6 +114,7 @@ def otp_send(request):
             'message': 'OTP sent successfully',
             'expires_in_seconds': 300,
             'phone': phone,
+            'delivery': 'sms' if sent else 'email',
         },
     })
 

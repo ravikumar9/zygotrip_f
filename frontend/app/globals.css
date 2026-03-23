@@ -36,13 +36,14 @@
   body {
     font-family: 'Nunito', 'Inter', system-ui, sans-serif;
     @apply text-neutral-900;
-    /* OTA-grade warm background — visible warm cream-gray (not plain white) */
-    background: #eeedf2;
+    overflow-x: hidden; /* Prevent horizontal scroll on mobile */
+    /* ZygoTrip — Goibibo-grade vibrant warmth */
+    background: #fdf2f2;
     background-image:
-      radial-gradient(ellipse 80% 60% at 30% 0%, rgba(255,107,53,0.08) 0%, transparent 70%),
-      radial-gradient(ellipse 60% 50% at 80% 100%, rgba(99,102,241,0.08) 0%, transparent 70%),
-      linear-gradient(175deg, #eae6e1 0%, #e6e4ec 40%, #ece8e2 70%, #e4e4ec 100%);
-    background-attachment: fixed;
+      radial-gradient(ellipse 120% 65% at -5% -5%, rgba(235,32,38,0.22) 0%, transparent 55%),
+      radial-gradient(ellipse 90% 60% at 105% 0%, rgba(255,107,53,0.20) 0%, transparent 55%),
+      radial-gradient(ellipse 80% 70% at 50% 110%, rgba(99,102,241,0.15) 0%, transparent 60%),
+      linear-gradient(158deg, #fff0f0 0%, #fff5ec 20%, #fdf8ff 50%, #f0f4ff 80%, #eef0ff 100%);
     min-height: 100vh;
     line-height: 1.6;
   }
@@ -65,10 +66,11 @@
            disabled:opacity-50 disabled:cursor-not-allowed
            focus-visible:outline focus-visible:outline-2
            focus-visible:outline-offset-2 focus-visible:outline-primary-500;
-    background: var(--primary);
+    background: linear-gradient(135deg, #EB2026 0%, #c71a1f 100%);
+    box-shadow: 0 4px 14px rgba(235,32,38,0.30);
   }
-  .btn-primary:hover  { background: var(--primary-dark); }
-  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:hover  { background: linear-gradient(135deg, #d61a20 0%, #b01418 100%); box-shadow: 0 6px 20px rgba(235,32,38,0.40); transform: translateY(-1px); }
+  .btn-primary:active { transform: scale(0.98); box-shadow: none; }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2
@@ -162,15 +164,18 @@
 
   /* ── Cards ───────────────────────────────────────────────── */
   .card {
-    @apply bg-white rounded-2xl border border-neutral-200;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05);
+    @apply bg-white rounded-2xl border border-neutral-100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .shadow-card {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.09), 0 1px 5px rgba(0,0,0,0.05);
   }
   .card-hover {
     @apply card transition-all duration-200;
   }
   .card-hover:hover {
-    box-shadow: 0 8px 28px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.07);
-    @apply border-neutral-300 -translate-y-0.5;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+    @apply border-neutral-200 -translate-y-1;
   }
 
   /* .property-card — REMOVED: replaced by HotelCard.tsx Tailwind classes */
@@ -268,13 +273,48 @@
   .page-container-narrow { @apply max-w-5xl mx-auto px-4 sm:px-6 lg:px-8; }
 
   /* ── Consistent page background ────────────────────────── */
+  /* ─── Page-level backgrounds — vibrant like Goibibo ─────────────── */
+
+  /* Generic bg-page: warm red-to-purple gradient */
   .bg-page {
-    background: #eeedf2;
+    background: #fff5f5;
     background-image:
-      radial-gradient(ellipse 80% 60% at 30% 0%, rgba(255,107,53,0.06) 0%, transparent 70%),
-      radial-gradient(ellipse 60% 50% at 80% 100%, rgba(99,102,241,0.06) 0%, transparent 70%),
-      linear-gradient(175deg, #eae6e1 0%, #e6e4ec 40%, #ece8e2 70%, #e4e4ec 100%);
+      radial-gradient(ellipse 100% 70% at 0% 0%, rgba(235,32,38,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 80% 60% at 100% 10%, rgba(255,107,53,0.15) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 50% 100%, rgba(99,102,241,0.12) 0%, transparent 60%),
+      linear-gradient(160deg, #fff0f0 0%, #fff5ee 30%, #f8f0ff 65%, #f0f5ff 100%);
   }
+
+  /* Listing pages (hotel/package search): cool blue tones */
+  .page-listing-bg {
+    background: #f0f4ff;
+    background-image:
+      radial-gradient(ellipse 90% 60% at 5% 0%, rgba(235,32,38,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 50% at 95% 5%, rgba(255,107,53,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse 80% 65% at 50% 100%, rgba(79,70,229,0.12) 0%, transparent 60%),
+      linear-gradient(155deg, #fff2f2 0%, #fff8f3 20%, #f5f2ff 50%, #eff4ff 80%, #eef3ff 100%);
+  }
+
+  /* Detail pages (hotel/room detail): rich warm gradient */
+  .page-detail-bg {
+    background: #fff8f5;
+    background-image:
+      radial-gradient(ellipse 100% 60% at 0% 0%, rgba(235,32,38,0.16) 0%, transparent 50%),
+      radial-gradient(ellipse 90% 55% at 100% 0%, rgba(255,107,53,0.18) 0%, transparent 50%),
+      radial-gradient(ellipse 70% 60% at 30% 100%, rgba(245,166,35,0.12) 0%, transparent 55%),
+      linear-gradient(165deg, #fff0f0 0%, #fff6f0 30%, #fffbf0 60%, #f5f0e8 100%);
+  }
+
+  /* Booking/checkout pages: trust-building deep blue */
+  .page-booking-bg {
+    background: #f5f0ff;
+    background-image:
+      radial-gradient(ellipse 85% 65% at 10% 0%, rgba(235,32,38,0.16) 0%, transparent 55%),
+      radial-gradient(ellipse 75% 55% at 90% 5%, rgba(255,107,53,0.13) 0%, transparent 50%),
+      radial-gradient(ellipse 90% 70% at 50% 100%, rgba(79,70,229,0.15) 0%, transparent 60%),
+      linear-gradient(155deg, #fff0f0 0%, #fff5f0 20%, #f8f5ff 50%, #f0f0ff 75%, #eeeeff 100%);
+  }
+
 
   /* ── Filter chip ─────────────────────────────────────────── */
   .filter-chip {
@@ -505,25 +545,28 @@
 
   /* ── Page section backgrounds (vibrant OTA gradients — clearly visible) ─────── */
   .page-listing-bg {
-    background:
-      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(99,102,241,0.14) 0%, transparent 70%),
-      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(244,114,182,0.10) 0%, transparent 70%),
-      linear-gradient(160deg, #ddd9ec 0%, #e2e4ef 30%, #ede3d6 70%, #dae0ee 100%);
-    min-height: 100vh;
+    background: #f0f4ff;
+    background-image:
+      radial-gradient(ellipse 90% 60% at 5% 0%, rgba(235,32,38,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 50% at 95% 5%, rgba(255,107,53,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse 80% 65% at 50% 100%, rgba(79,70,229,0.12) 0%, transparent 60%),
+      linear-gradient(155deg, #fff2f2 0%, #fff8f3 20%, #f5f2ff 50%, #eff4ff 80%, #eef3ff 100%);
   }
   .page-detail-bg {
-    background:
-      radial-gradient(ellipse 70% 50% at 10% 20%, rgba(99,102,241,0.14) 0%, transparent 65%),
-      radial-gradient(ellipse 50% 40% at 90% 70%, rgba(251,146,60,0.10) 0%, transparent 65%),
-      linear-gradient(160deg, #d9dff0 0%, #e2dcee 35%, #ede3d6 65%, #d8e0f0 100%);
-    min-height: 100vh;
+    background: #fff8f5;
+    background-image:
+      radial-gradient(ellipse 100% 60% at 0% 0%, rgba(235,32,38,0.16) 0%, transparent 50%),
+      radial-gradient(ellipse 90% 55% at 100% 0%, rgba(255,107,53,0.18) 0%, transparent 50%),
+      radial-gradient(ellipse 70% 60% at 30% 100%, rgba(245,166,35,0.12) 0%, transparent 55%),
+      linear-gradient(165deg, #fff0f0 0%, #fff6f0 30%, #fffbf0 60%, #f5f0e8 100%);
   }
   .page-booking-bg {
-    background:
-      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(16,185,129,0.10) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 40% at 80% 90%, rgba(99,102,241,0.10) 0%, transparent 70%),
-      linear-gradient(160deg, #dbe0f0 0%, #e0d9ee 35%, #ede3d6 65%, #d8e4f0 100%);
-    min-height: 100vh;
+    background: #f5f0ff;
+    background-image:
+      radial-gradient(ellipse 85% 65% at 10% 0%, rgba(235,32,38,0.16) 0%, transparent 55%),
+      radial-gradient(ellipse 75% 55% at 90% 5%, rgba(255,107,53,0.13) 0%, transparent 50%),
+      radial-gradient(ellipse 90% 70% at 50% 100%, rgba(79,70,229,0.15) 0%, transparent 60%),
+      linear-gradient(155deg, #fff0f0 0%, #fff5f0 20%, #f8f5ff 50%, #f0f0ff 75%, #eeeeff 100%);
   }
 
   /* ── Search hero band — vibrant navy top strip (Goibibo-parity) ─── */
@@ -581,3 +624,7 @@
 /* ─── Toast notifications ──────────────────────────────────────── */
 .toast-success { background: var(--green) !important; }
 .toast-error   { background: var(--primary) !important; }
+
+/* Hide scrollbar for tab overflow on mobile */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }

@@ -27,7 +27,7 @@ const SORT_OPTIONS = [
 /* ── Skeleton ── */
 function CabCardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden animate-pulse">
+    <div className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm overflow-hidden animate-pulse">
       <div className="h-48 bg-neutral-100" />
       <div className="p-4 space-y-3">
         <div className="h-4 bg-neutral-100 rounded w-1/3" />
@@ -56,7 +56,7 @@ function CabCard({ cab }: { cab: Cab }) {
   const totalEstimate = baseFare + driverAllowance + gst;
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
+    <div className="bg-white/80 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
       {/* Image */}
       <div className="relative h-48 bg-neutral-100 overflow-hidden">
         {cab.image_url ? (
@@ -69,7 +69,7 @@ function CabCard({ cab }: { cab: Cab }) {
           <div className="w-full h-full flex items-center justify-center text-5xl">🚗</div>
         )}
         {/* Category badge */}
-        <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-neutral-700 shadow-sm">
+        <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/80/90 backdrop-blur-sm text-neutral-700 shadow-sm">
           {cab.category_label || cab.category}
         </span>
       </div>
@@ -122,7 +122,7 @@ function CabCard({ cab }: { cab: Cab }) {
           </button>
 
           {showFare && (
-            <div className="mt-2 bg-neutral-50 rounded-xl p-3 space-y-1.5 text-xs">
+            <div className="mt-2 bg-page rounded-xl p-3 space-y-1.5 text-xs">
               <div className="flex justify-between text-neutral-500">
                 <span>Base fare ({estimatedKm}km × {formatPrice(cab.price_per_km)})</span>
                 <span className="font-medium text-neutral-700">{formatPrice(baseFare)}</span>
@@ -156,7 +156,7 @@ function CityCard({ city, onSelect }: { city: CityOption; onSelect: (cityValue: 
     <button
       type="button"
       onClick={() => onSelect(city.value)}
-      className="bg-white rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-4 flex items-center gap-3 text-left w-full"
+      className="bg-white/80 rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-4 flex items-center gap-3 text-left w-full"
     >
       <div className="shrink-0 w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
         <MapPin size={18} className="text-green-500" />
@@ -283,7 +283,7 @@ export default function CabSearchClient() {
 
           <form
             onSubmit={handleSearch}
-            className="bg-white rounded-2xl shadow-xl p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"
+            className="bg-white/80 rounded-2xl shadow-xl p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"
           >
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1 block">From</label>
@@ -318,7 +318,7 @@ export default function CabSearchClient() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 bg-white"
+                className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 bg-white/80"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
@@ -411,7 +411,7 @@ export default function CabSearchClient() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setFiltersOpen(true)}
-                  className="flex lg:hidden items-center gap-1.5 text-sm border rounded-xl px-3 py-1.5 bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400 transition-colors"
+                  className="flex lg:hidden items-center gap-1.5 text-sm border rounded-xl px-3 py-1.5 bg-white/80 text-neutral-700 border-neutral-200 hover:border-neutral-400 transition-colors"
                 >
                   <SlidersHorizontal size={14} />
                   Filters
@@ -420,7 +420,7 @@ export default function CabSearchClient() {
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-neutral-200 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                  className="px-3 py-2 rounded-xl border border-neutral-200 text-sm font-medium bg-white/80 focus:outline-none focus:ring-2 focus:ring-green-500/30"
                 >
                   {SORT_OPTIONS.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
@@ -436,7 +436,7 @@ export default function CabSearchClient() {
                   className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap ${
                     category === c.value
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400'
+                      : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400'
                   }`}>{c.label}</button>
               ))}
             </div>
@@ -448,8 +448,8 @@ export default function CabSearchClient() {
                   className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
                   onClick={() => setFiltersOpen(false)}
                 />
-                <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
-                  <div className="sticky top-0 bg-white z-10 px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between">
+                <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white/80 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
+                  <div className="sticky top-0 bg-white/80 z-10 px-5 pt-4 pb-3 border-b border-neutral-100 flex items-center justify-between">
                     <h3 className="font-bold text-neutral-900 text-base font-heading flex items-center gap-2">
                       <SlidersHorizontal size={16} /> Filters
                     </h3>
@@ -474,7 +474,7 @@ export default function CabSearchClient() {
                         {CATEGORIES.filter(c => c.value).map((c) => (
                           <button key={c.value} onClick={() => setCategory(category === c.value ? '' : c.value)}
                             className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                              category === c.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200'
+                              category === c.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                             }`}>{c.label}</button>
                         ))}
                       </div>
@@ -485,13 +485,13 @@ export default function CabSearchClient() {
                         {SORT_OPTIONS.map((s) => (
                           <button key={s.value} onClick={() => { setSort(s.value); setFiltersOpen(false); }}
                             className={`text-sm px-3 py-2 rounded-xl border transition-colors min-h-[40px] ${
-                              sort === s.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-neutral-700 border-neutral-200'
+                              sort === s.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white/80 text-neutral-700 border-neutral-200'
                             }`}>{s.label}</button>
                         ))}
                       </div>
                     </div>
                   </div>
-                  <div className="sticky bottom-0 px-5 py-4 border-t border-neutral-100 bg-white">
+                  <div className="sticky bottom-0 px-5 py-4 border-t border-neutral-100 bg-white/80">
                     <button
                       onClick={() => setFiltersOpen(false)}
                       className="w-full py-3 rounded-xl font-bold text-white text-sm"
@@ -525,7 +525,7 @@ export default function CabSearchClient() {
                 <button
                   onClick={() => doSearch(page - 1)}
                   disabled={page <= 1}
-                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-page transition-colors"
                 >
                   ← Prev
                 </button>
@@ -535,7 +535,7 @@ export default function CabSearchClient() {
                 <button
                   onClick={() => doSearch(page + 1)}
                   disabled={page >= totalPages}
-                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-neutral-50 transition-colors"
+                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-bold disabled:opacity-30 hover:bg-page transition-colors"
                 >
                   Next →
                 </button>

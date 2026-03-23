@@ -41,6 +41,7 @@ elasticsearch>=8.12.0,<9.0.0
 
 # ── PDF Invoice Generation (System 14) ───────────────────────────────────────
 # weasyprint>=60.0  # Uncomment for HTML→PDF (requires libpango, libcairo)
+fpdf2>=2.8.0  # Invoice PDF generation
 # reportlab>=4.0.0  # Uncomment for programmatic PDF generation
 
 # ── SMS / Notifications (System 8) ────────────────────────────────────────────
@@ -56,3 +57,5 @@ python-dateutil>=2.8.2
 # ── Cryptography (webhook signature verification) ──────────────────────────────
 cryptography>=41.0.0
 gunicorn==21.2.0
+firebase-admin>=6.5.0
+flower==2.0.1

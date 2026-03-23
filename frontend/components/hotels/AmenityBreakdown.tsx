@@ -108,7 +108,7 @@ export default function AmenityBreakdown({ amenities, className = '' }: AmenityB
   const shownNames = new Set(visibleAmenities.map(a => a.name));
 
   return (
-    <div className={`bg-white rounded-2xl shadow-card p-6 ${className}`}>
+    <div className={`bg-white/80 rounded-2xl shadow-card p-6 ${className}`}>
       <h3 className="text-lg font-bold text-neutral-900 font-heading mb-5">Amenities</h3>
 
       <div className="space-y-5">
@@ -125,7 +125,7 @@ export default function AmenityBreakdown({ amenities, className = '' }: AmenityB
                   return (
                     <div
                       key={amenity.id ?? amenity.name}
-                      className="flex items-center gap-2.5 text-sm text-neutral-700 bg-neutral-50 rounded-lg px-3 py-2.5"
+                      className="flex items-center gap-2.5 text-sm text-neutral-700 bg-page rounded-lg px-3 py-2.5"
                     >
                       <Icon size={15} className="text-primary-500 shrink-0" />
                       <span className="truncate">{amenity.name}</span>

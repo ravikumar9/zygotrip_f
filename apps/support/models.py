@@ -60,6 +60,7 @@ class SupportTicket(TimeStampedModel):
     resolved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'support'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', '-created_at'], name='support_ticket_user_idx'),
@@ -77,6 +78,7 @@ class SupportTicketMessage(TimeStampedModel):
     is_staff_reply = models.BooleanField(default=False)
 
     class Meta:
+        app_label = 'support'
         ordering = ['created_at']
 
     def __str__(self):

@@ -122,7 +122,7 @@ export default function CityLandingPage({ params }: Props) {
             <div className="max-w-[1200px] mx-auto px-4 py-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm border">
+                  <div key={i} className="bg-white/80 rounded-2xl overflow-hidden shadow-sm border">
                     <div className="h-52 bg-neutral-100 animate-pulse" />
                     <div className="p-4 space-y-2">
                       <div className="h-4 bg-neutral-100 rounded animate-pulse w-2/3" />
@@ -146,9 +146,9 @@ export default function CityLandingPage({ params }: Props) {
             {faqs.map((faq, i) => (
               <details
                 key={i}
-                className="bg-white rounded-xl border border-neutral-200 overflow-hidden group"
+                className="bg-white/80 rounded-xl border border-neutral-200 overflow-hidden group"
               >
-                <summary className="px-5 py-4 text-sm font-semibold text-neutral-800 cursor-pointer hover:bg-neutral-50 transition-colors list-none flex items-center justify-between">
+                <summary className="px-5 py-4 text-sm font-semibold text-neutral-800 cursor-pointer hover:bg-page transition-colors list-none flex items-center justify-between">
                   {faq.question}
                   <span className="text-neutral-400 group-open:rotate-180 transition-transform">▼</span>
                 </summary>
@@ -201,7 +201,7 @@ export default function CityLandingPage({ params }: Props) {
               <a
                 key={seg.slug}
                 href={`/hotels/in/${params.location}/${seg.slug}`}
-                className="block bg-white border border-neutral-200 rounded-xl px-4 py-3 text-sm font-medium text-neutral-700 hover:shadow-md hover:border-primary-300 transition-all"
+                className="block bg-white/80 border border-neutral-200 rounded-xl px-4 py-3 text-sm font-medium text-neutral-700 hover:shadow-md hover:border-primary-300 transition-all"
               >
                 {seg.label}
               </a>

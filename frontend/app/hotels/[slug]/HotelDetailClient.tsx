@@ -242,10 +242,10 @@ export default function HotelDetailClient() {
           >
             <ArrowLeft size={14} /> Back
           </button>
-          <div className="w-px h-5 bg-white/20" />
+          <div className="w-px h-5 bg-white/80/20" />
           {/* Property name */}
           <p className="font-bold text-white text-sm truncate max-w-xs">{property.name}</p>
-          <div className="w-px h-5 bg-white/20" />
+          <div className="w-px h-5 bg-white/80/20" />
           {/* Dates */}
           <div className="flex items-center gap-1.5 text-white/80 text-xs font-medium">
             <Calendar size={11} className="text-primary-300" />
@@ -254,7 +254,7 @@ export default function HotelDetailClient() {
             <span>{fmtDateCompact(checkOut)}</span>
             {nights > 0 && <span className="text-white/50 ml-1">({nights}N)</span>}
           </div>
-          <div className="w-px h-5 bg-white/20" />
+          <div className="w-px h-5 bg-white/80/20" />
           {/* Guests */}
           <div className="flex items-center gap-1.5 text-white/80 text-xs font-medium">
             <Users size={11} className="text-primary-300" />
@@ -344,7 +344,7 @@ export default function HotelDetailClient() {
           <div className="space-y-5">
 
             {/* Header card */}
-            <div className="bg-white rounded-2xl p-6 shadow-card">
+            <div className="bg-white/80 rounded-2xl p-6 shadow-card">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   {property.star_category > 0 && (
@@ -439,7 +439,7 @@ export default function HotelDetailClient() {
             </div>
 
             {/* Tabs */}
-            <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+            <div className="bg-white/80 rounded-2xl shadow-card overflow-hidden">
               <div className="flex overflow-x-auto border-b border-neutral-100">
                 {TABS.map((tab) => (
                   <button key={tab} onClick={() => setActiveTab(tab)} className={`tab-nav ${activeTab === tab ? 'active' : ''}`}>
@@ -474,7 +474,7 @@ export default function HotelDetailClient() {
                               'text-xs px-3 py-1.5 rounded-full border font-semibold transition-all',
                               mealFilter === code
                                 ? 'bg-primary-600 text-white border-primary-600'
-                                : 'bg-white text-neutral-600 border-neutral-200 hover:border-primary-400 hover:text-primary-600'
+                                : 'bg-white/80 text-neutral-600 border-neutral-200 hover:border-primary-400 hover:text-primary-600'
                             )}
                           >
                             {label}
@@ -566,7 +566,7 @@ export default function HotelDetailClient() {
 
                     {/* House rules */}
                     {property.house_rules && (
-                      <div className="rounded-xl bg-neutral-50 p-4 border border-neutral-100">
+                      <div className="rounded-xl bg-page p-4 border border-neutral-100">
                         <h4 className="font-semibold text-neutral-800 text-sm mb-2 flex items-center gap-2">
                           <Shield size={13} className="text-primary-400" /> House Rules
                         </h4>
@@ -590,7 +590,7 @@ export default function HotelDetailClient() {
 
                     {/* Other policies */}
                     {property.policies && property.policies.length > 0 && property.policies.map((p: any) => (
-                      <div key={p.id} className="rounded-xl bg-neutral-50 p-4 border border-neutral-100">
+                      <div key={p.id} className="rounded-xl bg-page p-4 border border-neutral-100">
                         <h4 className="font-semibold text-neutral-800 text-sm mb-1 flex items-center gap-2">
                           <AlertCircle size={13} className="text-orange-400" />{p.title}
                         </h4>
@@ -668,7 +668,7 @@ export default function HotelDetailClient() {
                 ].map((d) => (
                   <div key={d.label}>
                     <label className="text-xs font-semibold text-neutral-500 block mb-1">{d.label}</label>
-                    <div className="flex items-center gap-1 bg-neutral-50 rounded-xl px-2.5 py-2.5 border border-neutral-200 focus-within:border-primary-400">
+                    <div className="flex items-center gap-1 bg-page rounded-xl px-2.5 py-2.5 border border-neutral-200 focus-within:border-primary-400">
                       <Calendar size={12} className="text-neutral-400 shrink-0" />
                       <input type="date" value={d.val} min={d.min}
                         onChange={(e) => d.set(e.target.value)}
@@ -686,14 +686,14 @@ export default function HotelDetailClient() {
                 ].map((item) => (
                   <div key={item.label}>
                     <label className="text-xs font-semibold text-neutral-500 block mb-1">{item.label}</label>
-                    <div className="flex items-center justify-between bg-neutral-50 rounded-xl px-2.5 py-2.5 border border-neutral-200">
+                    <div className="flex items-center justify-between bg-page rounded-xl px-2.5 py-2.5 border border-neutral-200">
                       <button type="button" onClick={() => item.set(Math.max(item.min, item.val - 1))}
-                        className="w-6 h-6 rounded-full bg-white border border-neutral-300 flex items-center justify-center hover:border-primary-400">
+                        className="w-6 h-6 rounded-full bg-white/80 border border-neutral-300 flex items-center justify-center hover:border-primary-400">
                         <Minus size={10} />
                       </button>
                       <span className="text-sm font-bold">{item.val}</span>
                       <button type="button" onClick={() => item.set(Math.min(item.max, item.val + 1))}
-                        className="w-6 h-6 rounded-full bg-white border border-neutral-300 flex items-center justify-center hover:border-primary-400">
+                        className="w-6 h-6 rounded-full bg-white/80 border border-neutral-300 flex items-center justify-center hover:border-primary-400">
                         <Plus size={10} />
                       </button>
                     </div>
@@ -739,7 +739,7 @@ export default function HotelDetailClient() {
 
               {/* Price estimate — display only, NOT used for checkout */}
               {nights > 0 && estimatedTotal > 0 && (
-                <div className="bg-neutral-50 rounded-xl p-3.5 mb-4 border border-neutral-200">
+                <div className="bg-page rounded-xl p-3.5 mb-4 border border-neutral-200">
                   {selectedRoom && (
                     <div className="flex justify-between text-xs text-neutral-500 mb-1">
                       <span>Room: {fmt(parseFloat(String(selectedRoom.base_price)))}</span>
@@ -843,7 +843,7 @@ export default function HotelDetailClient() {
       </div>
 
       {/* ── Sticky Mobile Booking Bar ─────────────────────────────── */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-neutral-200 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] px-4 py-3 safe-area-bottom">
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/80 border-t border-neutral-200 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] px-4 py-3 safe-area-bottom">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             {selectedRoom ? (

@@ -66,7 +66,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
       return (
         <div className="min-h-[60vh] flex items-center justify-center p-6">
-          <div className="max-w-md w-full text-center bg-white rounded-2xl shadow-card p-8">
+          <div className="max-w-md w-full text-center bg-white/80 rounded-2xl shadow-card p-8">
             <div className="text-5xl mb-4">😵</div>
             <h2 className="text-xl font-bold text-neutral-900 mb-2">Something went wrong</h2>
             <p className="text-sm text-neutral-500 mb-6">
@@ -94,7 +94,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
                 <summary className="text-xs text-neutral-400 cursor-pointer hover:text-neutral-600">
                   Error Details (dev only)
                 </summary>
-                <pre className="mt-2 p-3 bg-neutral-50 rounded-lg text-xs text-red-600 overflow-x-auto whitespace-pre-wrap">
+                <pre className="mt-2 p-3 bg-page rounded-lg text-xs text-red-600 overflow-x-auto whitespace-pre-wrap">
                   {this.state.error.message}
                   {this.state.errorInfo?.componentStack}
                 </pre>

@@ -11,7 +11,7 @@ const LAST_UPDATED = 'March 14, 2026';
 
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen page-listing-bg">
       {/* Header */}
       <section className="text-white py-14 px-4" style={{ background: 'linear-gradient(135deg,#171717,#404040)' }}>
         <div className="max-w-3xl mx-auto text-center">
@@ -187,7 +187,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-xl font-bold text-neutral-900 mb-4">13. Contact</h2>
           <p>For questions about these Terms, please contact:</p>
-          <address className="not-italic mt-3 bg-neutral-50 rounded-xl p-4 text-sm border border-neutral-100">
+          <address className="not-italic mt-3 bg-page rounded-xl p-4 text-sm border border-neutral-100">
             <strong>ZygoTrip Technologies Pvt. Ltd.</strong><br />
             Legal Team<br />
             [Address], Bengaluru, Karnataka, India<br />

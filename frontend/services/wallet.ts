@@ -7,28 +7,25 @@ export async function getWalletBalance(): Promise<WalletBalance> {
   return data.data;
 }
 
-export async function getWalletTransactions(page: number = 1): Promise<{
-  results: WalletTransaction[];
-  pagination: PaginatedData<WalletTransaction>['pagination'];
-}> {
+export async function getWalletTransactions(page: number = 1) {
   const { data } = await api.get('/wallet/transactions/', { params: { page } });
   if (!data.success) throw new Error('Failed to fetch transactions');
   return data.data;
 }
 
-export async function topUpWallet(amount: number, note?: string): Promise<{
-  transaction_uid: string;
-  amount_credited: string;
-  new_balance: string;
-  currency: string;
-}> {
+export async function initiateWalletTopup(amount: number, note?: string) {
   const { data } = await api.post('/wallet/topup/', { amount, note });
-  // Handle both direct credit (201) and pending_payment (202) responses
-  if (!data.success) throw new Error(data?.error?.message || 'Top-up failed');
-  // If status is pending_payment (production gateway flow), treat as error for now
-  if (data.data?.status === 'pending_payment') {
-    throw new Error('Payment gateway integration pending. Please try again later.');
-  }
+  if (!data.success) throw new Error(data?.error || 'Top-up failed');
+  return data.data; // returns { order_id, payment_session_id, amount, cashfree_env }
+}
+
+export async function confirmWalletTopup(amount: number, orderId: string) {
+  const { data } = await api.post('/wallet/topup/', {
+    amount,
+    order_id: orderId,
+    payment_reference: orderId,
+  });
+  if (!data.success) throw new Error(data?.error || 'Verification failed');
   return data.data;
 }
 

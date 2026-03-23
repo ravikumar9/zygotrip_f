@@ -2,7 +2,11 @@ import json
 import re
 import logging
 from django.http import JsonResponse
-from django.core.cache import cache
+from django.core.cache import caches
+try:
+    cache = caches['default_primary']
+except Exception:
+    from django.core.cache import cache
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 

@@ -123,7 +123,7 @@ export default function CancellationPolicyDisplay({ type, tiers, checkinDate }: 
 
           {/* Deadline callout */}
           {checkinDate && sortedTiers.length > 0 && (
-            <div className="mt-2 bg-white rounded-lg px-3 py-2 border border-neutral-200">
+            <div className="mt-2 bg-white/80 rounded-lg px-3 py-2 border border-neutral-200">
               <p className="text-[10px] text-neutral-500">
                 <span className="font-semibold">Note:</span> Free cancellation deadline is{' '}
                 <span className="font-bold text-neutral-700">

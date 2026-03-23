@@ -113,6 +113,12 @@ INSTALLED_APPS = [
     "apps.flights",
     "apps.activities",
 
+    # new feature apps
+    "apps.loyalty",
+    "apps.referrals",
+    "apps.notifications",
+    "apps.support",
+    "apps.ai",
     # celery
     "django_celery_beat",
     "django_celery_results",
@@ -277,10 +283,8 @@ EXCHANGE_RATE_CACHE_TTL = 3600
 # EMAIL SERVICE
 # ======================================================
 
-EMAIL_BACKEND = os.getenv(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend",   # dev: print to console
-)
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_TIMEOUT = 30
 # SMTP settings (for production: smtp.gmail.com, Amazon SES, SendGrid, etc.)
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
@@ -364,8 +368,8 @@ else:
 
 AUTH_USER_MODEL = "accounts.User"
 
-LOGIN_URL = "accounts:login"
-LOGIN_REDIRECT_URL = "core:home"
+LOGIN_URL = "/account/login"
+LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "core:home"
 
 
@@ -561,11 +565,25 @@ CELERY_TASK_ROUTES = {
     'apps.core.push_notification_service.*': {'queue': 'notifications'},
     'apps.core.fcm_api.*':      {'queue': 'notifications'},
 
+    # Email & notifications — standard path
+    'apps.core.tasks.send_booking_confirmation_email': {'queue': 'default'},
+    'apps.core.tasks.send_booking_confirmation_email_task': {'queue': 'default'},
     # Search & reindexing — standard path
     'apps.search.*':            {'queue': 'search'},
     'apps.pricing.adaptive_crawl.*': {'queue': 'search'},
     'apps.pricing.competitor_pipeline.*': {'queue': 'search'},
 }
+
+# Explicitly import task modules not named 'tasks.py' for celery autodiscovery
+CELERY_IMPORTS = (
+    'apps.core.tasks',
+    'apps.core.notification_tasks',
+    'apps.booking.tasks',
+    'apps.checkout.tasks',
+    'apps.search.tasks',
+    'apps.hotels.tasks',
+)
+
 
 # PHASE 9: FORCE SAFE DEV MODE - Disable Celery beat in DEBUG, run tasks eagerly
 if DEBUG:
@@ -1045,9 +1063,11 @@ PAYTM_MERCHANT_KEY = os.getenv('PAYTM_MERCHANT_KEY', '')
 PAYTM_ENV = os.getenv('PAYTM_ENV', 'staging')  # 'staging' or 'production'
 
 # Payment callback URLs (used by gateway SDKs)
-PAYMENT_SUCCESS_URL = os.getenv('PAYMENT_SUCCESS_URL', 'http://localhost:3000/booking/confirmation')
 PAYMENT_CANCEL_URL = os.getenv('PAYMENT_CANCEL_URL', 'http://localhost:3000/payment/cancelled')
-CASHFREE_WEBHOOK_SECRET = os.getenv('CASHFREE_WEBHOOK_SECRET', '')
+CASHFREE_WEBHOOK_SECRET = os.getenv("CASHFREE_WEBHOOK_SECRET", "")
+CASHFREE_API_VERSION = os.getenv("CASHFREE_API_VERSION", "2025-01-01")
+CASHFREE_WEBHOOK_URL = os.getenv("CASHFREE_WEBHOOK_URL", "")
+PAYMENT_SUCCESS_URL = os.getenv("PAYMENT_SUCCESS_URL", "https://goexplorer-dev.cloud/payment-return/")
 
 # ======================================================
 # OTP & SMS CONFIGURATION
@@ -1066,6 +1086,11 @@ TWILIO_FROM_NUMBER = os.getenv('TWILIO_FROM_NUMBER', '')
 # MSG91 (if SMS_BACKEND='msg91')
 MSG91_AUTH_KEY = os.getenv('MSG91_AUTH_KEY', '')
 MSG91_TEMPLATE_ID = os.getenv('MSG91_TEMPLATE_ID', '')
+MSG91_OTP_TEMPLATE_ID = os.getenv('MSG91_OTP_TEMPLATE_ID', '')
+MSG91_BOOKING_TEMPLATE_ID = os.getenv('MSG91_BOOKING_TEMPLATE_ID', '')
+MSG91_PAYMENT_TEMPLATE_ID = os.getenv('MSG91_PAYMENT_TEMPLATE_ID', '')
+MSG91_CANCEL_TEMPLATE_ID = os.getenv('MSG91_CANCEL_TEMPLATE_ID', '')
+MSG91_SENDER_ID = os.getenv('MSG91_SENDER_ID', 'ZYGOIN')
 
 # ======================================================
 # CORS — Cross-Origin Resource Sharing
@@ -1090,6 +1115,15 @@ CORS_EXPOSE_HEADERS = ["Authorization"]
 
 # Preflight cache: 10 minutes
 CORS_PREFLIGHT_MAX_AGE = 600
+
+# Flutter web / any localhost port (e.g. localhost:61013).
+# CORS_ALLOW_LOCALHOST defaults to true on dev server; set false in prod.
+_allow_localhost = os.getenv('CORS_ALLOW_LOCALHOST', 'true').lower() in ('1', 'true', 'yes')
+if _allow_localhost:
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r'^https?://(localhost|127\.0\.0\.1)(:\d+)?$',
+    ]
+
 
 
 # ======================================================

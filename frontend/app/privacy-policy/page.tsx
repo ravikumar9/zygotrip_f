@@ -11,7 +11,7 @@ const LAST_UPDATED = 'March 14, 2026';
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen page-listing-bg">
       {/* Header */}
       <section className="text-white py-14 px-4" style={{ background: 'linear-gradient(135deg,#171717,#404040)' }}>
         <div className="max-w-3xl mx-auto text-center">
@@ -165,7 +165,7 @@ export default function PrivacyPolicyPage() {
                   ['Analytics', 'Understand usage patterns to improve the Platform'],
                   ['Marketing', 'Deliver relevant ads on third-party platforms (opt-in only)'],
                 ].map(([type, purpose]) => (
-                  <tr key={type} className="odd:bg-white even:bg-neutral-50">
+                  <tr key={type} className="odd:bg-white/80 even:bg-page">
                     <td className="px-4 py-2 border border-neutral-200 font-medium">{type}</td>
                     <td className="px-4 py-2 border border-neutral-200">{purpose}</td>
                   </tr>
@@ -215,7 +215,7 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="text-xl font-bold text-neutral-900 mb-4">10. Contact Us</h2>
           <p>For privacy-related queries or to exercise your data rights, contact our Data Protection Officer:</p>
-          <address className="not-italic mt-3 bg-neutral-50 rounded-xl p-4 text-sm border border-neutral-100">
+          <address className="not-italic mt-3 bg-page rounded-xl p-4 text-sm border border-neutral-100">
             <strong>ZygoTrip Technologies Pvt. Ltd.</strong><br />
             Attn: Data Protection Officer<br />
             [Address], Bengaluru, Karnataka, India<br />

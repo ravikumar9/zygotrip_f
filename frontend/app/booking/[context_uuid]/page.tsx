@@ -338,25 +338,25 @@ function BookingContent() {
             }
           </p>
 
-          <div className="bg-white rounded-2xl shadow-card p-6 mb-6 text-left">
+          <div className="bg-white/80 rounded-2xl shadow-card p-6 mb-6 text-left">
             <p className="text-xs text-neutral-400 mb-1 text-center">Booking ID</p>
             <p className="text-2xl font-black text-primary-700 mb-5 text-center font-heading">
               {confirmedBooking.public_booking_id}
             </p>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="bg-neutral-50 rounded-xl p-3">
+              <div className="bg-page rounded-xl p-3">
                 <p className="text-neutral-400 text-xs mb-0.5">Property</p>
                 <p className="font-bold text-neutral-800">{context.property_name}</p>
               </div>
-              <div className="bg-neutral-50 rounded-xl p-3">
+              <div className="bg-page rounded-xl p-3">
                 <p className="text-neutral-400 text-xs mb-0.5">Total Paid</p>
                 <p className="font-bold text-neutral-800">{fmt(context?.final_price ?? 0)}</p>
               </div>
-              <div className="bg-neutral-50 rounded-xl p-3">
+              <div className="bg-page rounded-xl p-3">
                 <p className="text-neutral-400 text-xs mb-0.5">Check-in</p>
                 <p className="font-bold text-neutral-800">{context.checkin}</p>
               </div>
-              <div className="bg-neutral-50 rounded-xl p-3">
+              <div className="bg-page rounded-xl p-3">
                 <p className="text-neutral-400 text-xs mb-0.5">Check-out</p>
                 <p className="font-bold text-neutral-800">{context.checkout}</p>
               </div>
@@ -403,7 +403,7 @@ function BookingContent() {
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-xl hover:bg-white hover:shadow-sm transition-all"
+            className="p-2 rounded-xl hover:bg-white/80 hover:shadow-sm transition-all"
             aria-label="Go back"
           >
             <ArrowLeft size={20} className="text-neutral-600" />
@@ -424,13 +424,13 @@ function BookingContent() {
           <div className="space-y-5">
 
             {/* ── Compact Property Info Card ───────────────────────── */}
-            <div className="bg-white rounded-2xl shadow-card overflow-hidden border border-neutral-100">
+            <div className="bg-white/80 rounded-2xl shadow-card overflow-hidden border border-neutral-100">
               {/* Dark gradient header */}
               <div
                 className="flex items-center gap-4 p-4"
                 style={{ background: 'linear-gradient(90deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)' }}
               >
-                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center text-2xl shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-white/80/15 flex items-center justify-center text-2xl shrink-0">
                   🏨
                 </div>
                 <div className="min-w-0 flex-1">
@@ -478,7 +478,7 @@ function BookingContent() {
             </div>
 
             {/* ── Guest Details ─────────────────────────────────────── */}
-            <div className="bg-white rounded-2xl shadow-card p-6">
+            <div className="bg-white/80 rounded-2xl shadow-card p-6">
               <h2
                 className="font-bold text-neutral-900 mb-5 flex items-center gap-2 font-heading"
               >
@@ -546,8 +546,8 @@ function BookingContent() {
                   {/* Phone with +91 prefix */}
                   <div>
                     <label className="label">Phone Number *</label>
-                    <div className="flex rounded-xl border border-neutral-200 focus-within:ring-2 focus-within:ring-primary-200 focus-within:border-primary-400 transition-all overflow-hidden bg-white">
-                      <span className="flex items-center gap-1 px-3 bg-neutral-50 border-r border-neutral-200 text-xs font-semibold text-neutral-600 shrink-0 select-none">
+                    <div className="flex rounded-xl border border-neutral-200 focus-within:ring-2 focus-within:ring-primary-200 focus-within:border-primary-400 transition-all overflow-hidden bg-white/80">
+                      <span className="flex items-center gap-1 px-3 bg-page border-r border-neutral-200 text-xs font-semibold text-neutral-600 shrink-0 select-none">
                         <Phone size={11} className="text-neutral-400" />
                         +91
                       </span>
@@ -556,7 +556,7 @@ function BookingContent() {
                         value={guestPhone}
                         onChange={(e) => setGuestPhone(e.target.value)}
                         placeholder=" "
-                        className="flex-1 px-3 py-2.5 text-sm bg-white outline-none text-neutral-900 placeholder-neutral-400"
+                        className="flex-1 px-3 py-2.5 text-sm bg-white/80 outline-none text-neutral-900 placeholder-neutral-400"
                         maxLength={10}
                       />
                     </div>
@@ -566,7 +566,7 @@ function BookingContent() {
             </div>
 
             {/* ── Payment Method ─────────────────────────────────────── */}
-            <div className="bg-white rounded-2xl shadow-card p-6">
+            <div className="bg-white/80 rounded-2xl shadow-card p-6">
               <h2
                 className="font-bold text-neutral-900 mb-5 flex items-center gap-2 font-heading"
               >
@@ -578,7 +578,7 @@ function BookingContent() {
               {isAuthenticated && walletBalance > 0 ? (
                 <div className={clsx(
                   'mb-4 rounded-xl border-2 p-4 transition-all',
-                  useWallet ? 'border-green-400 bg-green-50' : 'border-neutral-200 bg-neutral-50'
+                  useWallet ? 'border-green-400 bg-green-50' : 'border-neutral-200 bg-page'
                 )}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -603,7 +603,7 @@ function BookingContent() {
                         'text-xs font-bold px-3 py-1.5 rounded-lg transition-all',
                         useWallet
                           ? 'bg-green-600 text-white'
-                          : 'bg-white border border-neutral-300 text-neutral-700 hover:border-green-400 hover:text-green-600'
+                          : 'bg-white/80 border border-neutral-300 text-neutral-700 hover:border-green-400 hover:text-green-600'
                       )}
                     >
                       {useWallet ? '✓ Applied' : 'Use Wallet'}
@@ -621,7 +621,7 @@ function BookingContent() {
                 </div>
               ) : !isAuthenticated ? (
                 /* Guest user — wallet disabled with login CTA */
-                <div className="mb-4 rounded-xl border-2 border-neutral-200 bg-neutral-50 p-4 opacity-75">
+                <div className="mb-4 rounded-xl border-2 border-neutral-200 bg-page p-4 opacity-75">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-neutral-200">
@@ -672,10 +672,10 @@ function BookingContent() {
                       className={clsx(
                         'flex items-center gap-4 p-4 rounded-xl border-2 transition-all',
                         isWalletDisabled
-                          ? 'border-neutral-200 bg-neutral-50 opacity-50 cursor-not-allowed'
+                          ? 'border-neutral-200 bg-page opacity-50 cursor-not-allowed'
                           : isSelected
                             ? 'border-primary-500 bg-primary-50 cursor-pointer'
-                            : 'border-neutral-200 bg-white hover:border-neutral-300 cursor-pointer'
+                            : 'border-neutral-200 bg-white/80 hover:border-neutral-300 cursor-pointer'
                       )}
                     >
                       <input

@@ -29,7 +29,7 @@ function FlightCard({ flight, onSelect }: { flight: FlightResult; onSelect: () =
   const lastSeg = flight.segments[flight.segments.length - 1];
 
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-4">
+    <div className="bg-white/80 rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow p-4">
       <div className="flex items-center gap-4">
         {/* Airline */}
         <div className="flex items-center gap-3 w-32 shrink-0">
@@ -173,7 +173,7 @@ export default function FlightSearchClient() {
                 key={t}
                 onClick={() => setTripType(t)}
                 className={`text-xs px-3 py-1.5 rounded-full font-semibold ${
-                  tripType === t ? 'bg-white text-neutral-800' : 'text-white/70 border border-white/20'
+                  tripType === t ? 'bg-white/80 text-neutral-800' : 'text-white/70 border border-white/20'
                 }`}
               >
                 {t === 'one_way' ? 'One Way' : 'Round Trip'}
@@ -181,7 +181,7 @@ export default function FlightSearchClient() {
             ))}
           </div>
 
-          <div className="bg-white rounded-2xl p-4 shadow-lg">
+          <div className="bg-white/80 rounded-2xl p-4 shadow-lg">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto_auto] gap-3">
               {/* Origin */}
               <div className="relative">
@@ -194,12 +194,12 @@ export default function FlightSearchClient() {
                   className="w-full text-sm font-semibold text-neutral-800 outline-none border-b border-neutral-200 pb-1 focus:border-primary-400"
                 />
                 {originSuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-lg mt-1 z-50 border border-neutral-200 max-h-48 overflow-auto">
+                  <div className="absolute top-full left-0 right-0 bg-white/80 shadow-lg rounded-lg mt-1 z-50 border border-neutral-200 max-h-48 overflow-auto">
                     {originSuggestions.map((s) => (
                       <button
                         key={s.code}
                         onClick={() => { setOrigin(s.code); setOriginSuggestions([]); }}
-                        className="w-full text-left px-3 py-2 text-xs hover:bg-neutral-50"
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-page"
                       >
                         <span className="font-bold">{s.code}</span> — {s.name}, {s.city}
                       </button>
@@ -220,12 +220,12 @@ export default function FlightSearchClient() {
                     className="w-full text-sm font-semibold text-neutral-800 outline-none border-b border-neutral-200 pb-1 focus:border-primary-400"
                   />
                   {destSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-lg mt-1 z-50 border border-neutral-200 max-h-48 overflow-auto">
+                    <div className="absolute top-full left-0 right-0 bg-white/80 shadow-lg rounded-lg mt-1 z-50 border border-neutral-200 max-h-48 overflow-auto">
                       {destSuggestions.map((s) => (
                         <button
                           key={s.code}
                           onClick={() => { setDestination(s.code); setDestSuggestions([]); }}
-                          className="w-full text-left px-3 py-2 text-xs hover:bg-neutral-50"
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-page"
                         >
                           <span className="font-bold">{s.code}</span> — {s.name}, {s.city}
                         </button>
@@ -265,14 +265,14 @@ export default function FlightSearchClient() {
             {/* Extra options */}
             <div className="flex items-center gap-3 mt-3 pt-3 border-t border-neutral-100 flex-wrap">
               <select value={cabinClass} onChange={(e) => setCabinClass(e.target.value as typeof cabinClass)}
-                className="text-xs bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
+                className="text-xs bg-page border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
                 <option value="economy">Economy</option>
                 <option value="premium_economy">Premium Economy</option>
                 <option value="business">Business</option>
                 <option value="first">First Class</option>
               </select>
               <select value={adults} onChange={(e) => setAdults(Number(e.target.value))}
-                className="text-xs bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
+                className="text-xs bg-page border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
                 {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n} Adult{n > 1 ? 's' : ''}</option>)}
               </select>
             </div>
@@ -288,13 +288,13 @@ export default function FlightSearchClient() {
             <p className="text-sm text-neutral-500">{sortedResults.length} flights found</p>
             <div className="flex items-center gap-2">
               <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="text-xs bg-white border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
+                className="text-xs bg-white/80 border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
                 <option value="price">Cheapest</option>
                 <option value="duration">Fastest</option>
                 <option value="departure">Earliest</option>
               </select>
               <select value={maxStops ?? ''} onChange={(e) => setMaxStops(e.target.value ? Number(e.target.value) : undefined)}
-                className="text-xs bg-white border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
+                className="text-xs bg-white/80 border border-neutral-200 rounded-lg px-2 py-1.5 outline-none">
                 <option value="">Any stops</option>
                 <option value="0">Non-stop</option>
                 <option value="1">Max 1 stop</option>

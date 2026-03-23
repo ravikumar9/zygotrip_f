@@ -73,7 +73,7 @@ export default function DestinationsSection() {
               <p className="text-white/75 text-xs font-semibold mt-0.5">{dest.tagline}</p>
               <p className="text-white/55 text-xs mt-0.5">
                 {!loaded ? (
-                  <span className="inline-block w-16 h-3 rounded bg-white/20 animate-pulse" />
+                  <span className="inline-block w-16 h-3 rounded bg-white/80/20 animate-pulse" />
                 ) : (
                   `${count} hotels`
                 )}

@@ -129,7 +129,7 @@ function CancelModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-down">
+      <div className="relative bg-white/80 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-down">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-neutral-100">
           <X size={18} className="text-neutral-500" />
         </button>
@@ -143,7 +143,7 @@ function CancelModal({
           </div>
         </div>
 
-        <div className="bg-neutral-50 rounded-xl p-4 mb-5 space-y-2">
+        <div className="bg-page rounded-xl p-4 mb-5 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-neutral-500">Booking ID</span>
             <span className="font-semibold">{booking.public_booking_id ?? booking.uuid.slice(0, 8).toUpperCase()}</span>
@@ -188,7 +188,7 @@ function CancelModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-neutral-200 hover:bg-neutral-50 transition-colors"
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-neutral-200 hover:bg-page transition-colors"
           >
             Keep It
           </button>
@@ -291,14 +291,14 @@ export default function BookingDetailPage() {
   const totalAmount = parseFloat(booking.total_amount);
 
   return (
-    <div className="min-h-screen bg-neutral-50 pt-20 pb-16">
+    <div className="min-h-screen page-listing-bg pt-20 pb-16">
       <div className="max-w-3xl mx-auto px-4">
 
         {/* Back + header */}
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50 transition-colors"
+            className="p-2 rounded-xl bg-white/80 border border-neutral-200 hover:bg-page transition-colors"
           >
             <ArrowLeft size={18} className="text-neutral-600" />
           </button>
@@ -331,7 +331,7 @@ export default function BookingDetailPage() {
           <div className="space-y-5">
 
             {/* Property + Stay */}
-            <div className="bg-white rounded-2xl shadow-card p-5">
+            <div className="bg-white/80 rounded-2xl shadow-card p-5">
               <h2 className="font-bold text-neutral-900 text-lg mb-1">{booking.property_name}</h2>
               <Link
                 href={`/hotels/${booking.property_slug}`}
@@ -340,7 +340,7 @@ export default function BookingDetailPage() {
                 View Property →
               </Link>
 
-              <div className="grid grid-cols-3 gap-3 bg-neutral-50 rounded-xl p-4 mt-4">
+              <div className="grid grid-cols-3 gap-3 bg-page rounded-xl p-4 mt-4">
                 <div className="text-center">
                   <p className="text-[10px] font-semibold text-neutral-400 uppercase mb-1">Check-in</p>
                   <p className="text-base font-black text-neutral-800">
@@ -365,13 +365,13 @@ export default function BookingDetailPage() {
 
             {/* Room info */}
             {booking.rooms && booking.rooms.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-card p-5">
+              <div className="bg-white/80 rounded-2xl shadow-card p-5">
                 <h3 className="font-bold text-neutral-800 text-sm mb-3 flex items-center gap-2">
                   <BedDouble size={16} className="text-neutral-400" /> Room Details
                 </h3>
                 <div className="space-y-3">
                   {booking.rooms.map((room, i) => (
-                    <div key={i} className="bg-neutral-50 rounded-xl p-3">
+                    <div key={i} className="bg-page rounded-xl p-3">
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="text-sm font-bold text-neutral-800">{room.room_type_name ?? 'Room'}</p>
@@ -400,7 +400,7 @@ export default function BookingDetailPage() {
 
             {/* Guest info */}
             {(booking.guest_name || booking.guest_email || booking.guest_phone) && (
-              <div className="bg-white rounded-2xl shadow-card p-5">
+              <div className="bg-white/80 rounded-2xl shadow-card p-5">
                 <h3 className="font-bold text-neutral-800 text-sm mb-2 flex items-center gap-2">
                   <Users size={16} className="text-neutral-400" /> Guest Information
                 </h3>
@@ -413,7 +413,7 @@ export default function BookingDetailPage() {
 
           {/* Right column — Price summary */}
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl shadow-card p-5">
+            <div className="bg-white/80 rounded-2xl shadow-card p-5">
               <h3 className="font-bold text-neutral-800 text-sm mb-4 flex items-center gap-2">
                 <Receipt size={16} className="text-neutral-400" /> Price Summary
               </h3>
@@ -481,7 +481,7 @@ export default function BookingDetailPage() {
                 <button
                   onClick={handleDownloadInvoice}
                   disabled={downloading}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold border border-neutral-200 bg-white hover:bg-neutral-50 transition-colors disabled:opacity-60"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold border border-neutral-200 bg-white/80 hover:bg-page transition-colors disabled:opacity-60"
                 >
                   {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                   {downloading ? 'Downloading...' : 'Download Invoice'}
@@ -500,14 +500,14 @@ export default function BookingDetailPage() {
 
               <Link
                 href="/bookings"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold border border-neutral-200 bg-white hover:bg-neutral-50 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold border border-neutral-200 bg-white/80 hover:bg-page transition-colors"
               >
                 <ArrowLeft size={16} /> All Bookings
               </Link>
             </div>
 
             {/* Booking meta */}
-            <div className="bg-white rounded-2xl shadow-card p-4 text-xs text-neutral-400 space-y-1.5">
+            <div className="bg-white/80 rounded-2xl shadow-card p-4 text-xs text-neutral-400 space-y-1.5">
               <p>
                 <span className="font-semibold text-neutral-500">Booked on: </span>
                 {format(parseISO(booking.created_at), 'd MMM yyyy, h:mm a')}

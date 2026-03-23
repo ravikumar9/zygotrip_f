@@ -95,13 +95,22 @@ def wallet_transactions(request):
 def wallet_topup(request):
     """
     POST /api/v1/wallet/topup/
-
-    Initiates a wallet top-up. Does NOT credit directly — creates a pending
-    payment transaction. Wallet is credited ONLY after payment gateway callback
-    confirms the payment was successful (webhook/callback flow).
-
-    Body: { amount: Decimal, note?: str, payment_reference?: str }
+    Step 1: { amount } → returns cashfree payment_session_id + order_id
+    Step 2: { amount, order_id, payment_reference } → verify + credit wallet
     """
+    from django.conf import settings as _s
+    from apps.core.models import PlatformSettings
+
+    # Check platform settings
+    try:
+        ps = PlatformSettings.objects.first()
+        if ps and not getattr(ps, 'wallet_topup_enabled', True):
+            return Response({'success': False, 'error': 'Wallet top-up is currently disabled.'}, status=400)
+        min_topup = float(getattr(ps, 'min_wallet_topup', 100))
+        max_topup = float(getattr(ps, 'max_wallet_topup', 50000))
+    except Exception:
+        min_topup, max_topup = 100, 50000
+
     serializer = TopUpSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(
@@ -111,91 +120,125 @@ def wallet_topup(request):
 
     amount = serializer.validated_data['amount']
     note = serializer.validated_data.get('note', 'Wallet top-up')
+    order_id = request.data.get('order_id', '')
     payment_reference = request.data.get('payment_reference', '')
 
-    # ── DEV MODE: Direct credit without payment gateway ──────────────
-    # In development (DEBUG=True), skip payment verification and credit directly.
-    # In production, require payment_reference from a completed gateway transaction.
-    from django.conf import settings as django_settings
-    if not payment_reference and getattr(django_settings, 'DEBUG', False):
-        wallet = get_or_create_wallet(request.user)
-        txn = wallet.credit(
-            amount=amount,
-            txn_type=WalletTransaction.TYPE_CREDIT,
-            reference=f'dev_topup_{request.user.id}_{amount}',
-            note=note or 'Wallet top-up (dev mode)',
-        )
-        cache.delete(f'wallet_balance_{request.user.id}')
-        logger.info('DEV wallet top-up: user=%s amount=%s', request.user.email, amount)
-        return Response(
-            {
-                'success': True,
-                'data': {
-                    'transaction_uid': str(txn.uid),
-                    'amount_credited': str(amount),
-                    'new_balance': str(wallet.balance),
-                    'currency': wallet.currency,
-                },
-            },
-            status=status.HTTP_201_CREATED,
-        )
+    # Validate amount limits
+    if float(amount) < min_topup:
+        return Response({'success': False, 'error': f'Minimum top-up amount is ₹{min_topup}'}, status=400)
+    if float(amount) > max_topup:
+        return Response({'success': False, 'error': f'Maximum top-up amount is ₹{max_topup}'}, status=400)
 
-    if not payment_reference:
-        # No payment reference: return a pending status, instruct client to
-        # complete payment via gateway then call back with reference.
-        return Response(
-            {
-                'success': True,
-                'data': {
-                    'status': 'pending_payment',
-                    'amount': str(amount),
-                    'message': 'Complete payment via gateway, then confirm with payment_reference.',
-                },
-            },
-            status=status.HTTP_202_ACCEPTED,
-        )
+    # ── STEP 2: Verify payment and credit wallet ──────────────────────
+    if order_id and payment_reference:
+        try:
+            import requests as _req
+            env = getattr(_s, 'CASHFREE_ENV', 'sandbox')
+            base_url = 'https://api.cashfree.com/pg' if env == 'production' else 'https://sandbox.cashfree.com/pg'
+            headers = {
+                'x-client-id': getattr(_s, 'CASHFREE_APP_ID', ''),
+                'x-client-secret': getattr(_s, 'CASHFREE_SECRET_KEY', ''),
+                'x-api-version': getattr(_s, 'CASHFREE_API_VERSION', '2025-01-01'),
+            }
+            resp = _req.get(f'{base_url}/orders/{order_id}', headers=headers, timeout=15)
+            cf_data = resp.json()
+            order_status = cf_data.get('order_status')
+            logger.info('Wallet topup verify: order_id=%s status=%s', order_id, order_status)
 
-    # With a payment reference, verify and credit.
-    try:
-        from apps.payments.models import PaymentTransaction
-        payment = PaymentTransaction.objects.get(
-            transaction_id=payment_reference,
-            user=request.user,
-            status=PaymentTransaction.STATUS_SUCCESS if hasattr(PaymentTransaction, 'STATUS_SUCCESS') else 'success',
-        )
-        if payment.amount != amount:
-            return Response(
-                {'success': False, 'error': {'code': 'amount_mismatch',
-                    'message': 'Payment amount does not match topup amount.'}},
-                status=status.HTTP_400_BAD_REQUEST,
+            if order_status != 'PAID':
+                return Response({'success': False, 'error': f'Payment not confirmed. Status: {order_status}'}, status=400)
+
+            # Check not already credited
+            wallet = get_or_create_wallet(request.user)
+            if wallet.transactions.filter(reference=f'topup_{order_id}').exists():
+                return Response({'success': False, 'error': 'This payment has already been credited.'}, status=400)
+
+            # Credit wallet
+            txn = wallet.credit(
+                amount=amount,
+                txn_type=WalletTransaction.TYPE_CREDIT,
+                reference=f'topup_{order_id}',
+                note=f'Wallet top-up via Cashfree ({order_id})',
             )
-    except ImportError:
-        logger.error('wallet_topup: PaymentTransaction model not available')
-        return Response(
-            {'success': False, 'error': {'code': 'payment_verification_unavailable',
-                'message': 'Payment verification system unavailable. Try again later.'}},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
+            cache.delete(f'wallet_balance_{request.user.id}')
+            logger.info('Wallet top-up credited: user=%s amount=%s order=%s', request.user.email, amount, order_id)
+
+            # Send SMS notification
+            try:
+                from apps.accounts.sms_service import get_sms_backend
+                if request.user.phone:
+                    get_sms_backend().send(request.user.phone, f'ZygoTrip wallet credited with Rs{amount}. New balance: Rs{wallet.balance}.')
+            except Exception:
+                pass
+
+        except Exception as e:
+            logger.error('Wallet topup verify failed: %s', e)
+            return Response({'success': False, 'error': 'Payment verification failed. Contact support.'}, status=400)
+
+        return Response({
+            'success': True,
+            'data': {
+                'transaction_uid': str(txn.uid),
+                'amount_credited': str(amount),
+                'new_balance': str(wallet.balance),
+                'currency': wallet.currency,
+                'message': f'₹{amount} added to your ZygoWallet successfully!',
+            },
+        }, status=status.HTTP_201_CREATED)
+
+    # ── STEP 1: Create Cashfree order for wallet topup ────────────────
+    try:
+        import requests as _req, uuid
+        env = getattr(_s, 'CASHFREE_ENV', 'sandbox')
+        base_url = 'https://api.cashfree.com/pg' if env == 'production' else 'https://sandbox.cashfree.com/pg'
+        headers = {
+            'x-client-id': getattr(_s, 'CASHFREE_APP_ID', ''),
+            'x-client-secret': getattr(_s, 'CASHFREE_SECRET_KEY', ''),
+            'x-api-version': getattr(_s, 'CASHFREE_API_VERSION', '2025-01-01'),
+            'Content-Type': 'application/json',
+        }
+        wallet_order_id = f'WLT{str(uuid.uuid4()).replace("-","").upper()[:20]}'
+        site_url = getattr(_s, 'PAYMENT_SUCCESS_URL', 'https://goexplorer-dev.cloud/payment-return/')
+        payload = {
+            'order_id': wallet_order_id,
+            'order_amount': float(amount),
+            'order_currency': 'INR',
+            'order_note': 'ZygoTrip Wallet Top-up',
+            'customer_details': {
+                'customer_id': str(request.user.id),
+                'customer_name': request.user.full_name or request.user.email,
+                'customer_email': request.user.email,
+                'customer_phone': request.user.phone or '9999999999',
+            },
+            'order_meta': {
+                'return_url': f'https://goexplorer-dev.cloud/wallet/topup-return?order_id={wallet_order_id}&amount={amount}',
+                'notify_url': getattr(_s, 'CASHFREE_WEBHOOK_URL', ''),
+            },
+        }
+        resp = _req.post(f'{base_url}/orders', json=payload, headers=headers, timeout=15)
+        cf_order = resp.json()
+        logger.info('Wallet topup order created: %s', cf_order)
+
+        if not cf_order.get('payment_session_id'):
+            return Response({'success': False, 'error': 'Could not create payment order.'}, status=500)
+
+        return Response({
+            'success': True,
+            'data': {
+                'status': 'payment_required',
+                'order_id': wallet_order_id,
+                'payment_session_id': cf_order['payment_session_id'],
+                'amount': str(amount),
+                'cashfree_env': env,
+            },
+        }, status=status.HTTP_200_OK)
+
     except Exception as e:
-        logger.error('wallet_topup: Payment verification failed for ref=%s: %s', payment_reference, e)
-        return Response(
-            {'success': False, 'error': {'code': 'payment_verification_failed',
-                'message': 'Could not verify payment. Ensure the payment reference is valid and completed.'}},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        logger.error('Wallet topup order creation failed: %s', e)
+        return Response({'success': False, 'error': 'Could not initiate payment. Try again.'}, status=500)
 
     wallet = get_or_create_wallet(request.user)
-    txn = wallet.credit(
-        amount=amount,
-        txn_type=WalletTransaction.TYPE_CREDIT,
-        reference=f'topup_{payment_reference}',
-        note=note,
-    )
-
-    # Invalidate cache
-    cache.delete(f'wallet_balance_{request.user.id}')
-
-    logger.info('Wallet top-up confirmed: user=%s amount=%s ref=%s', request.user.email, amount, payment_reference)
+    logger.info('Wallet top-up confirmed: user=%s amount=%s', request.user.email, amount)
 
     return Response(
         {

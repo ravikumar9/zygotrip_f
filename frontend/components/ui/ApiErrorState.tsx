@@ -52,7 +52,7 @@ function getErrorInfo(error?: Error | null) {
     title: 'Something went wrong',
     description: 'We couldn\'t load this content. This is usually temporary.',
     color: 'text-neutral-500',
-    bg: 'bg-neutral-50',
+    bg: 'bg-page',
   };
 }
 

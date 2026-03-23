@@ -86,76 +86,46 @@ class PlatformSettingsAdmin(admin.ModelAdmin):
 	
 	fieldsets = (
 		('Platform Identity', {
-			'fields': (
-				'platform_name',
-				'default_currency',
-				'support_email',
-				'support_phone',
-				'system_notice',
-				'maintenance_message',
-			),
-			'description': 'Platform name and support contact details'
+			'fields': ('platform_name', 'default_currency', 'support_email', 'support_phone', 'system_notice', 'maintenance_message'),
 		}),
-		('App Version Gate', {
-			'fields': ('min_app_version_android', 'min_app_version_ios'),
-			'description': 'If set, clients below these app versions should force-update.'
+		('Service Switches', {
+			'fields': ('hotels_enabled', 'buses_enabled', 'cabs_enabled', 'packages_enabled', 'flights_enabled', 'activities_enabled', 'ai_assistant_enabled', 'loyalty_enabled', 'promos_enabled'),
 		}),
-		('Vertical Service Switches', {
-			'fields': (
-				'hotels_enabled',
-				'buses_enabled',
-				'cabs_enabled',
-				'packages_enabled',
-				'flights_enabled',
-				'activities_enabled',
-				'ai_assistant_enabled',
-				'loyalty_enabled',
-				'promos_enabled',
-			),
-			'description': 'Hard switches used by API guards. Changes are instant after cache invalidation.'
-		}),
-		('Operational Kill Switches', {
+		('Kill Switches', {
 			'fields': ('maintenance_mode', 'bookings_enabled', 'payments_enabled', 'max_coupon_discount_percent'),
-			'description': 'Global safety controls for traffic and monetisation.'
 		}),
-		('Default Commission Percentages', {
-			'fields': (
-				'default_property_commission',
-				'default_cab_commission',
-				'default_bus_commission',
-				'default_package_commission',
-			),
-			'description': 'Default commission percentages applied to new vendor listings. Can be overridden per property.'
+		('Payment Gateways', {
+			'fields': ('cashfree_enabled', 'stripe_enabled', 'paytm_enabled'),
+			'description': 'Enable/disable payment gateways instantly without code changes',
+		}),
+		('Wallet Controls', {
+			'fields': ('wallet_enabled', 'wallet_topup_enabled', 'wallet_topup_gateway', 'min_wallet_topup', 'max_wallet_topup'),
+			'description': 'Control wallet top-up gateway and limits',
+		}),
+		('Offers and Referrals', {
+			'fields': ('offers_enabled', 'referral_enabled'),
+		}),
+		('Commissions', {
+			'fields': ('default_property_commission', 'default_cab_commission', 'default_bus_commission', 'default_package_commission'),
 		}),
 		('Global Policies', {
 			'fields': ('service_fee_percent', 'require_agreement_signature'),
-			'description': 'Global platform policies affecting all vendors'
+		}),
+		('App Version Gate', {
+			'fields': ('min_app_version_android', 'min_app_version_ios'),
 		}),
 		('Audit', {
 			'fields': ('created_at', 'updated_at'),
-			'classes': ('collapse',)
+			'classes': ('collapse',),
 		}),
 	)
-	
-	def has_add_permission(self, request):
-		"""Only allow one PlatformSettings instance (singleton pattern)"""
-		return not PlatformSettings.objects.exists()
-	
-	def has_delete_permission(self, request, obj=None):
-		"""Prevent deletion of PlatformSettings"""
-		return False
 
+	def has_add_permission(self, request):
+		pass
 
 @admin.register(FeatureFlag)
 class FeatureFlagAdmin(admin.ModelAdmin):
-	list_display = (
-		'name',
-		'is_enabled',
-		'rollout_percentage',
-		'is_active',
-		'expires_at',
-		'updated_at',
-	)
+	list_display = ('name', 'description', 'is_enabled', 'is_active', 'rollout_percentage')
 	list_editable = ('is_enabled', 'rollout_percentage', 'is_active')
 	search_fields = ('name', 'description')
 	list_filter = ('is_enabled', 'is_active')
@@ -209,3 +179,4 @@ try:
         ordering = ['date']
 except Exception:
     pass
+        

@@ -1,15 +1,12 @@
 import secrets
 import string
 from decimal import Decimal
-
 from django.conf import settings
 from django.db import models
-
 
 def _generate_code():
     chars = string.ascii_uppercase + string.digits
     return "ZY" + "".join(secrets.choice(chars) for _ in range(6))
-
 
 class ReferralProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referrals_profile')
@@ -22,23 +19,21 @@ class ReferralProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'referrals'
         ordering = ('-updated_at',)
 
     def __str__(self):
         return f"{self.user_id}:{self.referral_code}"
 
-
 class Referral(models.Model):
     STATUS_SIGNED_UP = 'signed_up'
     STATUS_COMPLETED = 'completed'
     STATUS_REWARDED = 'rewarded'
-
     STATUS_CHOICES = (
         (STATUS_SIGNED_UP, 'Signed Up'),
         (STATUS_COMPLETED, 'Completed'),
         (STATUS_REWARDED, 'Rewarded'),
     )
-
     referrer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referrals_sent')
     referee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referrals_received')
     referral_code = models.CharField(max_length=12, db_index=True)
@@ -49,6 +44,7 @@ class Referral(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'referrals'
         ordering = ('-created_at',)
         constraints = [
             models.UniqueConstraint(fields=('referrer', 'referee'), name='unique_referrer_referee_pair'),

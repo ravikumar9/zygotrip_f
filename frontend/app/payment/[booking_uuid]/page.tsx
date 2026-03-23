@@ -267,7 +267,7 @@ function PaymentContent() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-white/60 transition-all">
+          <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-white/80/60 transition-all">
             <ArrowLeft size={20} className="text-neutral-600" />
           </button>
           <div>
@@ -279,7 +279,7 @@ function PaymentContent() {
         </div>
 
         {/* Order Summary */}
-        <div className="bg-white rounded-2xl shadow-card p-5 mb-5">
+        <div className="bg-white/80 rounded-2xl shadow-card p-5 mb-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Amount Due</p>
@@ -305,7 +305,7 @@ function PaymentContent() {
 
         {/* ═══ Wallet section (only for logged-in users with balance) ═══ */}
         {walletGw && (
-          <div className="bg-white rounded-2xl shadow-card p-5 mb-5">
+          <div className="bg-white/80 rounded-2xl shadow-card p-5 mb-5">
             <h2 className="font-bold text-neutral-900 mb-3 flex items-center gap-2 text-sm">
               <Wallet size={16} className="text-indigo-500" /> ZygoTrip Wallet
             </h2>
@@ -350,7 +350,7 @@ function PaymentContent() {
 
         {/* ═══ Card / UPI / Netbanking ═══ */}
         {cardGateways.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-card overflow-hidden mb-5">
+          <div className="bg-white/80 rounded-2xl shadow-card overflow-hidden mb-5">
             <div className="p-5 pb-0">
               <h2 className="font-bold text-neutral-900 flex items-center gap-2 text-sm mb-0">
                 <CreditCard size={16} className="text-primary-500" /> Payment Method
@@ -368,7 +368,7 @@ function PaymentContent() {
                 return (
                   <div key={gwKey} className="px-5 py-3 border-b border-neutral-50 last:border-0">
                     <label className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all ${
-                      isSelected ? 'bg-primary-50 border border-primary-200' : 'hover:bg-neutral-50'
+                      isSelected ? 'bg-primary-50 border border-primary-200' : 'hover:bg-page'
                     }`}>
                       <input type="radio" name="gateway" value={gwKey} checked={isSelected}
                         onChange={() => { setSelectedGateway(gwKey); setSubMethod(null); }}
@@ -398,7 +398,7 @@ function PaymentContent() {
                           className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-xs font-semibold transition-all border-b-2 ${
                             active
                               ? 'border-primary-500 text-primary-600 bg-primary-50/50'
-                              : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50'
+                              : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:bg-page'
                           }`}>
                           <tab.icon size={14} />
                           <span className="hidden sm:inline">{tab.label}</span>
@@ -512,7 +512,7 @@ function PaymentContent() {
               );
             })}
 
-            <div className="flex items-center gap-2.5 px-5 py-3 border-t border-neutral-100 bg-neutral-50/50">
+            <div className="flex items-center gap-2.5 px-5 py-3 border-t border-neutral-100 bg-page/50">
               <Shield size={14} className="text-green-600 shrink-0" />
               <span className="text-[11px] text-neutral-500">
                 256-bit SSL encrypted &middot; PCI DSS compliant &middot; Card details are never stored
